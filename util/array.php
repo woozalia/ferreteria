@@ -12,11 +12,13 @@ class clsArray {
 
     // ++ CALCULATIONS ++ //
 
-    static public function Nz(array $ar=NULL,$key) {
+    static public function Nz(array $ar=NULL,$key,$default=NULL) {
 	$out = NULL;
 	if (is_array($ar)) {
 	    if (array_key_exists($key,$ar)) {
 		$out = $ar[$key];
+	    } else {
+		$out = $default;
 	    }
 	}
 	return $out;
