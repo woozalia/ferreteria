@@ -175,7 +175,12 @@ class clsForm_recs extends clsCtrls {
 	    if (!is_null($iNotes)) {
 		$arEv['notes'] = $iNotes;
 	    }
-	    $rcEvent = $rcData->CreateEvent($arEv);
+	    // 2014-12-14 this is a bit of a kluge; we need a way to record events for multiple-index tables
+	    if (method_exists($rcData,'CreateEvent')) {
+		$rcEvent = $rcData->CreateEvent($arEv);
+	    } else {
+		$rcEvent = NULL;
+	    }
 	    // update/create the recordset
 	    // -- add any "new-default" fields or hard-coded changes
 	    $arUpd = array_merge($arUpd,$this->NewVals(),$arDataAdd);

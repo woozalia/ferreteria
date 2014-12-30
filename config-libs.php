@@ -124,3 +124,6 @@ $om = new clsModule(__FILE__, 'widgets/navbar.php');
   $om->AddClass('clsNavbar_flat');
   $om->AddClass('clsNavbar_tree');
 
+if (defined('KF_WANT_LIB_USER_ACCESS')) {
+    require_once('user-access/config-libs.php');
+}
