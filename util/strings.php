@@ -283,6 +283,17 @@ class clsString {
     }
 
     // -- SPECIFIC SPLITS -- //
+    // ++ NATURAL LANGUAGE ++ //
+    
+    static function Pluralize($iQty,$iSingular='',$iPlural='s') {
+	if ($iQty == 1) {
+	    return $iSingular;
+	} else {
+	    return $iPlural;
+	}
+    }
+
+    // -- NATURAL LANGUAGE -- //
 }
 
 /*%%%%%
