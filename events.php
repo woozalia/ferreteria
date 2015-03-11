@@ -97,8 +97,15 @@ class clsSysEvents extends clsSysEvents_abstract {
 	}
 	return $arIns;
     }
+    // TODO: this should fetch the current *system* user when in CLI mode
     protected function UserString() {
-	$oUser = $this->Engine()->App()->User();
+	$oApp = $this->Engine()->App();
+	if (is_null($oApp)) {
+	    // working in CLI context -- no app object
+	    $oUser = NULL;
+	} else {
+	    $oUser = $oApp->User();
+	}
 	if (is_null($oUser)) {
 	    $out = '(n/a)';
 	} else {
@@ -139,15 +146,23 @@ class clsSysEvents extends clsSysEvents_abstract {
 	    throw new exception($txtBody);	// this should send a second, more detailed email
 	}
     }
+    /*----
+      TODO: fix $this->UserString() to fetch ssh user string when in CLI mode
+    */
     public function CreateEvent(array $arArgs) {
-	$sUser = $this->UserString();
-
 	$arIns = static::CalcSQL($arArgs);
 	if (empty($arIns)) {
 	    return NULL;
 	} else {
 	    $arIns['WhenStarted'] = 'NOW()';
-	    $arIns['WhoNetwork'] = SQLValue($_SERVER['REMOTE_ADDR']);
+	    if (array_key_exists('REMOTE_ADDR',$_SERVER)) {
+		$sUser = $this->UserString();
+		$sAddr = $_SERVER['REMOTE_ADDR'];
+	    } else {
+		$sUser = '(sys:'.$_SERVER['USER'].')';
+		$sAddr = $_SERVER['SSH_CLIENT'];
+	    }
+	    $arIns['WhoNetwork'] = SQLValue($sAddr);
 	    $arIns['WhoAdmin'] = SQLValue($sUser);
 	    $idNew = $this->Insert($arIns);
 	    if ($idNew) {
