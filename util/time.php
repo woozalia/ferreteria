@@ -29,7 +29,7 @@ class clsDate {
 
 class clsTime {
 
-    // this may not be needed -- try clsData::NzDate
+    // this may not be needed -- try clsDate::NzDate
     static public function ShowStamp_HideTime($iStamp) {
 
 	if (is_string($iStamp)) {

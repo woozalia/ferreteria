@@ -36,14 +36,15 @@ class clsDataRecord_Menu extends clsDataSet {
       // table classes that don't descend from this class can just copy/paste these methods
       // ++ BOILERPLATE: event logging ++ //
 
+    private $oLogger;
     protected function Log() {
-	if (!is_object($this->logger)) {
+	if (empty($this->oLogger)) {
 	    $tLog = $this->Engine()->App()->Events();
 	    // alternative way to create Events object:
 	    //$tLog = VCM_Syslog::SpawnTable($this->Engine());
-	    $this->logger = new clsLogger_DataSet($this,$tLog);
+	    $this->oLogger = new clsLogger_DataSet($this,$tLog);
 	}
-	return $this->logger;
+	return $this->oLogger;
     }
     public function StartEvent(array $iarArgs) {
 	$this->Log()->StartEvent($iarArgs);

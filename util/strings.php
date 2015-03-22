@@ -252,6 +252,19 @@ class clsString {
 	$out[KS_INDEX] = $idx;
 	return $out;
     }
+    static public function Xplode($iString) {
+	if (!is_string($iString)) {
+	    throw new exception('Xplode() was given a non-string.');
+	}
+	$tok = substr ( $iString, 0, 1);	// token for splitting
+	if ($tok) {
+	    $tks = substr ( $iString, 1 );	// tokenized string
+	    $list = explode ( $tok, $tks );	// split the string
+	    return $list;
+	} else {
+	    return NULL;
+	}
+    }
 
     // -- GENERAL SPLITTING -- //
     // ++ SPECIFIC SPLITS ++ //
@@ -284,7 +297,7 @@ class clsString {
 
     // -- SPECIFIC SPLITS -- //
     // ++ NATURAL LANGUAGE ++ //
-    
+
     static function Pluralize($iQty,$iSingular='',$iPlural='s') {
 	if ($iQty == 1) {
 	    return $iSingular;

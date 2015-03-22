@@ -160,7 +160,7 @@ class clsSysEvents extends clsSysEvents_abstract {
 		$sAddr = $_SERVER['REMOTE_ADDR'];
 	    } else {
 		$sUser = '(sys:'.$_SERVER['USER'].')';
-		$sAddr = $_SERVER['SSH_CLIENT'];
+		$sAddr = clsArray::Nz($_SERVER,'SSH_CLIENT','LAN');
 	    }
 	    $arIns['WhoNetwork'] = SQLValue($sAddr);
 	    $arIns['WhoAdmin'] = SQLValue($sUser);

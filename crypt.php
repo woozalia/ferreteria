@@ -66,19 +66,47 @@ class Cipher_mcrypt extends Cipher_onekey {
 */
 class Cipher_pubkey extends Cipher {
     private $sPubKey;
+    private $sPrvKey;
+    private $sLastPlain;	// data last encrypted
 
-    public function PubKey($iPubKey) {
-	$this->sPubKey = $iPubKey;
+    // these two static functions probably belong somewhere else, but at the moment I don't know where
+
+    static public function Textify($binary) {
+	return base64_encode($binary);
     }
+    static public function Detextify($sText) {
+	return base64_decode($sText);
+    }
+
+    public function PublicKey($sPubKey=NULL) {
+	if (!is_null($sPubKey)) {
+	    $this->sPubKey = $sPubKey;
+	}
+	return $this->sPubKey;
+    }
+    public function PrivateKey($sPrvKey=NULL) {
+	if (!is_null($sPrvKey)) {
+	    $this->sPrvKey = $sPrvKey;
+	}
+	return $this->sPrvKey;
+    }
+    public function LastPlain() {
+	return $this->sLastPlain;
+    }
+    /*
     public function PubKey_isSet() {
 	return isset($this->sPubKey);
-    }
+    }*/
     public function encrypt($input) {
-	openssl_public_encrypt($input, $sEncrypted, $this->sPubKey);
+	$this->sLastPlain = $input;
+	$ok = openssl_public_encrypt($input, $sEncrypted, $this->PublicKey(), OPENSSL_SSLV23_PADDING);
+	if (!$ok) {
+	    $this->ReportErrors('encryption');
+	}
 	return $sEncrypted;
     }
-    public function decrypt($input,$iPvtKey) {
-	$ok = openssl_private_decrypt($input, $sDecrypted, $iPvtKey);
+    public function decrypt($input) {
+	$ok = openssl_private_decrypt($input, $sDecrypted, $this->PrivateKey());
 	if (!$ok) {
 	    $this->ReportErrors('decryption');
 	}
@@ -91,7 +119,11 @@ class Cipher_pubkey extends Cipher {
 	    $sMsg .= "\nCURRENT ERROR: $sErr";
 	    $qMsg++;
 	}
-	$sDescr = clsString::Pluralize($qMsg,'gave an error',"gave $qMsg errors:");
+	if ($qMsg > 0) {
+	    $sDescr = clsString::Pluralize($qMsg,'gave an error',"gave $qMsg errors:");
+	} else {
+	    $sDescr = 'failed for some reason.';
+	}
 	throw new exception("$sAction $sDescr$sMsg");
     }
 }

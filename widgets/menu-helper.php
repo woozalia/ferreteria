@@ -163,9 +163,14 @@ class clsMenuData_helper {
 	if (method_exists($this->Recs(),'Value_IdentityKeys')) {
 	    $rc = $this->Recs();
 	    $arKeys = $rc->Value_IdentityKeys();
-	    $oPage = $rc->Engine()->App()->Page();
-	    foreach ($arKeys as $key) {
-		$arArgs[$key] = $oPage->PathArg($key);
+	    if (is_array($arKeys)) {
+		$oPage = $rc->Engine()->App()->Page();
+		foreach ($arKeys as $key) {
+		    $arArgs[$key] = $oPage->PathArg($key);
+		}
+	    } else {
+		echo '<b>Error</b>: $arKeys is not an array; value=['.$arKeys.'], rc class=['.get_class($rc).'].';
+		throw new exception('Internal error: $arKeys is not an array.');
 	    }
 	}
 	$url = $this->Recs()->Engine()->App()->Page()->SelfURL($arArgs,FALSE);
@@ -181,7 +186,6 @@ class clsMenuData_helper {
 	clsHTTP::DisplayOnReturn($sText);
 	$url = $this->RecURL();
 	echo 'REDIRECTING to '.$url.' and saving the following text:<br>'.$sText;
-	//throw new exception('What is the call-stack for this?');	// DEBUGGING
 	clsHTTP::Redirect($url,array(),FALSE,HTTP_REDIRECT_POST);
 	die();	// don't do any more work (including accidentally erasing the cookie)
     }

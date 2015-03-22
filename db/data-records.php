@@ -128,6 +128,7 @@ abstract class clsRecs_abstract {
 		    $htTable = ' from query';
 		}
 		$strMsg = 'Attempted to read nonexistent field "'.$iName.'"'.$htTable.' in class '.get_class($this);
+
 		echo $strMsg.'<br>';
 		echo '<b>Source SQL</b>: '.$this->sqlMake.'<br>';
 		echo '<b>Row contents</b>:<pre>'.print_r($this->Values(),TRUE).'</pre>';
@@ -571,9 +572,13 @@ class clsDataSet_bare extends clsRecs_key_single {
 class clsDataSet extends clsRecs_key_single {
   // -- accessing individual fields
     public function __set($iName, $iValue) {
+	$sClass = get_class($this);
+	throw new exception("Internal - Attempted to set undeclared member [$sClass]->[$iName].");
 	$this->Row[$iName] = $iValue;
     }
     public function __get($iName) {
+	$sClass = get_class($this);
+	throw new exception("Internal - Attempted to access undeclared member [$sClass]->[$iName].");
 	if (isset($this->Row[$iName])) {
 	    return $this->Row[$iName];
 	} else {

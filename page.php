@@ -82,7 +82,6 @@ abstract class clsPage {
     abstract protected function Exception_Message_toShow($iMsg);
 }
 
-
 /*%%%%
   PURPOSE: page which provides some basic services
     - default message/email for exceptions
@@ -204,8 +203,8 @@ abstract class clsPageLogin extends clsPageBasic {
 	return $arOut;
     }
 
-    // --STATIC--
-    // ++DYNAMIC++
+    // -- STATIC -- //
+    // ++ DYNAMIC ++ //
 
     // user access stuff
     private $sLogin;
@@ -324,7 +323,7 @@ abstract class clsPageLogin extends clsPageBasic {
     }
 
     // -- DATA TABLE ACCESS -- //
-    // ++ DATA RECORD ACCESS -- //
+    // ++ DATA RECORD ACCESS ++ //
 
     protected function UserRecord() {
 	if (is_null($this->rcUser)) {

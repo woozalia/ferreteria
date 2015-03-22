@@ -63,6 +63,12 @@ class clsHTTP {
 	}
 	return $sText;
     }
+    static public function ClientAddress_string() {
+	return $_SERVER['REMOTE_ADDR'];
+    }
+    static public function ClientBrowser_string() {
+	return $_SERVER['HTTP_USER_AGENT'];
+    }
 
     // -- FORM DATA -- //
 }

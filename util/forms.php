@@ -239,17 +239,28 @@ class clsField {
 	2010-11-20 Moved from clsForms to clsForm and adapted/renamed
     */
     public function Change_fromShown($iNewVal) {
-	assert('!is_array($iNewVal)');
-	//$isSame = $this->ValSameAs($iNewVal);
 	$valOld = $this->ValStore();
 	$valNew = $this->Convert_ShowToStore($iNewVal);
 	$isSame = ($valOld === $valNew);
 	if (!$isSame) {
-	    $objOld = clone $this;
+	    $fldOld = clone $this;
 	    $this->SetStored($valNew);
-	    $this->objParent->AddChange($objOld,$this);
+	    $this->Parent()->AddChange($fldOld,$this);
 	}
 	return $isSame;
+    }
+    /*----
+      ACTION: Forces the acceptance of the given value as a *change*,
+	even if it matches what is already stored.
+      PURPOSE: This is for saving new records, which may have default
+	values displayed (and hence stored in memory) which need to be
+	saved even if the user doesn't alter them.
+    */
+    public function Change_asNew($sNewVal) {
+	$valNew = $this->Convert_ShowToStore($sNewVal);
+	$fldOld = clone $this;
+	$this->SetStored($valNew);
+	$this->Parent()->AddChange($fldOld,$this);
     }
     /*----
       ACTION: Clears the field's value
@@ -489,6 +500,13 @@ abstract class clsCtrls {
     }
     abstract protected function NewFieldsObject();
     private $oFields;
+    /*----
+      HISTORY:
+	2013-12-21 renamed from Fields() to FieldsObject()
+	2014-03-10 at some earlier point, was written to use NewFieldsObject()
+	  if internal object was not set and no object was passed.
+	  Prior to that, it threw an exception.
+    */
     public function FieldsObject(clsFields $oFields=NULL) {
 	if (is_null($this->oFields)) {
 	    if (is_null($oFields)) {
@@ -499,21 +517,6 @@ abstract class clsCtrls {
 	}
 	return $this->oFields;
     }
-    /*----
-      HISTORY:
-	2013-12-21 renamed from Fields() to FieldsObject()
-    */
-/* 2014-03-10 why is this needed?
-    public function FieldsObject(clsFields $oFields=NULL) {
-	if (!is_null($oFields)) {
-	    $this->oFields = $oFields;
-	}
-	if (is_null($this->oFields)) {
-	    throw new exception('Attempting to access object that has not been set.');
-	}
-	return $this->oFields;
-    }
-*/
     public function AddField(clsField $iField, clsCtrl $iCtrl) {
 	$strName = $iField->Name();
 	$this->arCtrls[$strName] = $iCtrl;
@@ -542,10 +545,10 @@ abstract class clsCtrls {
 */
 abstract class clsCtrl {
     protected $objField;
-    protected $strIndex;	// indexing, for multi-record forms
+    private $sIndex;	// indexing, for multi-record forms
 
     public function __construct() {
-	$this->strIndex = NULL;
+	$this->sIndex = NULL;
     }
     public function Field(clsField $iField=NULL) {
 	if (!is_null($iField)) {
@@ -553,17 +556,20 @@ abstract class clsCtrl {
 	}
 	return $this->objField;
     }
-    public function Index($iIndex=NULL) {
-	if (!is_null($iIndex)) {
-	    $this->strIndex = $iIndex;
+    public function Index($sIndex=NULL) {
+	if (!is_null($sIndex)) {
+	    $this->SetIndex($sIndex);
 	}
-	return $this->strIndex;
+	return $this->sIndex;
     }
-    public function SetIndex($iIndex) {
-	$this->strIndex = $iIndex;
+    public function SetIndex($sIndex) {
+	if ($sIndex == '') {
+	    throw new exception('Setting index to empty string');
+	}
+	$this->sIndex = $sIndex;
     }
     public function HasIndex() {
-	return !is_null($this->strIndex);
+	return !is_null($this->sIndex);
     }
     abstract public function Render();	// render code to display the control
     abstract public function Receive();	// receive user-entered value for this control
@@ -598,9 +604,11 @@ class clsCtrlHTML extends clsCtrl {
 	} else {
 	    $strOut = $strPart;
 	}
+	echo "CTRL NAME=[$strOut]<br>";
 	return $strOut;
     }
     public function Render() {
+    echo 'RENDERING CONTROL<br>';
 	$out = '<input name="'
 	  .$this->NameOut()
 	  .'" value="'
@@ -637,8 +645,18 @@ class clsCtrlHTML extends clsCtrl {
 	    if ($this->HasIndex()) {
 		$ar = $_POST[$htName];
 		$strIdx = $this->Index();
-		// if this line throws an error, then the control name probably didn't have an [index]:
-		$val = nz($ar[$strIdx]);
+		if (is_array($ar)) {
+		    // if this line throws an error, find out why.
+		    $val = $ar[$strIdx];
+		} else {
+		    $sMsg = '<b>Problem</b>: The field named "'
+		      .$htName
+		      .'" is lacking an array index. Value is "'.$ar.'", current index value is "'.$strIdx.'".'
+		      .'<br>';
+		    echo $sMsg;
+		    $sClass = get_class($this);
+		    throw new exception("Internal error (class:[$sClass] field:[$htName] value:[$ar] index:[$strIdx]");
+		}
 	    } else {
 		$val = $_POST[$htName];
 	    }
@@ -709,7 +727,11 @@ class clsCtrlHTML_DropDown extends clsCtrlHTML {
     }
     public function Render() {
 	if (count($this->arRows > 0)) {
-	    $valCur = $this->Field()->ValStore();
+	    $oField = $this->Field();
+	    if (!is_object($oField)) {
+		throw new exception('Could not retrieve object for field index "'.$this->Index().'".');
+	    }
+	    $valCur = $oField->ValStore();
 	    $out = "\n".'<select name="'.$this->NameOut().'"'.$this->RenderAttr().'>';
 	    if (!is_null($this->strChoose)) {
 		$out .= static::DropDown_row(NULL,$this->strChoose,$valCur);
@@ -731,6 +753,9 @@ class clsCtrlHTML_DropDown extends clsCtrlHTML {
 	  comparing. (Will this cause trouble when comparing 0 to NULL?)
     */
     protected static function DropDown_row($iVal,$iTxt,$iDefault=NULL) {
+	if (!is_scalar($iTxt)) {
+	    throw new exception('Expected string for iTxt, got something else.');
+	}
 	if ((string)$iVal == (string)$iDefault) {	// must be "===", else NULL=0 apparently
 	    $htSelect = " selected";
 	} else {

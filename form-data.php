@@ -1,12 +1,12 @@
 <?php
 /*
-  LIBRARY: admin.forms.php - some classes useful for administration functions in MW extensions
+  LIBRARY: form-data.php - form-database connector classes
   HISTORY:
     2010-11-01 created for clsForm_DataSet
     2010-11-18 trying this as a descendent of clsCtrls
     2013-12-14 adapting admin.forms.php as form-data.php for non-MW
 */
-class clsForm_recs extends clsCtrls {
+class clsForm_recs extends clsCtrls { // 2015-02-12 should probably be renamed clsCtrl_recs for consistency
     protected $rcData;
     protected $arNewVals;
     private $sTemplate;
@@ -74,6 +74,7 @@ class clsForm_recs extends clsCtrls {
     public function RenderControl($sName) {
 	$oCtrl = $this->Ctrl($sName);
 	if (is_object($oCtrl)) {
+	echo "RENDERING CONTROL [$sName], CLASS=[".get_class($oCtrl).']<br>';
 	    return $oCtrl->Render();
 	} else {
 	    throw new exception('No control found for "'.$sName.'"');
@@ -107,16 +108,29 @@ class clsForm_recs extends clsCtrls {
 	2010-11-19 Moved from clsFields to clsForm_DataSet
     */
     public function RecvVals() {
+	$isNew = $this->DataRecord()->IsNew();
 	foreach($this->FieldsArray() as $name => $field) {
+//	echo 'FIELD ['.$name.']: ';
 	    $oCtrl = $this->Ctrl($name);
 	    if (!is_object($oCtrl)) {
 		throw new exception('Attempt to access nonexistent control "'.$name.'".');
 	    }
 	    $sNewVal = $oCtrl->Receive();
-	    if (!is_null($sNewVal)) {	// NULL means no data received for this control
-		$field->Change_fromShown($sNewVal);
+	    if (is_null($sNewVal)) {	// NULL means no data received for this control
+//		echo 'NOTHING RECEIVED';
+	    } else {
+//		echo 'NEW VAL=['.$sNewVal.']';
+		if ($isNew) {
+		    $field->Change_asNew($sNewVal);
+//		    echo ' - CHANGED';
+		} else {
+		    $field->Change_fromShown($sNewVal);
+//		    echo ' - SAME';
+		}
 	    }
+//	    echo '<br>';
 	}
+//	die();
     }
     /*----
       ACTION: Saves the data (UPDATE or INSERT as appropriate) and then reloads the page
@@ -124,8 +138,9 @@ class clsForm_recs extends clsCtrls {
 	duplicate records).
       INPUT:
 	Notes (optional) -- human-entered text to go in "Notes" field of event log
-	arPath (optional) -- defined by record class ($this->DataRecord()), which is
-	  in turn typically defined by clsMenuData_helper::_AdminRedirect()
+	arRedir (optional) -- array of path overrides for redirect, as defined by record class
+	  ($this->DataRecord()), which is in turn typically defined by clsMenuData_helper::_AdminRedirect()
+	sRedir (optional) -- path override for redirect; you can supply either arRedir, sRedir, or neither
       NOTE:
 	Reloading: We always want to reload the page (via header redirect)
 	  (a) to get rid of the POST data (so user-reloads don't re-save)
@@ -133,16 +148,19 @@ class clsForm_recs extends clsCtrls {
 	  (c) to get rid of the "edit" directive in the URL (this could also be done by removing it from the form's target URL)
 	  There are other ways of doing B and C but not A. Not having to deal with the alternatives for B and C also simplifies things.
       HISTORY:
-	2010-11-18 Added iNotes parameter.
+	2010-11-18 added iNotes parameter
+	2015-02-16 see http://htyp.org/User:Woozle/Ferreteria/changes/1
     */
-    public function Save($iNotes=NULL,array $arPath=NULL) {
+    public function Save($iNotes=NULL) {
 	$oFlds = $this->FieldsObject();
 	$rcData = $this->DataRecord();
+
 	// get the form data and note any changes
-	//$objFlds->RecvVals();
 	$this->RecvVals();
+
 	// get the list of field updates
 	$arUpd = $oFlds->DataUpdates();
+
 	// is this a new record, or updating an existing one?
 	$isNew = $rcData->IsNew();
 
@@ -186,7 +204,6 @@ class clsForm_recs extends clsCtrls {
 	    $arUpd = array_merge($arUpd,$this->NewVals(),$arDataAdd);
 
 	    $ok = $rcData->Make($arUpd);
-
 	    $arEv = array();
 	    if ($ok === FALSE) {
 		$strErr = $rcData->Engine()->getError();
@@ -209,19 +226,15 @@ class clsForm_recs extends clsCtrls {
 	    if (!is_null($rcEvent)) {
 		$rcEvent->Finish($arEv);
 	    }
-	    if ($ok) {
-		// go to admin page for new record
-// see note about reloading
-		echo 'REDIRECTING with class '.get_class($rcData).'<br>';
-		$rcData->AdminRedirect($arPath);
-	    }
 	} else {
 	    $out .= 'No changes to save.';
+	    $ok = FALSE;	// stay on edit form -- maybe we forgot something
 	}
-	return $out;
+	$this->htMsg = $out;	// save any display messages for caller
+	return $ok;
     }
 }
-class clsForm_recs_indexed extends clsForm_recs {
+class clsForm_recs_indexed extends clsForm_recs { // 2015-02-12 should probably be renamed clsCtrl_recs_indexed for consistency
     /*----
       EXPERIMENTAL
 	Need to override the parent because we don't want to have to pass
@@ -386,7 +399,7 @@ class clsForm_recs_indexed extends clsForm_recs {
 	2010-11-19 Adapted from clsForm_DataSet::Save()
 	2014-01-26 added arPath param -- this may need to be reworked
     */
-    public function Save($iNotes=NULL,array $arPath=NULL,clsEvents $iLog=NULL) {
+    public function Save($iNotes=NULL,clsEvents $iLog=NULL) {
 	$objFlds = $this->FieldsObject();
 	$objData = $this->DataRecord();
 	// get the form data and note any changes
@@ -395,22 +408,6 @@ class clsForm_recs_indexed extends clsForm_recs {
 //	$arUpd = $objFlds->DataUpdates();
 	$arUpds = $this->arUpd;
 	$arIns = $this->arIns;
-//echo 'INSERT:<pre>'.print_r($arIns,TRUE).'</pre>';
-//echo 'UPDATE:<pre>'.print_r($arUpds,TRUE).'</pre>';
-	// is this a new record, or updating an existing one?
-/*
-	$isNew = $objData->IsNew();
-
-	if ($isNew) {
-	    $strAct = 'Creating: ';
-	    $strHdr = 'Creating';
-	    $strCode = 'NEW';
-	} else {
-	    $strAct = 'Edited: ';
-	    $strHdr = 'Saving Edit';
-	    $strCode = 'ED';
-	}
-*/
 
 	$isChg = FALSE;
 	$strErrAll = NULL;
