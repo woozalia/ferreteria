@@ -517,11 +517,12 @@ abstract class clsCtrls {
 	}
 	return $this->oFields;
     }
-    public function AddField(clsField $iField, clsCtrl $iCtrl) {
-	$strName = $iField->Name();
-	$this->arCtrls[$strName] = $iCtrl;
-	$iCtrl->Field($iField);
-	$this->FieldsObject()->Add($iField);
+    public function AddField(clsField $oField, clsCtrl $oCtrl) {
+	$sName = $oField->Name();
+	$this->arCtrls[$sName] = $oCtrl;
+	$oCtrl->Field($oField);
+	$oCtrl->RowObject($this);
+	$this->FieldsObject()->Add($oField);
     }
     /*
       HISTORY:
@@ -544,18 +545,20 @@ abstract class clsCtrls {
   CLASS: clsCtrl -- abstract UI control
 */
 abstract class clsCtrl {
-    protected $objField;
-    private $sIndex;	// indexing, for multi-record forms
+    private $oField;
+    private $oRow;
+//    private $sIndex;	// indexing, for multi-record forms
 
     public function __construct() {
-	$this->sIndex = NULL;
+	//$this->sIndex = NULL;
+	$this->oRow = NULL;
     }
-    public function Field(clsField $iField=NULL) {
-	if (!is_null($iField)) {
-	    $this->objField = $iField;
+    public function Field(clsField $oField=NULL) {
+	if (!is_null($oField)) {
+	    $this->oField = $oField;
 	}
-	return $this->objField;
-    }
+	return $this->oField;
+    }/*
     public function Index($sIndex=NULL) {
 	if (!is_null($sIndex)) {
 	    $this->SetIndex($sIndex);
@@ -570,6 +573,19 @@ abstract class clsCtrl {
     }
     public function HasIndex() {
 	return !is_null($this->sIndex);
+    }*/
+    // PUBLIC so row objects can add themselves
+    public function RowObject(clsCtrls $oRow=NULL) {
+	if (!is_null($oRow)) {
+	    $this->oRow = $oRow;
+	}
+	return $this->oRow;
+    }
+    protected function HasIndex() {
+	return $this->RowObject()->HasIndex();
+    }
+    protected function IndexString() {
+	return $this->RowObject()->IndexString();
     }
     abstract public function Render();	// render code to display the control
     abstract public function Receive();	// receive user-entered value for this control
@@ -600,15 +616,13 @@ class clsCtrlHTML extends clsCtrl {
     protected function NameOut() {
 	$strPart = $this->NameBase();
 	if ($this->HasIndex()) {
-	    $strOut = $strPart.'['.$this->Index().']';
+	    $strOut = $strPart.'['.$this->IndexString().']';
 	} else {
 	    $strOut = $strPart;
 	}
-	echo "CTRL NAME=[$strOut]<br>";
 	return $strOut;
     }
     public function Render() {
-    echo 'RENDERING CONTROL<br>';
 	$out = '<input name="'
 	  .$this->NameOut()
 	  .'" value="'
@@ -644,7 +658,7 @@ class clsCtrlHTML extends clsCtrl {
 	if (isset($_POST[$htName])) {
 	    if ($this->HasIndex()) {
 		$ar = $_POST[$htName];
-		$strIdx = $this->Index();
+		$strIdx = $this->IndexString();
 		if (is_array($ar)) {
 		    // if this line throws an error, find out why.
 		    $val = $ar[$strIdx];

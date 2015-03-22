@@ -5,9 +5,10 @@
     2010-11-01 created for clsForm_DataSet
     2010-11-18 trying this as a descendent of clsCtrls
     2013-12-14 adapting admin.forms.php as form-data.php for non-MW
+    2015-03-22 redoing how indexes work
 */
 class clsForm_recs extends clsCtrls { // 2015-02-12 should probably be renamed clsCtrl_recs for consistency
-    protected $rcData;
+    private $rcData;
     protected $arNewVals;
     private $sTemplate;
 
@@ -30,6 +31,9 @@ class clsForm_recs extends clsCtrls { // 2015-02-12 should probably be renamed c
     }
     protected function DataRecord() {
 	return $this->rcData;
+    }
+    public function HasIndex() {
+	return FALSE;
     }
     /*----
       ACTION: Sets or retrieves the template used for displaying the form
@@ -74,7 +78,6 @@ class clsForm_recs extends clsCtrls { // 2015-02-12 should probably be renamed c
     public function RenderControl($sName) {
 	$oCtrl = $this->Ctrl($sName);
 	if (is_object($oCtrl)) {
-	echo "RENDERING CONTROL [$sName], CLASS=[".get_class($oCtrl).']<br>';
 	    return $oCtrl->Render();
 	} else {
 	    throw new exception('No control found for "'.$sName.'"');
@@ -234,40 +237,41 @@ class clsForm_recs extends clsCtrls { // 2015-02-12 should probably be renamed c
 	return $ok;
     }
 }
-class clsForm_recs_indexed extends clsForm_recs { // 2015-02-12 should probably be renamed clsCtrl_recs_indexed for consistency
-    /*----
-      EXPERIMENTAL
-	Need to override the parent because we don't want to have to pass
-	  row values, because they will change.
-	Eventually, parent should be rewritten to allow for this possibility.
-    */
+class clsForm_recs_indexed extends clsForm_recs {
     /*----
       HISTORY:
 	2011-12-20 changed param 1 from clsDataSet to clsRecs_key_single
 	  to match change in parent declaration
 	2014-04-27 Removed iRichText setup param -- doesn't seem to be used anywhere
+	2015-03-22 Removed $this->objFields=NULL because nothing seems to use it
+	  This now is identical to parent, so not needed.
     */
-    public function __construct(clsRecs_key_single $iData) {
+/*    public function __construct(clsRecs_key_single $iData) {
 	parent::__construct($iData);
-
-	$this->objFields = NULL;
+    }
+*/
+    public function HasIndex() {
+	return TRUE;
+    }
+    public function IndexString() {
+	return static::IndexString_toUse($this->DataRecord()->KeyValue());
     }
     protected function NewFieldsObject() {
 	return new clsFields(array());
     }
     public function RowPrefix() {
 	$strKeyVal = $this->DataRecord()->KeyValue();
-	$strIndex = self::IndexString($strKeyVal);
+	$strIndex = self::IndexString_toUse($strKeyVal);
 	$out = '<input type=hidden name="_update['.$strIndex.']" value=1>';
 	return $out;
     }
-    static protected function IndexString($iIndex) {
+    static protected function IndexString_toUse($iIndex) {
 	return empty($iIndex)?'new':$iIndex;
     }
     protected function LoadCtrl($iName,$iIndex) {
-	$objCtrl = $this->Ctrl($iName);
-	$objCtrl->Index(self::IndexString($iIndex));
-	return $objCtrl;
+	$oCtrl = $this->Ctrl($iName);
+	//$oCtrl->Index(self::IndexString_toUse($iIndex));
+	return $oCtrl;
     }
     public function Render($iName) {
 	//$objCtrl = $this->Ctrl($iName);
@@ -308,6 +312,7 @@ class clsForm_recs_indexed extends clsForm_recs { // 2015-02-12 should probably 
 
 	$objData = $this->DataRecord();
 
+	// get a list of rows being modified
 	$arUpd = clsHTTP::Request()->GetArray('_update');
 	$cntRows = count($arUpd);
 	if ($cntRows > 0) {
@@ -352,14 +357,22 @@ class clsForm_recs_indexed extends clsForm_recs { // 2015-02-12 should probably 
 		    if ($isNew) {
 			// make sure there's some data
 			$arReq = $this->FieldsRequired();
+			$arNew = $this->NewVals();
 			$okIns = TRUE;	// we can insert unless there's an empty required field
 			$arMissing = NULL;
 			$arChg = ArrayJoin($arEdit,$this->NewVals(),FALSE,TRUE);	// fill in any unfilled values from default list
 			if (is_array($arReq)) {
 			    foreach ($arReq as $key) {
 				if (empty($arChg[$key])) {
-				    $okIns = FALSE;
-				    $arMissing[] = $key;
+				    // if not submitted by user, check for new-default
+				    if (array_key_exists($key,$arNew)) {
+					// use new-default value
+					$arChg[$key] = $arNew[$key];
+				    } else {
+					// value required, not submitted, no default available = fail
+					$okIns = FALSE;
+					$arMissing[] = $key;
+				    }
 				}
 			    }
 			}
@@ -453,6 +466,7 @@ class clsForm_recs_indexed extends clsForm_recs { // 2015-02-12 should probably 
 	if (is_array($arIns)) {
 	    $isChg = TRUE;
 	    $ok = $objData->Table()->Insert($arIns);
+	    die ("INSERT: ok=[$ok] SQL=".$objData->Table()->sqlExec.'<br>');
 //global $sql;
 //echo 'INSERT:<pre>'.print_r($arIns,TRUE).'</pre> OK=['.$ok.'] SQL=['.$sql.']';
 
