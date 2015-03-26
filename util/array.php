@@ -49,6 +49,22 @@ class clsArray {
     // -- CALCULATIONS -- //
     // ++ RENDERING ++ //
 
+    static public function RenderList($ar,$sSep=', ') {
+	if (is_scalar($ar)) {
+	    return $ar;
+	} elseif (is_null($ar)) {
+	    return NULL;
+	} else {
+	    $out = '';
+	    foreach ($ar as $val) {
+		if ($out != '') {
+		    $out .= $sSep;
+		}
+		$out .= $val;
+	    }
+	    return $out;
+	}
+    }
     /*----
       INPUT:
 	$ar = array to render

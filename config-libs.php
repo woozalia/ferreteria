@@ -4,11 +4,18 @@ PURPOSE: define locations for libraries using modloader.php
 FILE SET: common libraries
 HISTORY:
   2013-08-29 created
+  2015-03-14 extracted data modules from here into separate library
 */
-//require_once('../modloader.php');
 
 $fp = dirname( __FILE__ );
 clsModule::BasePath($fp.'/');
+clsLibrary::BasePath($fp.'/');
+
+// database library indexes
+$oL = new clsLibrary('ferreteria.db.1','db/config-libs-v1.php');
+$oL = new clsLibrary('ferreteria.db.2','db/config-libs-v2.php');
+$oL = new clsLibrary('ferreteria.mw.1','mw/config-libs-v1.php');
+$oL = new clsLibrary('ferreteria.mw.2','mw/config-libs-v2.php');
 
 $om = new clsModule(__FILE__, 'app.php');
   $om->AddClass('clsApp');
@@ -45,30 +52,6 @@ $om = new clsModule(__FILE__, 'skin.php');
   $om->AddClass('clsSkin_standard');
 $om = new clsModule(__FILE__, 'skin-login.php');
   $om->AddClass('clsSkin_login');
-
-// DATABASE LIBRARIES
-$om = new clsModule(__FILE__, 'db/data.php');
-  $om->AddClass('clsDatabase_abstract');
-  $om->AddClass('clsDatabase');
-  $om->AddFunc('SQLValue');
-  $om->AddFunc('NzArray');
-$om = new clsModule(__FILE__, 'db/data-chained.php');
-  $om->AddClass('clsTable_chained');
-$om = new clsModule(__FILE__, 'db/data-indexed.php');
-  $om->AddClass('clsTable_indexed');
-$om = new clsModule(__FILE__, 'db/data-indexer.php');
-  $om->AddClass('clsIndexer_Table');
-  $om->AddClass('clsIndexer_Table_single_key');
-  $om->AddClass('clsIndexer_Table_multi_key');
-$om = new clsModule(__FILE__, 'db/data-records.php');
-  $om->AddClass('clsDataSet');
-  $om->AddClass('clsRecs_keyed_abstract');
-  $om->AddClass('clsRecs_key_single');
-$om = new clsModule(__FILE__, 'db/data-table.php');
-  $om->AddClass('clsTable_abstract');
-  $om->AddClass('clsTable');
-  $om->AddClass('clsTable_keyed_abstract');
-  $om->AddClass('clsTable_key_single');
 
 // DEPRECATED
 $om = new clsModule(__FILE__, 'deprecated/user-mw.php');
