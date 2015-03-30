@@ -8,33 +8,41 @@
     FIELDS handle data but not how it is displayed or stored
     CTRLS handle how FIELDS are displayed
 */
-/*###
-  SECTION: utility functions
-*/
-/* 2013-12-14 use clsHTML::fromBool()
-function Bool_toHTML($iVal) {
-    if ($iVal) {
-	$out = '<font color=green title="yes">&radic;</font>';
-    } else {
-	$out = '<font color=grey title="no">&ndash;</font>';
-    }
-    return $out;
-}
-*/
 /*====
   CLASS: clsFields -- group of clsField objects
   USAGE: Descendant classes can implement a constructor which creates all the fields,
     or they can be loaded via Add() by an external routine.
 */
-class clsFields {
-    protected $arFields;
-    protected $arValues;	// starting values
+class clsFields_DEPRECATED {
+    private $arFields;
+    private $arDVals;	// default values
     protected $arChg;		// array of changed fields: array[name][old|new] = field object
     protected $strPfx;
 
-    public function __construct(array $iVals=NULL) {
-	$this->arValues = $iVals;
+    public function __construct(array $arVals=NULL) {
+	$this->DefaultValues($arVals);
     }
+
+    // ++ DEFAULT VALUES ++ //
+
+    /*----
+      PURPOSE: mainly for writing values to be rendered elsewhere
+      PUBLIC so external recordset iterators can load each new row
+    */
+    public function DefaultValues(array $arVals=NULL) {
+	if (is_null($arVals)) {
+	    $this->arDVals = $arVals;
+	}
+	return $this->arDVals;
+    }
+    protected function HasDefaultValue($sName) {
+	return array_key_exists($sName,$this->arDVals);
+    }
+    protected function DefaultValue($sName) {
+	return $this->arDVals[$sName];
+    }
+
+    // -- DEFAULT VALUES -- //
     /*----
       RETURNS: array of field objects
     */
@@ -66,50 +74,11 @@ class clsFields {
     public function Add(clsField $iField) {
 	$strName = $iField->Name();
 	$iField->Parent($this);	// give control a pointer back to the group
-	if (isset($this->arValues[$strName])) {
-	    $iField->ValStore($this->arValues[$strName]);
+	if ($this->HasDefaultValue($strName)) {
+	    $iField->ValStore($this->DefaultValue($strName));
 	}
 	$this->arFields[$strName] = $iField;
     }
-    /*----
-      ACTION: For each field in the group, checks to see
-	if there's POST data. If there is, updates the
-	control with that data.
-      HISTORY:
-	2010-11-02 Checkboxes that aren't checked don't return values in POST data,
-	  so we can't skip values that aren't set. Must assume all form controls are included.
-    */
-/*
-    public function RecvVals() {
-	foreach($this->arFields as $name => $field) {
-	    $htFormName = $field->FormName();
-	    $strNewVal = nz($_POST[$htFormName],'');
-	    $isSame = $field->ValSameAs($strNewVal);
-	    if (!$isSame) {
-		$this->arChg[$name]['old'] = $field->Value();
-		$field->Value($strNewVal);
-		$this->arChg[$name]['new'] = $field->Value();
-		$field->Value($strNewVal);
-	    }
-	}
-    }
-*/
-    /*----
-      RETURNS: ValSameAs() return value
-      HISTORY:
-	2010-11-19 Added to help with multi-row forms
-    */
-/*
-    public function SetField($iField,$iNewVal) {
-	$isSame = $iField->ValSameAs($iNewVal);
-	if (!$isSame) {
-	    $this->arChg[$name]['old'] = $iField->Value();
-	    $iField->Value($strNewVal);
-	    $this->arChg[$name]['new'] = $iField->Value();
-	}
-	return $isSame;
-    }
-*/
     public function AddChange(clsField $iOldVal,clsField $iNewVal) {
 	$strName = $iOldVal->Name();
 	$this->arChg[$strName]['old'] = $iOldVal;
@@ -161,11 +130,11 @@ class clsFields {
 */
 class clsField {
     protected $objParent;
-    protected $strName;
-    protected $vValue;
+    private $sName;
+    private $vValue;
 
     public function __construct($iName,$iVal=NULL) {
-	$this->strName = $iName;
+	$this->sName = $iName;
 	$this->vValue = $iVal;
 	$this->objParent = NULL;
     }
@@ -178,12 +147,15 @@ class clsField {
     protected function HasParent() {
 	return !is_null($this->objParent);
     }
-    public function Name($iName=NULL) {		// name of field
-	if (!is_null($iName)) {
-	    $this->strName = $iName;
+    public function Name($sName=NULL) {		// name of field
+	if (!is_null($sName)) {
+	    $this->sName = $sName;
 	}
-	return $this->strName;
+	return $this->sName;
     }
+
+    // ++ VALUE ACCESS ++ //
+
     /*----
       ACTION: returns the value of the field.
 	If iVal is not null, sets field to iVal first.
@@ -206,9 +178,9 @@ class clsField {
     */
     public function ValShow($iVal=NULL) {
 	if (!is_null($iVal)) {
-	    $this->vValue = self::Convert_ShowToStore($iVal);
+	    $this->ValStore(static::Convert_ShowToStore($iVal));
 	}
-	return $this->Convert_StoreToShow($this->vValue);
+	return static::Convert_StoreToShow($this->ValStore());
     }
     /*----
       INPUT: value in format returned by SQL
@@ -221,7 +193,7 @@ class clsField {
 	    $this->vValue = self::Convert_SQLToStore($iVal);
 	}
 */
-	return SQLValue($this->vValue);
+	return SQLValue($this->ValStore());
     }
     /*----
       ACTION: Sets the value even if input is NULL
@@ -238,9 +210,18 @@ class clsField {
 	2010-11-19 Added to help with multi-row forms
 	2010-11-20 Moved from clsForms to clsForm and adapted/renamed
     */
+    /*----
+      ACTION: Clears the field's value
+    */
+    public function Clear() {
+	$this->vValue = NULL;
+    }
+
+    // -- VALUE ACCESS -- //
+
     public function Change_fromShown($iNewVal) {
 	$valOld = $this->ValStore();
-	$valNew = $this->Convert_ShowToStore($iNewVal);
+	$valNew = static::Convert_ShowToStore($iNewVal);
 	$isSame = ($valOld === $valNew);
 	if (!$isSame) {
 	    $fldOld = clone $this;
@@ -257,16 +238,10 @@ class clsField {
 	saved even if the user doesn't alter them.
     */
     public function Change_asNew($sNewVal) {
-	$valNew = $this->Convert_ShowToStore($sNewVal);
+	$valNew = static::Convert_ShowToStore($sNewVal);
 	$fldOld = clone $this;
 	$this->SetStored($valNew);
 	$this->Parent()->AddChange($fldOld,$this);
-    }
-    /*----
-      ACTION: Clears the field's value
-    */
-    public function Clear() {
-	$this->vValue = NULL;
     }
     /*----
       ACTION: converts displayable input to storable value
@@ -276,9 +251,10 @@ class clsField {
       NOTE: must be non-static to allow for polymorphism
       HISTORY:
 	2011-03-29 renamed from Value() to Convert_ShowToStore()
+	2015-03-29 changing to static function, public -> protected
     */
-    public function Convert_ShowToStore($iVal) {
-	return $iVal;	// default/generic behavior
+    static protected function Convert_ShowToStore($val) {
+	return $val;	// default/generic behavior
     }
     /*----
       ACTION: converts storable input to displayable value
@@ -289,8 +265,8 @@ class clsField {
       HISTORY:
 	2011-03-29 created
     */
-    public function Convert_StoreToShow($iVal) {
-	return $iVal;	// default/generic behavior
+    static protected function Convert_StoreToShow($val) {
+	return $val;	// default/generic behavior
     }
     /*----
       ACTION: converts storable input to string usable in SQL statements
@@ -301,8 +277,8 @@ class clsField {
       HISTORY:
 	2011-03-29 created
     */
-    public function Convert_StoreToSQL($iVal) {
-	return SQLValue($iVal);	// default/generic behavior
+    static protected function Convert_StoreToSQL($val) {
+	return SQLValue($val);	// default/generic behavior
     }
     /*----
       RETURNS: TRUE if Value() is essentially the same as iVal, FALSE otherwise
@@ -322,12 +298,25 @@ class clsField {
     public function RowName() {		// name of field (column) within data row (record)
 	return $this->Name();
     }
+
+    // ++ DEBUGGING ++ //
+
+    public function __set($sName, $val) {
+	$sClass = get_class($this);
+	throw new exception("Internal - Attempted to set undeclared member [$sClass]->[$sName].");
+    }
+    public function __get($sName) {
+	$sClass = get_class($this);
+	throw new exception("Internal - Attempted to access undeclared member [$sClass]->[$sName].");
+    }
+
+    // -- DEBUGGING -- //
 }
 /*====
   CLASS: clsFieldTime - date/time field
 */
 class clsFieldTime extends clsField {
-    private function NormalizeTimeString($iStr) {
+    static private function NormalizeTimeString($iStr) {
 	$val = NULL;
 	if (is_string($iStr)) {
 	    if (!empty($iStr)) {
@@ -353,20 +342,15 @@ class clsFieldTime extends clsField {
 	Given that, the only normalization we'll do here is to convert the text into
 	a binary format (*any* binary format) and then back again.
     */
-    public function Convert_ShowToStore($iVal) {
-	return $this->NormalizeTimeString($iVal);
+    static protected function Convert_ShowToStore($val) {
+	return static::NormalizeTimeString($val);
     }
     /*----
       NOTES: See notes on Convert_ShowToStore(). We do exactly the same thing here,
 	even though it's conceptually not the same thing.
     */
-    public function Convert_StoreToShow($iVal) {
-/*
-	$dt = strtotime($iVal);	// stored in standard text format
-	$val = date('Y-m-d H:i:s',$dt);	// convert to display format
-	return $val;
-*/
-	return $this->NormalizeTimeString($iVal);
+    static protected function Convert_StoreToShow($val) {
+	return static::NormalizeTimeString($val);
     }
 }
 /*====
@@ -387,11 +371,11 @@ class clsFieldNum extends clsField {
       NOTE: This mainly converts "" to NULL, and ensures that
 	all non-blank values are handled numerically
     */
-    public function Convert_ShowToStore($iVal) {
-	if ($iVal == '') {
+    static protected function Convert_ShowToStore($val) {
+	if ($val == '') {
 	    return NULL;
 	} else {
-	    return (float)$iVal;
+	    return (float)$val;
 	}
     }
 }
@@ -400,7 +384,7 @@ class clsFieldNum extends clsField {
   FUTURE: Rename this to clsFieldBool_Bit
 */
 class clsFieldBool extends clsField {
-    protected function Convert_Show_toInternal($iVal) {
+    static protected function Convert_Show_toInternal($iVal) {
 	if (is_numeric($iVal)) {
 	    $val = ($iVal==0)?FALSE:TRUE;
 	} else {
@@ -426,37 +410,37 @@ class clsFieldBool extends clsField {
 	}
 	return $val;
     }
-    protected function Convert_Internal_toStore($iVal) {
-	return $iVal?chr(1):chr(0);
+    static protected function Convert_Internal_toStore($val) {
+	return $val?chr(1):chr(0);
     }
-    protected function Convert_Store_toInternal($iVal) {
-	return (ord($iVal) != 0);
+    static protected function Convert_Store_toInternal($val) {
+	return (ord($val) != 0);
     }
-    protected function Convert_Internal_toShow($iVal) {
-	return $iVal?'YES':'no';
+    static protected function Convert_Internal_toShow($val) {
+	return $val?'YES':'no';
     }
-    public function Convert_ShowToStore($iVal) {
-	$val = $this->Convert_Show_toInternal($iVal);
-	$val = $this->Convert_Internal_toStore($val);
+    static protected function Convert_ShowToStore($val) {
+	$val = static::Convert_Show_toInternal($val);
+	$val = static::Convert_Internal_toStore($val);
 	return $val;
     }
-    public function Convert_StoreToShow($iVal) {
-	$val = $this->Convert_Store_toInternal($iVal);
+    static protected function Convert_StoreToShow($val) {
+	$val = $this->Convert_Store_toInternal($val);
 	$val = $this->Convert_Internal_toShow($val);
 	return $val;
     }
-    public function Convert_StoreToBool($iVal) {
-	return (ord($iVal) != 0);
+    static protected function Convert_StoreToBool($val) {
+	return (ord($val) != 0);
     }
-    public function Convert_BoolToStore($iVal) {
-	return $iVal?chr(1):chr(0);
+    static protected function Convert_BoolToStore($val) {
+	return $val?chr(1):chr(0);
     }
     public function ValBool($iVal=NULL) {
 	if (!is_null($iVal)) {
-	    $ch = $this->Convert_BoolToStore($iVal);
+	    $ch = self::Convert_BoolToStore($iVal);
 	    parent::ValStore($ch);
 	}
-	return $this->Convert_StoreToBool($this->ValStore());
+	return self::Convert_StoreToBool($this->ValStore());
     }
 }
 
@@ -467,36 +451,40 @@ class clsFieldBool extends clsField {
     2011-10-06 created
 */
 class clsFieldBool_Int extends clsFieldBool {
-    protected function Convert_Internal_toStore($iVal) {
-	return $iVal?1:0;
+    static protected function Convert_Internal_toStore($val) {
+	return $val?1:0;
     }
-    protected function Convert_Store_toInternal($iVal) {
-	return !empty($iVal);
+    static protected function Convert_Store_toInternal($val) {
+	return !empty($val);
     }
-    public function Convert_StoreToBool($iVal) {
-	return ($iVal != 0);
+    static public function Convert_StoreToBool($val) {
+	return ($val != 0);
     }
-    public function Convert_BoolToStore($iVal) {
-	return $iVal?FALSE:TRUE;
+    static public function Convert_BoolToStore($val) {
+	return $val?FALSE:TRUE;
     }
     public function ValSQL() {
-	return $this->vValue?1:0;
+	return $this->ValStore()?1:0;
     }
 }
 
-/*====
+/*%%%%
   CLASS: clsCtrls -- group of form controls
     Does not implement a form, just the controls within a form.
     A form would generally contain exactly one of these.
 */
 abstract class clsCtrls {
-    protected $arCtrls;
+    private $arCtrls;
+    private $arDVals;	// default/initial values
 
     /*----
       RETURNS: object for the named control
     */
-    public function Ctrl($iName) {
-	return $this->arCtrls[$iName];
+    public function Ctrl($sName) {
+	throw new excption('Ctrl() is deprecated; call ControlObject().');
+    }
+    public function ControlObject($sName) {
+	return $this->arCtrls[$sName];
     }
     abstract protected function NewFieldsObject();
     private $oFields;
@@ -558,22 +546,7 @@ abstract class clsCtrl {
 	    $this->oField = $oField;
 	}
 	return $this->oField;
-    }/*
-    public function Index($sIndex=NULL) {
-	if (!is_null($sIndex)) {
-	    $this->SetIndex($sIndex);
-	}
-	return $this->sIndex;
     }
-    public function SetIndex($sIndex) {
-	if ($sIndex == '') {
-	    throw new exception('Setting index to empty string');
-	}
-	$this->sIndex = $sIndex;
-    }
-    public function HasIndex() {
-	return !is_null($this->sIndex);
-    }*/
     // PUBLIC so row objects can add themselves
     public function RowObject(clsCtrls $oRow=NULL) {
 	if (!is_null($oRow)) {
@@ -686,10 +659,9 @@ class clsCtrlHTML extends clsCtrl {
 */
 class clsCtrlHTML_TextArea extends clsCtrlHTML {
     public function Render() {
-	$objFld = $this->Field();
 	$out = '<textarea name="'.$this->NameOut().'"';
 	$out .= $this->RenderAttr().'>';
-	$out .= htmlspecialchars($objFld->ValShow());
+	$out .= htmlspecialchars($this->Field()->ValShow());
 	$out .= '</textarea>';
 	return $out;
     }
@@ -699,10 +671,9 @@ class clsCtrlHTML_TextArea extends clsCtrlHTML {
 */
 class clsCtrlHTML_CheckBox extends clsCtrlHTML {
     public function Render() {
-	$objFld = $this->Field();
 	$out = '<input type=checkbox name="'.$this->NameOut().'"';
 	$out .= $this->RenderAttr();
-	$out .= ($objFld->ValBool())?' checked':'';
+	$out .= ($this->Field()->ValBool())?' checked':'';
 	$out .= '>';
 	return $out;
     }

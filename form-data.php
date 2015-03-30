@@ -20,7 +20,7 @@ class clsForm_recs extends clsCtrls { // 2015-02-12 should probably be renamed c
     */
     public function __construct(clsRecs_keyed_abstract $rcData) {
 	$this->rcData = $rcData;
-	$oFields = new clsFields($rcData->Row);
+	$oFields = new clsFields($rcData->Values());
 	$this->FieldsObject($oFields);
     }
     protected function NewFieldsObject() {
@@ -113,7 +113,6 @@ class clsForm_recs extends clsCtrls { // 2015-02-12 should probably be renamed c
     public function RecvVals() {
 	$isNew = $this->DataRecord()->IsNew();
 	foreach($this->FieldsArray() as $name => $field) {
-//	echo 'FIELD ['.$name.']: ';
 	    $oCtrl = $this->Ctrl($name);
 	    if (!is_object($oCtrl)) {
 		throw new exception('Attempt to access nonexistent control "'.$name.'".');
@@ -122,18 +121,13 @@ class clsForm_recs extends clsCtrls { // 2015-02-12 should probably be renamed c
 	    if (is_null($sNewVal)) {	// NULL means no data received for this control
 //		echo 'NOTHING RECEIVED';
 	    } else {
-//		echo 'NEW VAL=['.$sNewVal.']';
 		if ($isNew) {
 		    $field->Change_asNew($sNewVal);
-//		    echo ' - CHANGED';
 		} else {
 		    $field->Change_fromShown($sNewVal);
-//		    echo ' - SAME';
 		}
 	    }
-//	    echo '<br>';
 	}
-//	die();
     }
     /*----
       ACTION: Saves the data (UPDATE or INSERT as appropriate) and then reloads the page
@@ -238,18 +232,6 @@ class clsForm_recs extends clsCtrls { // 2015-02-12 should probably be renamed c
     }
 }
 class clsForm_recs_indexed extends clsForm_recs {
-    /*----
-      HISTORY:
-	2011-12-20 changed param 1 from clsDataSet to clsRecs_key_single
-	  to match change in parent declaration
-	2014-04-27 Removed iRichText setup param -- doesn't seem to be used anywhere
-	2015-03-22 Removed $this->objFields=NULL because nothing seems to use it
-	  This now is identical to parent, so not needed.
-    */
-/*    public function __construct(clsRecs_key_single $iData) {
-	parent::__construct($iData);
-    }
-*/
     public function HasIndex() {
 	return TRUE;
     }
@@ -274,9 +256,8 @@ class clsForm_recs_indexed extends clsForm_recs {
 	return $oCtrl;
     }
     public function Render($iName) {
-	//$objCtrl = $this->Ctrl($iName);
 	$objCtrl = $this->LoadCtrl($iName,$this->DataRecord()->KeyValue());
-	    $objCtrl->Field()->Clear();
+	$objCtrl->Field()->Clear();
 	if ($this->DataRecord()->IsNew()) {
 	    $objCtrl->Field()->Clear();
 	} else {
@@ -378,11 +359,6 @@ class clsForm_recs_indexed extends clsForm_recs {
 			}
 			if ($okIns) {
 			    $this->arIns = $arChg;	// copy new data to insertion array
-			    //$arNew = $this->NewVals();	// defaults for new fields
-			    // add any "new-default" fields
-			    //$this->arIns = array_merge($arChg,$arNew);		// array_merge() doesn't do what I expect
-			    //$this->arIns = ArrayJoin($arChg,$arNew,FALSE,TRUE);	// this is redundant anyway
-//			    $sql = $objData->Table->SQL_forInsert($arUpd);	// DEBUG
 			} else {
 			    $strPl = Pluralize(count($arMissing));
 			    echo 'New record cannot be created because of missing field'.$strPl.':';
@@ -466,9 +442,6 @@ class clsForm_recs_indexed extends clsForm_recs {
 	if (is_array($arIns)) {
 	    $isChg = TRUE;
 	    $ok = $objData->Table()->Insert($arIns);
-	    die ("INSERT: ok=[$ok] SQL=".$objData->Table()->sqlExec.'<br>');
-//global $sql;
-//echo 'INSERT:<pre>'.print_r($arIns,TRUE).'</pre> OK=['.$ok.'] SQL=['.$sql.']';
 
 	    $strUpd .= ' new:'.$objData->KeyValue();
 	    if ($ok) {
