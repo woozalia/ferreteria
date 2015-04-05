@@ -9,15 +9,22 @@
 */
 
 abstract class fcFormControl {
+    private $oForm;
     private $oField;
 
-    public function __construct(fcForm $oForm) {
+    public function __construct(fcForm $oForm, fcFormField $oField) {
 	$this->FormObject($oForm);
+	$this->FieldObject($oField);
+	$oForm->ControlObject($oField->NameString(),$this);
     }
 
     // ++ CONFIG ++ //
 
     protected function FormObject(fcForm $oForm=NULL) {
+	if (!is_null($oForm)) {
+	    $this->oForm = $oForm;
+	}
+	return $this->oForm;
     }
     public function FieldObject(fcFormField $oField=NULL) {
 	if (!is_null($oField)) {
@@ -29,16 +36,20 @@ abstract class fcFormControl {
     // -- CONFIG -- //
     // ++ ACTIONS ++ //
 
-    abstract public function Render();		// render code to display the control
-    abstract public function Receive();	// receive user-entered value for this control
+    abstract public function Render($doEdit);		// render code to display the control
+    //abstract public function Receive();	// receive user-entered value for this control
 
     // -- ACTIONS -- //
 }
 
-abstract class fcFormControl_HTML extends fcFormControl {
+class fcFormControl_HTML extends fcFormControl {
     private $arTagAttr;
     private $sKey;
 
+    public function __construct(fcForm $oForm, fcFormField $oField, array $arAttr) {
+	parent::__construct($oForm,$oField);
+	$this->TagAttributes($arAttr);
+    }
 
     public function TagAttributes(array $arAttr=NULL) {
 	if (!is_null($arAttr)) {
@@ -46,36 +57,43 @@ abstract class fcFormControl_HTML extends fcFormControl {
 	}
 	return $this->arTagAttr;
     }
-    protected function NameString($sName=NULL) {
-	if (!is_null($sName)) {
-	    $this->sTagName = $sName;
-	}
-	return $this->sTagName;
+    protected function NameString() {
+	return $this->FieldObject()->NameString();
     }
     // RETURNS: calculated name spec (including parent form keys as needed)
     protected function NameSpec() {
 	$oForm = $this->FormObject();
-	$sForm = $oForm->KeyString();
-	$sForm .= '.'.$this->NameString();	// test this... might need different separator
-	if ($oForm->HasParent()) {
-	    $oForm = $oForm->ParentObject();
-	    $sForm = $oForm->KeyString().'['.$sForm.']';
+	$sCtrlID = $this->NameString();
+	if ($oForm->HasKey()) {
+	    $sForm = $oForm->NameString();
+	    $sRowID = $oForm->Get_KeyString_loaded();
+	    $sSpec = $sForm."[$sRowID][$sCtrlID]";
+	} else {
+	    $sSpec = $sCtrlID;
 	}
-	return $sForm;
+	return $sSpec;
     }
 
     // ++ RENDERING ++ //
 
-    public function Render() {
+    public function Render($doEdit) {
+	if ($doEdit) {
+	    $out = $this->RenderEditor();
+	} else {
+	    $out = $this->RenderValue();
+	}
+	return $out;
+    }
+    protected function RenderEditor() {
 	$out = '<input name="'
-	  .$this->NameOut()
+	  .$this->NameSpec()
 	  .'" value="'
 	  .$this->RenderValue().'"'
 	  .$this->RenderAttr().'>';
 	return $out;
     }
-    public function RenderValue() {
-	return htmlspecialchars($this->FieldObject()->Value_show());
+    protected function RenderValue() {
+	return htmlspecialchars($this->FieldObject()->ValueDisplay());
     }
     protected function RenderAttr() {
 	$out = '';
@@ -91,3 +109,13 @@ abstract class fcFormControl_HTML extends fcFormControl {
     // -- RENDERING -- //
 }
 
+class fcFormControl_HTML_TextArea extends fcFormControl_HTML {
+    protected function RenderEditor() {
+	$out = '<textarea name="'
+	  .$this->NameSpec().'"'
+	  .$this->RenderAttr().'>'
+	  .$this->RenderValue()
+	  .'</textarea>';
+	return $out;
+    }
+}

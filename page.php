@@ -154,13 +154,14 @@ __END__;
 	$htContact = '<a href="'.KWP_HELP_CONTACT.'">contact</a>';
 	$out = <<<__END__
 <b>Ack!</b> We seem to have a small problem here. (If it was a large problem, you wouldn't be seeing this message.)
-The webmaster is being alerted about this. Feel free to $htContact the webmaster.
-<br>Meanwhile, you might try reloading the page -- a lot of errors are transient,
-which makes them hard to fix, which is why there are more of them than the other kind.
-<br><br>
-We apologize for the nuisance.
-<br><br>
-<b>Error Message</b>: $msg
+The webmaster is being alerted about this; please feel free to $htContact the webmaster.
+
+<br><br>Meanwhile, you might try reloading the page -- a lot of errors are transient,
+which sometimes makes them hard to fix, which is why there are more of them than the other kind.
+
+<br><br>We apologize for the nuisance.
+
+<br><br><b>Error Message</b>: $msg
 <pre>
 __END__;
 	return $out;

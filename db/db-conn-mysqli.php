@@ -12,7 +12,7 @@ fcDBOFactory::RegisterType('mysql','fcDataConn_MySQL');
 class fcDataConn_MySQL extends fcDataConn_CliSrv {
 
     // ++ CONFIGURATION FIELDS ++ //
-    
+
     private $oNative;
     protected function NativeObject(mysqli $oConn=NULL) {
 	if (!is_null($oConn)) {
@@ -20,10 +20,10 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	}
 	return $this->oNative;
     }
-    
+
     // -- CONFIGURATION FIELDS -- //
     // ++ INFORMATION ++ //
-    
+
     public function Sanitize($sSQL) {
 	return $this->NativeObject()->escape_string($sSQL);
     }
@@ -40,10 +40,10 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	    return "'$s'";
 	}
     }
-    
+
     // -- INFORMATION -- //
     // ++ ACTIONS ++ //
-    
+
     public function Open() {
 	$oNative = new mysqli(
 	  $this->HostString(),
@@ -56,10 +56,10 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     public function Shut() {
 	$this->NativeObject()->close();
     }
-    
+
     // -- ACTIONS -- //
     // ++ DATA RETRIEVAL ++ //
-    
+
     public function Recordset($sSQL) {
 	$poRes = $this->NativeObject()->query($sSQL);	// returns a mysqli_result if successful
 	return $this->ProcessResultset($poRes);
@@ -78,16 +78,16 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	    return $poRes;	// TRUE for successful non-data-output query, FALSE if query failed
 	}
     }
-    
+
     // -- DATA RETRIEVAL -- //
     // ++ DATA OPERATIONS ++ //
-    
+
     public function Result_RowCount(fcDataRecord $rs) {
 	return $rs->BlobValue('native')->num_rows;
     }
     public function Result_NextRow(fcDataRecord $rs) {
     	return $rs->BlobValue('native')->fetch_assoc();
     }
-    
+
     // -- DATA OPERATIONS -- //
 }

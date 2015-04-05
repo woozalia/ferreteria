@@ -12,10 +12,10 @@ abstract class fcDataTable {
 	$this->TableName($this->DefaultTableName());
 	$this->SingularName($this->DefaultSingularName());
     }
-    
+
     // -- SETUP -- //
     // ++ CONFIGURATION ++ //
-    
+
       // connection object
     private $oConn;
     protected function ConnObject(fcDataConn $oConn=NULL) {
@@ -42,6 +42,6 @@ abstract class fcDataTable {
 	return $this->sCSing;
     }
     abstract protected function DefaultSingularName();
-    
+
     // -- CONFIGURATION -- //
 }

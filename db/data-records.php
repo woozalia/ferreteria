@@ -4,6 +4,9 @@
   HISTORY:
     2013-12-19 split off from data.php
 */
+
+define('KS_NEW_REC','new');	// value to use for key of new records
+
 /*=============
   NAME: clsRecs_abstract -- abstract recordset
     Does not deal with keys.
@@ -395,8 +398,9 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
 	}
 	return $this->Row[$strKeyName];
     }
-    public function KeyString() {
-	return (string)$this->KeyValue();
+    public function KeyString($sNew=KS_NEW_REC) {
+	$sKey = (string)$this->KeyValue();
+	return ($sKey=='')?$sNew:$sKey;
     }
     /*----
       RETURNS: list of key values from the current recordset, formatted for use in an SQL "IN (...)" clause

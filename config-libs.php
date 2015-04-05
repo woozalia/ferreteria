@@ -16,6 +16,7 @@ $oL = new clsLibrary('ferreteria.db.1','db/config-libs-v1.php');
 $oL = new clsLibrary('ferreteria.db.2','db/config-libs-v2.php');
 $oL = new clsLibrary('ferreteria.mw.1','mw/config-libs-v1.php');
 $oL = new clsLibrary('ferreteria.mw.2','mw/config-libs-v2.php');
+$oL = new clsLibrary('ferreteria.forms.2','forms/config-libs.php');
 
 $om = new clsModule(__FILE__, 'app.php');
   $om->AddClass('clsApp');
@@ -85,6 +86,7 @@ $om = new clsModule(__FILE__, 'util/strings.php');
   $om->AddClass('xtString');
   $om->AddFunc('Xplode');
 $om = new clsModule(__FILE__, 'util/StringTemplate.php');
+  $om->AddClass('fcTemplate_array');
   $om->AddClass('clsStringTemplate');
   $om->AddClass('clsStringTemplate_array');
 $om = new clsModule(__FILE__, 'util/time.php');
