@@ -18,6 +18,8 @@ abstract class clsPage {
     private $oApp;
     private $oDoc;
 
+    // ++ SETUP ++ //
+
     public function __construct() {}
 
     /*-----
@@ -39,7 +41,9 @@ abstract class clsPage {
 	}
     }
 
-    // environmental objects
+    // -- SETUP -- //
+    // ++ APP FRAMEWORK ++ //
+
     public function App(clsApp $iObj=NULL) {
 	if (!is_null($iObj)) {
 	    $this->oApp = $iObj;
@@ -57,7 +61,8 @@ abstract class clsPage {
 	return $this->App()->Data();
     }
 
-    // STAGES OF PAGE GENERATION
+    // -- APP FRAMEWORK -- //
+    // ++ PAGE GENERATION ++ //
 
     /*-----
       ACTION: Grab any expected input and interpret it
@@ -77,12 +82,36 @@ abstract class clsPage {
     abstract protected function PreSkinBuild();
     abstract protected function PostSkinBuild();
 
-    // EXCEPTION HANDLING
+    // -- PAGE GENERATION -- //
+    // ++ EXCEPTION HANDLING ++ //
 
     abstract protected function DoEmailException(exception $e);
     abstract protected function Exception_Message_toEmail(array $arErr);
     abstract protected function Exception_Subject_toEmail(array $arErr);
     abstract protected function Exception_Message_toShow($iMsg);
+
+    // -- EXCEPTION HANDLING -- //
+    // ++ UTILITIES ++ //
+
+    /*----
+      RETURNS: The rest of the URI after KFP_PAGE_BASE
+      REQUIRES: KFP_PAGE_BASE must be set to the base URL for the expected request (e.g. '/cat/')
+      REASON: $SERVER[PATH_INFO] is often unavailable; $SERVER[REQUEST_URI] is more reliable,
+	  but needs a little processing.
+	This function can be gradually foolproofed as more cases are encountered.
+	See getPathInfo in https://doc.wikimedia.org/mediawiki-core/master/php/WebRequest_8php_source.html
+    */
+    static protected function GetPathInfo() {
+	$uriReq = $_SERVER['REQUEST_URI'];
+	$idxBase = strpos($uriReq,KFP_PAGE_BASE);
+	if ($idxBase === FALSE) {
+	    throw new exception("Configuration needed: URI [$uriReq] does not include KFP_PAGE_BASE [".KFP_PAGE_BASE.'].');
+	}
+	$urlPath = substr($uriReq,$idxBase+strlen(KFP_PAGE_BASE));
+	return $urlPath;
+    }
+
+    // -- UTILITIES -- //
 }
 
 /*%%%%
