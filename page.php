@@ -17,7 +17,6 @@
 abstract class clsPage {
     private $oApp;
     private $oDoc;
-    private $oSkin;
 
     public function __construct() {}
 
@@ -47,8 +46,12 @@ abstract class clsPage {
 	}
 	return $this->oApp;
     }
+    private $oSkin;
     public function Skin() {
-	return $this->App()->Skin();
+	if (empty($this->oSkin)) {
+	    $this->oSkin = $this->NewSkin();
+	}
+	return $this->oSkin;
     }
     protected function Data() {
 	return $this->App()->Data();
