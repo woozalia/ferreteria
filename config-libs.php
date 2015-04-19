@@ -17,6 +17,7 @@ $oL = new clsLibrary('ferreteria.db.2','db/config-libs-v2.php');
 $oL = new clsLibrary('ferreteria.mw.1','mw/config-libs-v1.php');
 $oL = new clsLibrary('ferreteria.mw.2','mw/config-libs-v2.php');
 $oL = new clsLibrary('ferreteria.forms.2','forms/config-libs.php');
+$oL = new clsLibrary('ferreteria.login','user-access/config-libs.php');
 
 $om = new clsModule(__FILE__, 'app.php');
   $om->AddClass('clsApp');
@@ -109,6 +110,3 @@ $om = new clsModule(__FILE__, 'widgets/navbar.php');
   $om->AddClass('clsNavbar_flat');
   $om->AddClass('clsNavbar_tree');
 
-if (defined('KF_WANT_LIB_USER_ACCESS')) {
-    require_once('user-access/config-libs.php');
-}

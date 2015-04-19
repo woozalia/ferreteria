@@ -41,6 +41,9 @@ class clsDropInManager {
     */
     static public function ScanDropins($fsFolder,clsMenuItem $oMenu) {
 	self::$oMenu = $oMenu;
+	if (!file_exists($fsFolder)) {
+	    throw new exception('Dropins folder "'.$fsFolder.'" does not exist.');
+	}
 	$poDir = dir($fsFolder);
 	while (FALSE !== ($fnFile = $poDir->read())) {
 	    if (($fnFile!='.') && ($fnFile!='..')) {
