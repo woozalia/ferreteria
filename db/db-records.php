@@ -12,10 +12,10 @@ class fcDataRecord {
     public function __construct(fcDataConn $fo) {
 	$this->Connection($fo);
     }
-    
+
     // -- SETUP -- //
     // ++ OBJECT FAMILY ++ //
-  
+
     private $foConn;
     protected function Connection(fcDataConn $fo=NULL) {
 	if (!is_null($fo)) {
@@ -23,10 +23,10 @@ class fcDataRecord {
 	}
 	return $this->foConn;
     }
-  
+
     // -- OBJECT FAMILY -- //
     // ++ VALUE STORAGE ++ //
-    
+
     private $arBlob;
     public function BlobValue($sKey,$val=NULL) {
 	if (!is_null($val)) {
@@ -50,10 +50,10 @@ class fcDataRecord {
     protected function FieldsClear() {
 	$this->arRow = NULL;
     }
-    
+
     // -- BLOB STORAGE -- //
     // ++ VALUE ACCESS ++ //
-    
+
     /*----
       RETURNS: number of rows in the resultset
     */
@@ -77,6 +77,6 @@ class fcDataRecord {
 	    return $this->FieldValues($arVals);
 	}
     }
-    
+
     // -- DATA ACCESS -- //
 }

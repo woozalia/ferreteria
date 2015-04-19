@@ -85,7 +85,6 @@ abstract class clsPage {
     abstract protected function Exception_Message_toShow($iMsg);
 }
 
-
 /*%%%%
   PURPOSE: page which provides some basic services
     - default message/email for exceptions
@@ -158,13 +157,14 @@ __END__;
 	$htContact = '<a href="'.KWP_HELP_CONTACT.'">contact</a>';
 	$out = <<<__END__
 <b>Ack!</b> We seem to have a small problem here. (If it was a large problem, you wouldn't be seeing this message.)
-The webmaster is being alerted about this. Feel free to $htContact the webmaster.
-<br>Meanwhile, you might try reloading the page -- a lot of errors are transient,
-which makes them hard to fix, which is why there are more of them than the other kind.
-<br><br>
-We apologize for the nuisance.
-<br><br>
-<b>Error Message</b>: $msg
+The webmaster is being alerted about this; please feel free to $htContact the webmaster.
+
+<br><br>Meanwhile, you might try reloading the page -- a lot of errors are transient,
+which sometimes makes them hard to fix, which is why there are more of them than the other kind.
+
+<br><br>We apologize for the nuisance.
+
+<br><br><b>Error Message</b>: $msg
 <pre>
 __END__;
 	return $out;
@@ -207,8 +207,8 @@ abstract class clsPageLogin extends clsPageBasic {
 	return $arOut;
     }
 
-    // --STATIC--
-    // ++DYNAMIC++
+    // -- STATIC -- //
+    // ++ DYNAMIC ++ //
 
     // user access stuff
     private $sLogin;
@@ -327,7 +327,7 @@ abstract class clsPageLogin extends clsPageBasic {
     }
 
     // -- DATA TABLE ACCESS -- //
-    // ++ DATA RECORD ACCESS -- //
+    // ++ DATA RECORD ACCESS ++ //
 
     protected function UserRecord() {
 	if (is_null($this->rcUser)) {

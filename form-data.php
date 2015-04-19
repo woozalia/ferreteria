@@ -1,13 +1,14 @@
 <?php
 /*
-  LIBRARY: admin.forms.php - some classes useful for administration functions in MW extensions
+  LIBRARY: form-data.php - form-database connector classes
   HISTORY:
     2010-11-01 created for clsForm_DataSet
     2010-11-18 trying this as a descendent of clsCtrls
     2013-12-14 adapting admin.forms.php as form-data.php for non-MW
+    2015-03-22 redoing how indexes work
 */
-class clsForm_recs extends clsCtrls {
-    protected $rcData;
+class clsForm_recs extends clsCtrls { // 2015-02-12 should probably be renamed clsCtrl_recs for consistency
+    private $rcData;
     protected $arNewVals;
     private $sTemplate;
 
@@ -19,7 +20,7 @@ class clsForm_recs extends clsCtrls {
     */
     public function __construct(clsRecs_keyed_abstract $rcData) {
 	$this->rcData = $rcData;
-	$oFields = new clsFields($rcData->Row);
+	$oFields = new clsFields($rcData->Values());
 	$this->FieldsObject($oFields);
     }
     protected function NewFieldsObject() {
@@ -30,6 +31,9 @@ class clsForm_recs extends clsCtrls {
     }
     protected function DataRecord() {
 	return $this->rcData;
+    }
+    public function HasIndex() {
+	return FALSE;
     }
     /*----
       ACTION: Sets or retrieves the template used for displaying the form
@@ -107,14 +111,21 @@ class clsForm_recs extends clsCtrls {
 	2010-11-19 Moved from clsFields to clsForm_DataSet
     */
     public function RecvVals() {
+	$isNew = $this->DataRecord()->IsNew();
 	foreach($this->FieldsArray() as $name => $field) {
 	    $oCtrl = $this->Ctrl($name);
 	    if (!is_object($oCtrl)) {
 		throw new exception('Attempt to access nonexistent control "'.$name.'".');
 	    }
 	    $sNewVal = $oCtrl->Receive();
-	    if (!is_null($sNewVal)) {	// NULL means no data received for this control
-		$field->Change_fromShown($sNewVal);
+	    if (is_null($sNewVal)) {	// NULL means no data received for this control
+//		echo 'NOTHING RECEIVED';
+	    } else {
+		if ($isNew) {
+		    $field->Change_asNew($sNewVal);
+		} else {
+		    $field->Change_fromShown($sNewVal);
+		}
 	    }
 	}
     }
@@ -124,8 +135,9 @@ class clsForm_recs extends clsCtrls {
 	duplicate records).
       INPUT:
 	Notes (optional) -- human-entered text to go in "Notes" field of event log
-	arPath (optional) -- defined by record class ($this->DataRecord()), which is
-	  in turn typically defined by clsMenuData_helper::_AdminRedirect()
+	arRedir (optional) -- array of path overrides for redirect, as defined by record class
+	  ($this->DataRecord()), which is in turn typically defined by clsMenuData_helper::_AdminRedirect()
+	sRedir (optional) -- path override for redirect; you can supply either arRedir, sRedir, or neither
       NOTE:
 	Reloading: We always want to reload the page (via header redirect)
 	  (a) to get rid of the POST data (so user-reloads don't re-save)
@@ -133,16 +145,19 @@ class clsForm_recs extends clsCtrls {
 	  (c) to get rid of the "edit" directive in the URL (this could also be done by removing it from the form's target URL)
 	  There are other ways of doing B and C but not A. Not having to deal with the alternatives for B and C also simplifies things.
       HISTORY:
-	2010-11-18 Added iNotes parameter.
+	2010-11-18 added iNotes parameter
+	2015-02-16 see http://htyp.org/User:Woozle/Ferreteria/changes/1
     */
-    public function Save($iNotes=NULL,array $arPath=NULL) {
+    public function Save($iNotes=NULL) {
 	$oFlds = $this->FieldsObject();
 	$rcData = $this->DataRecord();
+
 	// get the form data and note any changes
-	//$objFlds->RecvVals();
 	$this->RecvVals();
+
 	// get the list of field updates
 	$arUpd = $oFlds->DataUpdates();
+
 	// is this a new record, or updating an existing one?
 	$isNew = $rcData->IsNew();
 
@@ -186,7 +201,6 @@ class clsForm_recs extends clsCtrls {
 	    $arUpd = array_merge($arUpd,$this->NewVals(),$arDataAdd);
 
 	    $ok = $rcData->Make($arUpd);
-
 	    $arEv = array();
 	    if ($ok === FALSE) {
 		$strErr = $rcData->Engine()->getError();
@@ -209,57 +223,41 @@ class clsForm_recs extends clsCtrls {
 	    if (!is_null($rcEvent)) {
 		$rcEvent->Finish($arEv);
 	    }
-	    if ($ok) {
-		// go to admin page for new record
-// see note about reloading
-		echo 'REDIRECTING with class '.get_class($rcData).'<br>';
-		$rcData->AdminRedirect($arPath);
-	    }
 	} else {
 	    $out .= 'No changes to save.';
+	    $ok = FALSE;	// stay on edit form -- maybe we forgot something
 	}
-	return $out;
+	$this->htMsg = $out;	// save any display messages for caller
+	return $ok;
     }
 }
 class clsForm_recs_indexed extends clsForm_recs {
-    /*----
-      EXPERIMENTAL
-	Need to override the parent because we don't want to have to pass
-	  row values, because they will change.
-	Eventually, parent should be rewritten to allow for this possibility.
-    */
-    /*----
-      HISTORY:
-	2011-12-20 changed param 1 from clsDataSet to clsRecs_key_single
-	  to match change in parent declaration
-	2014-04-27 Removed iRichText setup param -- doesn't seem to be used anywhere
-    */
-    public function __construct(clsRecs_key_single $iData) {
-	parent::__construct($iData);
-
-	$this->objFields = NULL;
+    public function HasIndex() {
+	return TRUE;
+    }
+    public function IndexString() {
+	return static::IndexString_toUse($this->DataRecord()->KeyValue());
     }
     protected function NewFieldsObject() {
 	return new clsFields(array());
     }
     public function RowPrefix() {
 	$strKeyVal = $this->DataRecord()->KeyValue();
-	$strIndex = self::IndexString($strKeyVal);
+	$strIndex = self::IndexString_toUse($strKeyVal);
 	$out = '<input type=hidden name="_update['.$strIndex.']" value=1>';
 	return $out;
     }
-    static protected function IndexString($iIndex) {
+    static protected function IndexString_toUse($iIndex) {
 	return empty($iIndex)?'new':$iIndex;
     }
     protected function LoadCtrl($iName,$iIndex) {
-	$objCtrl = $this->Ctrl($iName);
-	$objCtrl->Index(self::IndexString($iIndex));
-	return $objCtrl;
+	$oCtrl = $this->Ctrl($iName);
+	//$oCtrl->Index(self::IndexString_toUse($iIndex));
+	return $oCtrl;
     }
     public function Render($iName) {
-	//$objCtrl = $this->Ctrl($iName);
 	$objCtrl = $this->LoadCtrl($iName,$this->DataRecord()->KeyValue());
-	    $objCtrl->Field()->Clear();
+	$objCtrl->Field()->Clear();
 	if ($this->DataRecord()->IsNew()) {
 	    $objCtrl->Field()->Clear();
 	} else {
@@ -295,6 +293,7 @@ class clsForm_recs_indexed extends clsForm_recs {
 
 	$objData = $this->DataRecord();
 
+	// get a list of rows being modified
 	$arUpd = clsHTTP::Request()->GetArray('_update');
 	$cntRows = count($arUpd);
 	if ($cntRows > 0) {
@@ -339,24 +338,27 @@ class clsForm_recs_indexed extends clsForm_recs {
 		    if ($isNew) {
 			// make sure there's some data
 			$arReq = $this->FieldsRequired();
+			$arNew = $this->NewVals();
 			$okIns = TRUE;	// we can insert unless there's an empty required field
 			$arMissing = NULL;
 			$arChg = ArrayJoin($arEdit,$this->NewVals(),FALSE,TRUE);	// fill in any unfilled values from default list
 			if (is_array($arReq)) {
 			    foreach ($arReq as $key) {
 				if (empty($arChg[$key])) {
-				    $okIns = FALSE;
-				    $arMissing[] = $key;
+				    // if not submitted by user, check for new-default
+				    if (array_key_exists($key,$arNew)) {
+					// use new-default value
+					$arChg[$key] = $arNew[$key];
+				    } else {
+					// value required, not submitted, no default available = fail
+					$okIns = FALSE;
+					$arMissing[] = $key;
+				    }
 				}
 			    }
 			}
 			if ($okIns) {
 			    $this->arIns = $arChg;	// copy new data to insertion array
-			    //$arNew = $this->NewVals();	// defaults for new fields
-			    // add any "new-default" fields
-			    //$this->arIns = array_merge($arChg,$arNew);		// array_merge() doesn't do what I expect
-			    //$this->arIns = ArrayJoin($arChg,$arNew,FALSE,TRUE);	// this is redundant anyway
-//			    $sql = $objData->Table->SQL_forInsert($arUpd);	// DEBUG
 			} else {
 			    $strPl = Pluralize(count($arMissing));
 			    echo 'New record cannot be created because of missing field'.$strPl.':';
@@ -386,7 +388,7 @@ class clsForm_recs_indexed extends clsForm_recs {
 	2010-11-19 Adapted from clsForm_DataSet::Save()
 	2014-01-26 added arPath param -- this may need to be reworked
     */
-    public function Save($iNotes=NULL,array $arPath=NULL,clsEvents $iLog=NULL) {
+    public function Save($iNotes=NULL,clsEvents $iLog=NULL) {
 	$objFlds = $this->FieldsObject();
 	$objData = $this->DataRecord();
 	// get the form data and note any changes
@@ -395,22 +397,6 @@ class clsForm_recs_indexed extends clsForm_recs {
 //	$arUpd = $objFlds->DataUpdates();
 	$arUpds = $this->arUpd;
 	$arIns = $this->arIns;
-//echo 'INSERT:<pre>'.print_r($arIns,TRUE).'</pre>';
-//echo 'UPDATE:<pre>'.print_r($arUpds,TRUE).'</pre>';
-	// is this a new record, or updating an existing one?
-/*
-	$isNew = $objData->IsNew();
-
-	if ($isNew) {
-	    $strAct = 'Creating: ';
-	    $strHdr = 'Creating';
-	    $strCode = 'NEW';
-	} else {
-	    $strAct = 'Edited: ';
-	    $strHdr = 'Saving Edit';
-	    $strCode = 'ED';
-	}
-*/
 
 	$isChg = FALSE;
 	$strErrAll = NULL;
@@ -456,8 +442,6 @@ class clsForm_recs_indexed extends clsForm_recs {
 	if (is_array($arIns)) {
 	    $isChg = TRUE;
 	    $ok = $objData->Table()->Insert($arIns);
-//global $sql;
-//echo 'INSERT:<pre>'.print_r($arIns,TRUE).'</pre> OK=['.$ok.'] SQL=['.$sql.']';
 
 	    $strUpd .= ' new:'.$objData->KeyValue();
 	    if ($ok) {

@@ -7,30 +7,30 @@
   HISTORY:
     2015-03-12 rewrite of data*.php started
   */
-  
+
 
 /*%%%%
   PURPOSE: defines the basic interface for a database connection
 */
 abstract class fcDataConn {
-    
+
     // ++ CONNECTING ++ //
 
     abstract public function Open();
     abstract public function Shut();
-    
+
     // -- CONNECTING -- //
     // ++ INFORMATION ++ //
-    
+
     abstract public function Sanitize($sSQL);
     abstract public function Sanitize_andQuote($sSQL);
-    
+
     // -- INFORMATION -- //
     // ++ DATA ACCESS ++ //
-    
+
     abstract public function Recordset($sSQL);
     //abstract public function Select($sTable,$arFields
-    
+
     // -- DATA ACCESS -- //
     //
 }
@@ -43,7 +43,7 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
     private $sHost,$sUser,$sPass,$sSchema;
 
     // ++ SETUP ++ //
-    
+
     /*----
       RULES: spec includes everything after the "<type>:"
       IMPLEMENTATION: "<user>:<password>@<host>/<schema>"
@@ -60,7 +60,7 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
 	list($sUser,$sPass) = explode(':',$sPart1);
 	// get host, schema
 	list($sHost,$sName) = explode('/',$sPart2);
-	
+
 	// initialize it with these params
 	$this->HostString($sHost);
 	$this->Username($sUser);
@@ -71,7 +71,7 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
 
     // -- SETUP -- //
     // ++ CONFIGURATION FIELDS ++ //
-    
+
     protected function HostString($sVal=NULL) {
 	if (!is_null($sVal)) {
 	    $this->sHost = $sVal;
@@ -111,13 +111,13 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
     protected function DefaultRecordsClassName() {
 	return 'fcDataRecord';
     }
-    
+
     // -- CONFIGURATION FIELDS -- //
     // ++ DATA OPERATIONS ++ //
-    
+
     abstract public function Result_RowCount(fcDataRecord $rs);
     abstract public function Result_NextRow(fcDataRecord $rs);
-    
+
     // -- DATA OPERATIONS -- //
 }
 

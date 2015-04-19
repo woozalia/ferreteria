@@ -172,12 +172,12 @@ class clsUserSession extends clsDataSet {
     */
     public function Create() {
 	$ar = array(
-	  'ID_Client'	=> SQLValue($this->Value('ID_Client')),
-	  'ID_User'	=> SQLValue($this->Value('ID_User')),
-	  'Token'	=> SQLValue($this->Token),
+	  'ID_Client'	=> SQLValue($this->ClientID()),
+	  'ID_User'	=> SQLValue($this->UserID()),
+	  'Token'	=> SQLValue($this->Token()),
 	  'WhenCreated'	=> 'NOW()'
 	  );
-	$this->ID = $this->Table()->Insert($ar);
+	$this->KeyValue($this->Table()->Insert($ar));
 	$rcClient = $this->ClientRecord_needed();
 	if (!$rcClient->isNew()) {
 	    $rcClient->Stamp();
@@ -188,8 +188,6 @@ class clsUserSession extends clsDataSet {
       RETURNS: user object if successful, NULL otherwise.
     */
     public function UserLogin($iUser,$iPass) {
-	//$tUsers = $this->Engine()->Users();
-	//$tUsers = $this->Engine()->App()->Users();
 	$tUsers = $this->UserTable();
 	$oUser = $tUsers->Login($iUser,$iPass);
 	$this->SetUserRecord($oUser);		// set user for this session
@@ -230,7 +228,7 @@ class clsUserSession extends clsDataSet {
       RETURNS: TRUE if the stored session credentials match current reality (browser's credentials)
     */
     public function IsValidNow($iKey) {
-	$ok = ($this->Token == $iKey);
+	$ok = ($this->Token() == $iKey);
 	if ($ok) {
 	    $rcClient = $this->ClientRecord_asSet();
 	    $ok = $rcClient->IsValidNow();

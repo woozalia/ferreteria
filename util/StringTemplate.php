@@ -1,4 +1,105 @@
 <?php
+
+abstract class fcTemplate {
+    protected $sMarkSt;
+    protected $sMarkFi;
+    private $sTplt;
+
+    public function __construct($sStartMark, $sFinishMark,$sTemplate=NULL) {
+	$this->StartMark($sStartMark);
+	$this->FinishMark($sFinishMark);
+	$this->Template($sTemplate);
+    }
+    /*----
+      PUBLIC so callers can override individual values
+    */
+    abstract public function VariableValue($sName);
+
+    // ++ CONFIGURATION ++ //
+
+    public function Template($s=NULL) {
+	if (!is_null($s)) {
+	    $this->sTplt = $s;
+	}
+	return $this->sTplt;
+    }
+    protected function StartMark($s=NULL) {
+	if (!is_null($s)) {
+	    $this->sMarkSt = $s;
+	}
+	return $this->sMarkSt;
+    }
+    protected function FinishMark($s=NULL) {
+	if (!is_null($s)) {
+	    $this->sMarkFi = $s;
+	}
+	return $this->sMarkFi;
+    }
+
+    // -- CONFIGURATION -- //
+    // ++ MAIN PROCESS ++ //
+
+    public function Render() {
+	$out = $this->Template();
+	$smSt = $this->StartMark();
+	$smFi = $this->FinishMark();
+
+// do variable swapout:
+	$nStarts = 0;
+	do {
+	    $isFound = false;
+	    $posSt = strpos ( $out, $smSt );
+	    if ($posSt !== FALSE) {
+		$nStarts++;
+		$posFiVar = strpos ( $out, $smFi, $posSt );
+		if ($posFiVar !== FALSE) {
+		    $isFound = true;
+		    $posStVar = ($posSt+strlen($smSt));
+		    $varLen = $posFiVar - $posStVar;
+		    $varName = substr($out, $posStVar, $varLen);
+		    $posFi = ($posFiVar+strlen($smFi));
+		    $varVal = $this->VariableValue($varName);	// virtual method to retrieve variable's value
+		    $out =
+			substr($out, 0, $posSt )
+			.$varVal
+			.substr($out, $posFi );
+		}
+	    }
+	} while ($isFound);
+	return $out;
+    }
+
+    // -- MAIN PROCESS -- //
+}
+
+class fcTemplate_array extends fcTemplate {
+    private $arVals;
+
+    public function VariableValues(array $arVals=NULL) {
+	if (!is_null($arVals)) {
+	    $this->arVals = $arVals;
+	}
+	return $this->arVals;
+    }
+    public function VariableValue($sName,$sVal=NULL) {
+	if (!is_null($sVal)) {
+	    $this->arVals[$sName] = $sVal;
+	}
+	if (array_key_exists($sName,$this->arVals)) {
+	    return $this->arVals[$sName];
+	} else {
+	    throw new exception("Attempting to access undefined template variable [$sName].");
+	}
+    }
+
+    public function Render($arVals=NULL) {
+	$this->VariableValues($arVals);
+	return parent::Render();
+    }
+}
+
+// OLD CLASSES -- deprecate soon, remove later
+
 abstract class clsStringTemplate {
 // Abstract version
     public $Value;

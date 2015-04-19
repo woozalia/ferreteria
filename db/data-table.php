@@ -441,6 +441,14 @@ class clsTable_key_single extends clsTable_keyed_abstract {
 	$val = $iData[$strName];
 	return $strName.'='.$val;
     }
+    /*----
+      ACTION: Update the record identified by the key $id
+    */
+    public function Update_Keyed(array $arUpd,$id) {
+	$sName = $this->KeyName();
+	$sFilt = $sName.'='.$id;
+	$this->Update($arUpd,$sFilt);
+    }
 }
 // alias -- sort of a default table type
 class clsTable extends clsTable_key_single {

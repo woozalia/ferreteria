@@ -4,6 +4,9 @@
   HISTORY:
     2013-12-19 split off from data.php
 */
+
+define('KS_NEW_REC','new');	// value to use for key of new records
+
 /*=============
   NAME: clsRecs_abstract -- abstract recordset
     Does not deal with keys.
@@ -128,6 +131,7 @@ abstract class clsRecs_abstract {
 		    $htTable = ' from query';
 		}
 		$strMsg = 'Attempted to read nonexistent field "'.$iName.'"'.$htTable.' in class '.get_class($this);
+
 		echo $strMsg.'<br>';
 		echo '<b>Source SQL</b>: '.$this->sqlMake.'<br>';
 		echo '<b>Row contents</b>:<pre>'.print_r($this->Values(),TRUE).'</pre>';
@@ -394,8 +398,9 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
 	}
 	return $this->Row[$strKeyName];
     }
-    public function KeyString() {
-	return (string)$this->KeyValue();
+    public function KeyString($sNew=KS_NEW_REC) {
+	$sKey = (string)$this->KeyValue();
+	return ($sKey=='')?$sNew:$sKey;
     }
     /*----
       RETURNS: list of key values from the current recordset, formatted for use in an SQL "IN (...)" clause
@@ -571,9 +576,13 @@ class clsDataSet_bare extends clsRecs_key_single {
 class clsDataSet extends clsRecs_key_single {
   // -- accessing individual fields
     public function __set($iName, $iValue) {
+	$sClass = get_class($this);
+	throw new exception("Internal - Attempted to set undeclared member [$sClass]->[$iName].");
 	$this->Row[$iName] = $iValue;
     }
     public function __get($iName) {
+	$sClass = get_class($this);
+	throw new exception("Internal - Attempted to access undeclared member [$sClass]->[$iName].");
 	if (isset($this->Row[$iName])) {
 	    return $this->Row[$iName];
 	} else {

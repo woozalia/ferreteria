@@ -24,9 +24,14 @@ class clsArray {
 	return $out;
     }
     static public function NzSum(array &$ar=NULL,$key,$nVal) {
+	$isNew = TRUE;
 	if (is_array($ar)) {
-	    $ar[$key] += $nVal;
-	} else {
+	    if (array_key_exists($key,$ar)) {
+		$ar[$key] += $nVal;
+		$isNew = FALSE;
+	    }
+	}
+	if ($isNew) {
 	    $ar[$key] = $nVal;
 	}
 	return $ar;
