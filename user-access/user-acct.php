@@ -121,7 +121,7 @@ class clsUserAccts extends clsTable {
 /*%%%%
   PURPOSE: user management
 */
-class clsUserAcct extends clsVbzRecs {
+class clsUserAcct extends fcDataRecs {
     private $arPerm;	// cache of permissions for this user
 
     // ++ INITIALIZATION ++ //

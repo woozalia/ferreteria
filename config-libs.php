@@ -49,6 +49,8 @@ $om = new clsModule(__FILE__, 'menu-data.php');
 $om = new clsModule(__FILE__, 'page.php');
   $om->AddClass('clsPageLogin');
   $om->AddClass('clsPageRestricted');
+$om = new clsModule(__FILE__, 'page-data.php');
+  $om->AddClass('fcDataRecs');
 $om = new clsModule(__FILE__, 'skin.php');
   $om->AddClass('clsSkin');
   $om->AddClass('clsSkin_standard');

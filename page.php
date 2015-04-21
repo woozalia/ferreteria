@@ -245,8 +245,9 @@ abstract class clsPageLogin extends clsPageBasic {
     private $sPassX;	// duplicate password for confirming change
     private $sAuth;	// auth token
     private $sEmail;
-    private $isLogin;	// is login attempt
+    private $isLogin;	// is login attempt?
     private $isReset;
+    private $isNew;	// is request to create new account?
     private $isAuth;
     private $doEmail;
     private $doLogout;
@@ -263,6 +264,7 @@ abstract class clsPageLogin extends clsPageBasic {
 
     public function __construct() {
 	$this->rcUser = NULL;
+	$this->isNew = NULL;
     }
 
     // -- SETUP -- //
@@ -613,15 +615,15 @@ abstract class clsPageLogin extends clsPageBasic {
 	    clsHTTP::Redirect($this->BaseURL());
 	}
  	if ($this->doEmail) {
-	    $this->sTitle = 'Send Password Reset Email';
+	    $this->TitleString('Send Password Reset Email');
 	} elseif ($this->IsCreateRequest()) {
-	    $this->sTitle = 'Creating User Account';
+	    $this->TitleString('Creating User Account');
 	} elseif ($this->IsResetRequest()) {
-	    $this->sTitle = 'Setting Password';
+	    $this->TitleString('Setting Password');
 	} elseif ($this->IsAuthLink()) {
-	    $this->sTitle = 'Authorize Password Reset';
+	    $this->TitleString('Authorize Password Reset');
 	} else {
-	    $this->sTitle = 'User Login';
+	    $this->TitleString('User Login');
 	    if ($this->IsLoginRequest()) {
 		$this->DoLoginCheck();
 	    }
