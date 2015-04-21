@@ -17,7 +17,8 @@
 abstract class clsPage {
     private $oApp;
     private $oDoc;
-    private $oSkin;
+
+    // ++ SETUP ++ //
 
     public function __construct() {}
 
@@ -40,21 +41,28 @@ abstract class clsPage {
 	}
     }
 
-    // environmental objects
+    // -- SETUP -- //
+    // ++ APP FRAMEWORK ++ //
+
     public function App(clsApp $iObj=NULL) {
 	if (!is_null($iObj)) {
 	    $this->oApp = $iObj;
 	}
 	return $this->oApp;
     }
+    private $oSkin;
     public function Skin() {
-	return $this->App()->Skin();
+	if (empty($this->oSkin)) {
+	    $this->oSkin = $this->NewSkin();
+	}
+	return $this->oSkin;
     }
     protected function Data() {
 	return $this->App()->Data();
     }
 
-    // STAGES OF PAGE GENERATION
+    // -- APP FRAMEWORK -- //
+    // ++ PAGE GENERATION ++ //
 
     /*-----
       ACTION: Grab any expected input and interpret it
@@ -74,12 +82,36 @@ abstract class clsPage {
     abstract protected function PreSkinBuild();
     abstract protected function PostSkinBuild();
 
-    // EXCEPTION HANDLING
+    // -- PAGE GENERATION -- //
+    // ++ EXCEPTION HANDLING ++ //
 
     abstract protected function DoEmailException(exception $e);
     abstract protected function Exception_Message_toEmail(array $arErr);
     abstract protected function Exception_Subject_toEmail(array $arErr);
     abstract protected function Exception_Message_toShow($iMsg);
+
+    // -- EXCEPTION HANDLING -- //
+    // ++ UTILITIES ++ //
+
+    /*----
+      RETURNS: The rest of the URI after KFP_PAGE_BASE
+      REQUIRES: KFP_PAGE_BASE must be set to the base URL for the expected request (e.g. '/cat/')
+      REASON: $SERVER[PATH_INFO] is often unavailable; $SERVER[REQUEST_URI] is more reliable,
+	  but needs a little processing.
+	This function can be gradually foolproofed as more cases are encountered.
+	See getPathInfo in https://doc.wikimedia.org/mediawiki-core/master/php/WebRequest_8php_source.html
+    */
+    static protected function GetPathInfo() {
+	$uriReq = $_SERVER['REQUEST_URI'];
+	$idxBase = strpos($uriReq,KFP_PAGE_BASE);
+	if ($idxBase === FALSE) {
+	    throw new exception("Configuration needed: URI [$uriReq] does not include KFP_PAGE_BASE [".KFP_PAGE_BASE.'].');
+	}
+	$urlPath = substr($uriReq,$idxBase+strlen(KFP_PAGE_BASE));
+	return $urlPath;
+    }
+
+    // -- UTILITIES -- //
 }
 
 /*%%%%
@@ -213,8 +245,9 @@ abstract class clsPageLogin extends clsPageBasic {
     private $sPassX;	// duplicate password for confirming change
     private $sAuth;	// auth token
     private $sEmail;
-    private $isLogin;	// is login attempt
+    private $isLogin;	// is login attempt?
     private $isReset;
+    private $isNew;	// is request to create new account?
     private $isAuth;
     private $doEmail;
     private $doLogout;
@@ -231,6 +264,7 @@ abstract class clsPageLogin extends clsPageBasic {
 
     public function __construct() {
 	$this->rcUser = NULL;
+	$this->isNew = NULL;
     }
 
     // -- SETUP -- //
@@ -581,15 +615,15 @@ abstract class clsPageLogin extends clsPageBasic {
 	    clsHTTP::Redirect($this->BaseURL());
 	}
  	if ($this->doEmail) {
-	    $this->sTitle = 'Send Password Reset Email';
+	    $this->TitleString('Send Password Reset Email');
 	} elseif ($this->IsCreateRequest()) {
-	    $this->sTitle = 'Creating User Account';
+	    $this->TitleString('Creating User Account');
 	} elseif ($this->IsResetRequest()) {
-	    $this->sTitle = 'Setting Password';
+	    $this->TitleString('Setting Password');
 	} elseif ($this->IsAuthLink()) {
-	    $this->sTitle = 'Authorize Password Reset';
+	    $this->TitleString('Authorize Password Reset');
 	} else {
-	    $this->sTitle = 'User Login';
+	    $this->TitleString('User Login');
 	    if ($this->IsLoginRequest()) {
 		$this->DoLoginCheck();
 	    }
