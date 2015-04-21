@@ -12,6 +12,11 @@
     Skin methods do not display anything; they return HTML which the caller can display.
     Skins should be more about layout than content (large wodges of text).
 */
+
+if (!defined('KHT_PAGE_DOCTYPE')) {
+    define('KHT_PAGE_DOCTYPE','<!DOCTYPE HTML>');
+}
+
 abstract class clsSkin {
     protected $arPieces;	// the pieces
     protected $arPOrder;	// the order in which they appear
