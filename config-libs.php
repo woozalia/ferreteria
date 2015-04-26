@@ -36,9 +36,11 @@ $om = new clsModule(__FILE__, 'events.php');
   $om->AddClass('clsSysEvents');
   $om->AddClass('clsSysEvents_abstract');
   $om->AddClass('clsLogger_DataSet');
-$om = new clsModule(__FILE__, 'form-data.php');
+/*
+  $om = new clsModule(__FILE__, 'form-data.php');
   $om->AddClass('clsForm_recs');
   $om->AddClass('clsForm_recs_indexed');
+  */
 $om = new clsModule(__FILE__, 'menu.php');
   $om->AddClass('clsMenuRegistry');
   $om->AddClass('clsMenuItem');

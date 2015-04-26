@@ -129,3 +129,68 @@ class fcFormField_Time extends fcFormField {
 
     // -- FORMAT CONVERSION -- //
 }
+/*%%%%
+  IMPLEMENTATION: Handles BIT-type fields, which are (oddly) returned as characters instead of numerical values
+*/
+
+class fcFormField_Bit extends fcFormField {
+
+    // ++ CONFIGURATION ++ //
+    
+    static private $sValTrue = 'YES';
+    static private $sValFalse = 'no';
+    static public function Value_forTrue($sVal=NULL) {
+	if (!is_null($sVal)) {
+	    self::$sValTrue = $sVal;
+	}
+	return self::$sValTrue;
+    }
+    static public function Value_forFalse($sVal=NULL) {
+	if (!is_null($sVal)) {
+	    self::$sValFalse = $sVal;
+	}
+	return self::$sValFalse;
+    }
+
+    // ++ FORMAT CONVERSION ++ //
+
+    // NOTE: it's not clear when this would come into play
+    static protected function Convert_DisplayToNative($sVal) {
+	throw new exception('Do we really want to be converting string values to boolean?');
+    
+	if (is_numeric($sVal)) {
+	    $val = ($sVal==0)?FALSE:TRUE;
+	} else {
+	    switch (strtolower($sVal)) {
+	      case 'on':
+	      case 'y':
+	      case 'yes':
+	      case 'true':
+		$val = TRUE;
+		break;
+	      case '':
+	      case 'off':
+	      case 'n':
+	      case 'no':
+	      case 'false':
+		$val = FALSE;
+		break;
+	      default:
+		$val = NULL;
+	    }
+	}
+	return $val;
+    }
+    // NOTE: native value should be either TRUE or FALSE. (Do we need to support NULL? Assume not, for now.)
+    static protected function Convert_NativeToDisplay($vVal) {
+	return $vVal ? (self::Value_forTrue()) : (self::Value_forFalse());
+    }
+    static protected function Convert_SQLToNative($sqlVal) {
+	return (ord($sqlVal) != 0);
+    }
+    static protected function Convert_NativeToSQL($bVal) {
+	return $bVal ? chr(1) : chr(0);	 // I think there's another notation for this, like "b(1)"...
+    }
+
+    // -- FORMAT CONVERSION -- //
+}

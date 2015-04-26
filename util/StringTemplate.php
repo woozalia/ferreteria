@@ -44,7 +44,6 @@ abstract class fcTemplate {
 	$smSt = $this->StartMark();
 	$smFi = $this->FinishMark();
 
-// do variable swapout:
 	$nStarts = 0;
 	do {
 	    $isFound = false;
@@ -66,6 +65,26 @@ abstract class fcTemplate {
 		}
 	    }
 	} while ($isFound);
+	return $out;
+    }
+    /*----
+      PURPOSE: Same as Render(), but handles recursive replacement -- i.e. a variable's value
+	may contain a reference to another variable.
+    */
+    public function RenderRecursive() {
+	$out = $this->Render();
+	$done = FALSE;
+	do {
+	    $posSt = strpos ( $out, $smSt );	// does output contain more vars?
+	    if ($posSt === FALSE) {
+		$done = TRUE;
+	    } else {
+		// spawn another object to handle inner vars
+		$sClass =  __CLASS__;
+		$tpInner = new $sClass($this->StartMark(),$this->FinishMark(),$out);
+		$out = $tpInner->RenderRecursive();
+	    }
+	} while (!$done);
 	return $out;
     }
 
