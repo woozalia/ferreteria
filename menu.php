@@ -230,7 +230,6 @@ class clsMenuLink extends clsMenuItem {
 	$htText = htmlspecialchars($sText);
 	$sDescr = $this->Descr();
 	$urlNode = $oPainter->MenuItem_BuildURL($this->URL());
-
 	$isSel = $this->Selected();
 	$cssClass = $isSel?'node-active':'node-passive';
 	$arAttr = array('class'=>$cssClass);
@@ -327,16 +326,8 @@ abstract class clsMenuPainter {
 	if (is_null($oNode)) {
 	    $oNode = $this->RootNode();
 	}
-//	$this->arPath[$oNode->IndentDepth()] = $oNode->Name();
 	// render the current node
 	$out = $this->RenderNode($oNode);
-/*
-	if ($oNode->HasNodes()) {
-	    $out .= $this->RenderIndent();
-	    $out .= $this->RenderSubnodes($oNode);
-	    $out .= $this->RenderOutdent();
-	}
-	*/
 	return $out;
     }
 /*
@@ -369,19 +360,6 @@ abstract class clsMenuPainter {
   PURPOSE: Renders the menu as an unordered list using <ul> and <li> tags
 */
 class clsMenuPainter_UL extends clsMenuPainter {
-/*
-    protected function RenderNode(clsMenuItem $oNode) {
-	if ($oNode->IsLink()) {
-	    if (!$oNode->HasURL()) {
-		$sPath = $this->urlPfx.$oNode->Name().$this->urlSfx;
-		$oNode->URL($sPath);
-	    }
-	}
-	$sText = $oNode->Render();
-	$out = $sText;
-	return $out;
-    }
-    */
 
     // ++ clsMenuItem CALLBACKS ++ //
 
@@ -396,7 +374,12 @@ class clsMenuPainter_UL extends clsMenuPainter {
 	return "\n</ul>";
     }
     public function MenuItem_BuildURL($urlItem) {
-	return $this->urlPfx.$urlItem.$this->urlSfx;
+	if (is_null($urlItem)) {
+	    $out = NULL;
+	} else {
+	    $out = $this->urlPfx.$urlItem.$this->urlSfx;
+	}
+	return $out;
     }
 
     // -- clsMenuItem CALLBACKS -- //

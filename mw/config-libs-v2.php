@@ -4,6 +4,7 @@
   REQUIRES: SMW_SCHEMA_VERSION must be defined as '2' or '3'
   HISTORY:
     2015-03-14 this library index file created
+    2015-04-29 added check for SMW_SCHEMA_VERSION - SMW library is optional
 */
 
 $fp = dirname( __FILE__ );
@@ -16,7 +17,8 @@ $om = new clsModule(__FILE__, 'menu.php');
 $om = new clsModule(__FILE__, 'richtext.php');
   $om->AddClass('clsRT_HTML');
   $om->AddClass('clsRT_Wiki');
-$om = new clsModule(__FILE__, 'smw/SMWv'.SMW_SCHEMA_VERSION.'/db-conn-smw.php');
-  $om->AddClass('fcDataConn_SMW');
-  $om->AddClass('w3smwPage');
-  
+if (defined('SMW_SCHEMA_VERSION')) {
+    $om = new clsModule(__FILE__, 'smw/SMWv'.SMW_SCHEMA_VERSION.'/db-conn-smw.php');
+        $om->AddClass('fcDataConn_SMW');
+        $om->AddClass('w3smwPage');
+}

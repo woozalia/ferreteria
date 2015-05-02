@@ -226,23 +226,30 @@ class clsUserSession extends clsDataSet {
     }
     /*-----
       RETURNS: TRUE if the stored session credentials match current reality (browser's credentials)
+      HISTORY:
+	2015-04-26 This sometimes comes up with no record -- I'm guessing that happens when a matching
+	  Session isn't found. (Not sure why this isn't detected elsewhere.)
     */
     public function IsValidNow($iKey) {
-	$ok = ($this->Token() == $iKey);
-	if ($ok) {
-	    $rcClient = $this->ClientRecord_asSet();
-	    $ok = $rcClient->IsValidNow();
-	    /* This doesn't make sense. We need to ask the client if it matches the browser fingerprint.
-	    $idClientWas = $this->ClientID();
-	    $idClientNow = $this->ClientID();
-	    if ($idClientWas != $idClientNow) {
-		// not an error, but could indicate a hacking attempt -- so log it, flagged as severe:
-		$this->Engine()->LogEvent(
-		  'session.valid',
-		  'KEY='.$iKey,' OLD-CLIENT='.$idClientWas.' NEW-CLIENT='.$idClientNow,
-		  'stored session client mismatch','XCRED',FALSE,TRUE);
-		$ok = FALSE;
-	    } */
+	if ($this->IsNew()) {
+	    $ok = FALSE;
+	} else {
+	    $ok = ($this->Token() == $iKey);
+	    if ($ok) {
+		$rcClient = $this->ClientRecord_asSet();
+		$ok = $rcClient->IsValidNow();
+		/* This doesn't make sense. We need to ask the client if it matches the browser fingerprint.
+		$idClientWas = $this->ClientID();
+		$idClientNow = $this->ClientID();
+		if ($idClientWas != $idClientNow) {
+		    // not an error, but could indicate a hacking attempt -- so log it, flagged as severe:
+		    $this->Engine()->LogEvent(
+		      'session.valid',
+		      'KEY='.$iKey,' OLD-CLIENT='.$idClientWas.' NEW-CLIENT='.$idClientNow,
+		      'stored session client mismatch','XCRED',FALSE,TRUE);
+		    $ok = FALSE;
+		} */
+	    }
 	}
 	return $ok;
     }

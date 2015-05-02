@@ -94,8 +94,8 @@ abstract class clsPage {
     // ++ UTILITIES ++ //
 
     /*----
-      RETURNS: The rest of the URI after KFP_PAGE_BASE
-      REQUIRES: KFP_PAGE_BASE must be set to the base URL for the expected request (e.g. '/cat/')
+      RETURNS: The rest of the URI after KWP_PAGE_BASE
+      REQUIRES: KWP_PAGE_BASE must be set to the base URL for the expected request (e.g. '/cat/')
       REASON: $SERVER[PATH_INFO] is often unavailable; $SERVER[REQUEST_URI] is more reliable,
 	  but needs a little processing.
 	This function can be gradually foolproofed as more cases are encountered.
@@ -103,11 +103,11 @@ abstract class clsPage {
     */
     static protected function GetPathInfo() {
 	$uriReq = $_SERVER['REQUEST_URI'];
-	$idxBase = strpos($uriReq,KFP_PAGE_BASE);
+	$idxBase = strpos($uriReq,KWP_PAGE_BASE);
 	if ($idxBase === FALSE) {
-	    throw new exception("Configuration needed: URI [$uriReq] does not include KFP_PAGE_BASE [".KFP_PAGE_BASE.'].');
+	    throw new exception("Configuration needed: URI [$uriReq] does not include KWP_PAGE_BASE [".KWP_PAGE_BASE.'].');
 	}
-	$urlPath = substr($uriReq,$idxBase+strlen(KFP_PAGE_BASE));
+	$urlPath = substr($uriReq,$idxBase+strlen(KWP_PAGE_BASE));
 	return $urlPath;
     }
 
@@ -622,12 +622,15 @@ abstract class clsPageLogin extends clsPageBasic {
 	    $this->TitleString('Setting Password');
 	} elseif ($this->IsAuthLink()) {
 	    $this->TitleString('Authorize Password Reset');
-	} else {
+	} elseif ($this->IsLoginRequest()) {
 	    $this->TitleString('User Login');
-	    if ($this->IsLoginRequest()) {
-		$this->DoLoginCheck();
-	    }
+	    $this->DoLoginCheck();
+	} else {
+	    $this->HandleInput_notLoggedIn();
 	}
+    }
+    protected function HandleInput_notLoggedIn() {
+	// this can be overridden to show a default public page
     }
     /*----
       ACTION: gets the user logged in by rendering/handling the following:
@@ -985,15 +988,27 @@ abstract class clsPageLogin extends clsPageBasic {
 		    return $out;
 		}
 		if (!$ok) {
-		    return 'No action defined for menu item "'.$oNode->Name().'".';
+		    $sName = $oNode->Name();
+		    if (empty($sName)) {
+			// this is a bit of a kluge; I don't know why we end up here
+			return $this->DefaultContent();
+		    } else {
+			return 'No action defined for menu item "'.$sName.'".';
+		    }
 		}
 	    } else {
 		$php = $oNode->GoCode();
 		return eval($php);	// execute the menu choice
 	    }
 	} else {
-	    return 'Choose an item from the menu, or '.$this->RenderHome().'.';
+	    return $this->DefaultContent();
 	}
+    }
+    /*----
+      PURPOSE: Called when no menu item is active
+    */
+    protected function DefaultContent() {
+	return 'Choose an item from the menu, or '.$this->RenderHome().'.';
     }
     /*----
       ACTION: Does any initialization needed for the currently chosen menu selection

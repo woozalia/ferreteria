@@ -3,16 +3,23 @@
   PURPOSE: Skin class that supports login controls
 */
 abstract class clsSkin_login extends clsSkin_standard {
-    public function RenderLogin($iUName=NULL) {
-	$out =
-	  ' Username:<input name=uname size=10 value="'.$iUName.'">'
+    public function RenderLogin() {
+	return $this->RenderLoginForm();
+    }
+    public function RenderLogout() {
+	return $this->RenderLogoutLink();
+    }
+    public function RenderLoginLink($sText='log in') {
+	return '<a href="'.KWP_LOGIN.'">'.$sText.'</a>';
+    }
+    public function RenderLogoutLink($sText='log out') {
+	return '<a href="'.KWP_LOGOUT.'">'.$sText.'</a>';
+    }
+    public function RenderLoginForm($sUName=NULL) {
+	return
+	  ' Username:<input name=uname size=10 value="'.$sUName.'">'
 	  .' Password:<input type=password name=upass size=10>'
 	  .' <input type=submit value="Log In" name=btnLogIn>';
-	return $out;
-    }
-    public function RenderLogout($iText='log out') {
-	$out = '<a href="'.KWP_LOGOUT.'">'.$iText.'</a>';
-	return $out;
     }
     /*----
       ACTION: Renders controls for setting username and password

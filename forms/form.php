@@ -183,13 +183,23 @@ abstract class fcForm_keyed extends fcForm {
     // ++ FORM PROCESSING ++ //
 
     public function Save() {
-	$arPost = $_POST[$this->NameString()];
-	foreach ($arPost as $sKey => $arRec) {
-	    $this->ClearValues();
-	    $this->RecordValues($arRec);
-	    $this->Set_KeyString_toSave($sKey);
-	    $this->SaveRecord();
-	}
+        $sName = $this->NameString();
+        if (array_key_exists($sName,$_POST)) {
+            $arPost = $_POST[$sName];
+            foreach ($arPost as $sKey => $arRec) {
+                $this->ClearValues();
+                $this->RecordValues($arRec);
+                $this->Set_KeyString_toSave($sKey);
+                $this->SaveRecord();
+            }
+        } else {
+            echo '<b>Internal error</b>: POST contains no "'.$sName.'" data.<br>';
+            echo 'POST:'.clsArray::Render($_POST);
+            echo '<pre>';
+            debug_print_backtrace();
+            echo '</pre>';
+            die();
+        }
     }
 
     // -- FORM PROCESSING -- //
