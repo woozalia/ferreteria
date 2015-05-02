@@ -119,3 +119,16 @@ class fcFormControl_HTML_TextArea extends fcFormControl_HTML {
 	return $out;
     }
 }
+class fcFormControl_HTML_CheckBox extends fcFormControl_HTML {
+    protected function RenderEditor() {
+	$out = '<input type="checkbox" name="'
+	  .$this->NameSpec().'"'
+	  .$this->RenderAttr()
+	  .$this->RenderValue()
+	  .'>';
+	return $out;
+    }
+    protected function RenderValue() {
+	return $this->FieldObject()->ValueNative() ? ' checked' : '';
+    }
+}
