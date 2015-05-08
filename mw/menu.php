@@ -6,7 +6,7 @@
     2009-08-09 Extracted from SpecialVbzAdmin.php
     2009-11-04 clsArgs
     2010-02-20 clsWikiSection::SectionAdd(), ::ToggleAdd()
-    2010-04-06 
+    2010-04-06
       * General reconciliation with edited non-dev version
       * Done earlier but not logged here:
 	clsWikiSection::ArgsToAdd() (ported from other copy of menu.php)
@@ -215,7 +215,7 @@ function SelfLink_HTML(array $iData,$iShow,$iPopup=NULL) {
 class SpecialPageApp extends SpecialPage {
     // DYNAMIC
     protected $args;	// URL arguments as an array
-    private $arKeep;	// arguments to preserve (in every menu item) from the current page 
+    private $arKeep;	// arguments to preserve (in every menu item) from the current page
     private $arAdd;	// arguments to add to every menu item
     protected $objRT_HTML,$objRT_Wiki;
 
@@ -296,10 +296,11 @@ class SpecialPageApp extends SpecialPage {
     }
 */
     /*----
-    ACTION: Parses variable arguments from the URL
-      The URL is formatted as a series of arguments /arg:val/arg:val/..., so that we can always refer directly
-	to any particular item as a wiki page title while also not worrying about hierarchy/order.
-	An arg can also appear without a val (/arg/...), in which case it is treated as a flag set to TRUE.
+      ACTION: Parses variable arguments from the URL
+	The URL is formatted as a series of arguments /arg:val/arg:val/..., so that we can always refer directly
+	  to any particular item as a wiki page title while also not worrying about hierarchy/order.
+	  An arg can also appear without a val (/arg/...), in which case it is treated as a flag set to TRUE.
+      TODO: This can probably be replaced by clsURL::ParsePath($par);
     */
     protected function GetArgs($par) {
 	$args_raw = preg_split('/\//',$par);
@@ -339,6 +340,10 @@ class SpecialPageApp extends SpecialPage {
 	    return NULL;
 	}
     }
+    // Alias for compatibility with other Ferreteria Page classes
+    public function PathArg($sName) {
+	return $this->Arg($sName);
+    }
     /*----
       HISTORY:
 	2013-08-26 added so we could avoid adding nonexistent data to the URL
@@ -353,7 +358,7 @@ class SpecialPageApp extends SpecialPage {
 	2011-03-30 adapted from clsWikiSection to SpecialPageApp
     */
     public function ArgsToKeep(array $iKeep) {
-	$this->arKeep = $iKeep;	
+	$this->arKeep = $iKeep;
     }
     public function ArgsToAdd(array $iAdd) {
 	$this->arAdd = $iAdd;
@@ -400,8 +405,11 @@ class SpecialPageApp extends SpecialPage {
       HISTORY:
 	2013-08-26 set $arLink to NULL if iClear is TRUE
 	  otherwise "rebuild tree" on http://vbz.net/corp/wiki/Special:VbzAdmin/page:topic fails
+	2015-05-03 renamed this to SelfURL_extend() to avoid conflict with clsPageLogin::SelfURL(),
+	  whose second parameter means somewhat the opposite of what $iClear does.
+      NOTE: Not entirely clear what this is actually supposed to do.
     */
-    public function SelfURL(array $iAdd=NULL,$iClear=TRUE) {
+    public function SelfURL_what(array $iAdd=NULL,$iClear=TRUE) {
 	$arAddSave = $this->arAdd;
 	$this->arAdd = $iAdd;
 	if ($iClear) {
@@ -412,6 +420,28 @@ class SpecialPageApp extends SpecialPage {
 	$wpPath = $this->SelfURL_calc($arLink,$iClear);
 	$this->arAdd = $arAddSave;
 	return $wpPath;
+    }
+    /*----
+      RETURNS: URL calculated from identity keys
+    */
+    public function SelfURL_basic() {
+	$arLink = $this->SelfArray();
+	$wpPath = $this->SelfURL_calc($arLink,TRUE);	// TRUE = don't include anything except ID keys
+	return $wpPath;
+    }
+    /*----
+      RETURNS: base URL (SelfURL_basic) extended by the items in arAdd
+    */
+    public function SelfURL_extend(array $arAdd) {
+	$arAddSave = $this->arAdd;
+	$this->arAdd = $arAdd;
+	$arLink = $this->SelfArray();
+	$wpPath = $this->SelfURL_calc($arLink,TRUE);
+	$this->arAdd = $arAddSave;
+	return $wpPath;
+   }
+    public function SelfURL() {
+	throw new exception('SelfURL() is deprecated; call SelfURL_extend() or SelfURL_basic().');
     }
     /*----
       NOTE: This has only been tested with SpecialPages; in theory it could be used on regular pages
@@ -853,7 +883,7 @@ abstract class clsWikiSectionLink extends clsWikiSectionLink_base {
 
 	$key = $this->Key();
 	$ar[$key] = !$this->Selected();
-      
+
 	return $ar;
     }
 }
@@ -986,7 +1016,7 @@ class clsWikiSectionLink_option extends clsWikiSectionLink_base {
 	} else {
 	    $ar[$lk] = !$this->Selected();
 	}
-      
+
 	return $ar;
     }
     /*----
@@ -1068,7 +1098,7 @@ class clsWikiSection {
     private $intLevel;	// level of header; defaults to 2
     private $objFmt;	// page-formatter object
     private $arMenu;	// menu entries
-    private $arKeep;	// arguments to preserve (in every menu item) from the current page 
+    private $arKeep;	// arguments to preserve (in every menu item) from the current page
     private $arAdd;	// arguments to add to every menu item
 
     public function __construct(clsWikiFormatter $iFmt,$iName,$iDescr=NULL,$iLevel=2,array $iMenu=NULL) {
@@ -1084,7 +1114,7 @@ class clsWikiSection {
 2011-10-17 ArgsToKeep() and ArgsToAdd() were being used by SpecialWorkFerret clsWFSession.SectionHdr(); checking to see if actually needed...
   no, they aren't -- DEPRECATED -- use $vgPage-> functions instead.
     public function ArgsToKeep(array $iKeep) {
-	$this->arKeep = $iKeep;	
+	$this->arKeep = $iKeep;
     }
     public function ArgsToAdd(array $iAdd) {
 	$this->arAdd = $iAdd;
@@ -1166,7 +1196,7 @@ class clsWikiSection {
 	$strKey = is_null($iKey)?$iDisp:$iKey;
 
 	$objPage = $this->objFmt->Page();
-	
+
 	$arLink = $objPage->SelfArray();
 	$isActive = $objPage->Arg($strKey);	// active state is indicated by presence of key
 	$arLink[$strKey] = !$isActive;

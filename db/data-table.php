@@ -75,25 +75,21 @@ abstract class clsTable_abstract {
 	$iItem->sqlMake = $this->sqlExec;
     }
     /*----
-      ACTION: creates a new uninitialized singular object but sets the Table pointer back to self
-      RETURNS: created object
-      FUTURE: maybe this should be renamed GetNew()?
+      ACTION: creates a new uninitialized singular (recordset) object but sets the Table pointer back to self
+      RETURNS: created recordset object
     */
-    public function SpawnItem($iClass=NULL) {
-	if (is_null($iClass)) {
-	    $strCls = $this->ClassSng();
-	} else {
-	    $strCls = $iClass;
+    public function SpawnItem($sClass=NULL) {
+	if (is_null($sClass)) {
+	    $sClass = $this->ClassSng();
 	}
-	assert('!empty($strCls);');
-	if (class_exists($strCls)) {
-	    $objItem = new $strCls;
-	    // NOTE: If you get an error like "Missing argument 1 for <$strCls>" here,
+	if (class_exists($sClass)) {
+	    $rs = new $sClass();
+	    // NOTE: If you get an error like "Missing argument 1 for <$sClass>" here,
 	    //	you're probably requesting a non-recordset class. Check what was passed to ClassSng().
-	    $this->ReleaseItem($objItem);
-	    return $objItem;
+	    $this->ReleaseItem($rs);
+	    return $rs;
 	} else {
-	    throw new exception('Class "'.$strCls.'" is not defined.');
+	    throw new exception('Class "'.$sClass.'" is not defined.');
 	}
     }
     /*----

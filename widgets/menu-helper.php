@@ -21,7 +21,11 @@ class clsMenuData_helper {
 	$txtShow = is_null($iText)?($iThis->KeyString()):$iText;
 	$objSelf = static::_Spawn();
 	$objSelf->Recs($iThis);
-	$out = $objSelf->AdminLink($iText,$iPopup,$arArgs);
+// TODO: probably need to rethink this
+	$arBase = $iThis->IdentityValues();
+	$arAll = clsArray::Merge($arBase,$arArgs);
+
+	$out = $objSelf->BuildLink($arAll,$iText,$iPopup);
 	return $out;
     }
     static public function _AdminURL(clsRecs_keyed_abstract $iThis,array $iarArgs=NULL) {
@@ -88,7 +92,10 @@ class clsMenuData_helper {
 	$this->strNewTxt = 'new';
 	$this->strNewKey = '';
     }
-
+    /*----
+      RETURNS: appropriate key value, even if record is new
+      TODO: possibly this should be renamed
+    */
     protected function ActionID() {
 	$objRecs = $this->Recs();
 	$sKeyNew = $this->NewKey();
@@ -145,6 +152,7 @@ class clsMenuData_helper {
 	2012-12-31 After moving this code to clsAdminData_helper, modifying new-record handling
 	  to use object field values. Also, no longer any need for a static function, so merging
 	  with dynamic version.
+      TODO: This should probably be deprecated.
     */
     public function AdminLink($iText=NULL,$iPopup=NULL,array $iarArgs=NULL) {
 	$txtID = $this->ActionID();
@@ -152,11 +160,28 @@ class clsMenuData_helper {
 	$arLink = $this->AdminLink_array($iarArgs);
 	$txtShow = is_null($iText)?($txtID):$iText;
 
-	$url = $this->Recs()->Engine()->App()->Page()->SelfURL($arLink);
+	$url = $this->Recs()->Engine()->App()->Page()->SelfURL_basic($arLink);
 
 	$out = clsHTML::BuildLink($url,$txtShow,$iPopup);
 
 	return $out;
+    }
+    /*----
+      ACTION: create a link from the given parameters
+	URL: derived from $arArgs
+	Text: sText if set, otherwise the current ActionID
+	Title (popup): $sPopup if set
+    */
+    public function BuildLink(array $arArgs,$sText=NULL,$sPopup=NULL) {
+	$sID = $this->ActionID();
+	$urlBase = $this->Recs()->Engine()->App()->BaseURL();
+	$uriPage = clsURL::FromArray($arArgs);
+	$url = $urlBase.'/'.$uriPage;
+	if (is_null($sText)) {
+	    $sText = $this->ActionID();
+	}
+	$htTitle = is_null($sPopup)?'':(' title="'.htmlspecialchars($sPopup).'"');
+	return "<a href='$url'$htTitle>$sText</a>";
     }
     protected function RecURL() {
 	$arArgs = NULL;
@@ -169,11 +194,12 @@ class clsMenuData_helper {
 		    $arArgs[$key] = $oPage->PathArg($key);
 		}
 	    } else {
-		echo '<b>Error</b>: $arKeys is not an array; value=['.$arKeys.'], rc class=['.get_class($rc).'].';
+		echo '<b>Error</b>: $arKeys is not an array; value=['.$arKeys.'], recordset class=['.get_class($rc).'].';
 		throw new exception('Internal error: $arKeys is not an array.');
 	    }
 	}
-	$url = $this->Recs()->Engine()->App()->Page()->SelfURL($arArgs,FALSE);
+	// NOTE: This will choke when next used in Ferreteria's App framework -- but we just need to write SelfURL_extend().
+	$url = $this->Recs()->Engine()->App()->Page()->SelfURL_extend($arArgs);
 	return $url;
     }
     /*----

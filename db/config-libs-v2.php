@@ -19,10 +19,9 @@ $om = new clsModule(__FILE__, 'db-conn-mysqli.php');
 //  $om->AddClass('fcDataResult');
 //$om = new clsModule(__FILE__, 'db-result-mysqli.php');
 //  $om->AddClass('fcDataResult_MySQL');
-$om = new clsModule(__FILE__, 'db-table.php');  
+$om = new clsModule(__FILE__, 'db-table.php');
   $om->AddClass('fcDataTable');
-$om = new clsModule(__FILE__, 'db-table-indexed.php');  
+$om = new clsModule(__FILE__, 'db-table-indexed.php');
   $om->AddClass('fcDataTable_indexed');
-$om = new clsModule(__FILE__, 'db-records.php');  
+$om = new clsModule(__FILE__, 'db-records.php');
   $om->AddClass('fcDataRecord');
-  

@@ -14,6 +14,7 @@ $om = new clsModule(__FILE__, 'admin.php');
   $om->AddClass('clsAdminData');
 $om = new clsModule(__FILE__, 'app-mw.php');
   $om->AddClass('clsApp_MW');
+  $om->AddClass('cDataRecord_MW');
 $om = new clsModule(__FILE__, 'data-mw.php');
   $om->AddClass('clsMWData');
 $om = new clsModule(__FILE__, 'menu.php');

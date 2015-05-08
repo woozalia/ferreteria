@@ -12,11 +12,13 @@ abstract class fcForm {
     private $sName;
     private $arCtrls;
     private $arRec;
+    private $arNewVals;
 
     // ++ SETUP ++ //
 
     public function __construct($sName) {
 	$this->NameString($sName);
+	$this->arNewVals = NULL;
     }
 
     // -- SETUP -- //
@@ -40,8 +42,19 @@ abstract class fcForm {
     public function ControlObject($sName,fcFormControl $oCtrl=NULL) {
 	if (!is_null($oCtrl)) {
 	    $this->arCtrls[$sName] = $oCtrl;
+	    $this->arRec[$sName] = NULL;	// make sure data field exists
 	}
-	return $this->arCtrls[$sName];
+	if (array_key_exists($sName,$this->arCtrls)) {
+	    return $this->arCtrls[$sName];
+	} else {
+	    throw new exception('Attempting to retrieve unknown form field "'.$sName.'".');
+	}
+    }
+    protected function ControlExists($sName) {
+	return array_key_exists($sName,$this->arCtrls);
+    }
+    protected function FieldObject($sName) {
+	return $this->ControlObject($sName)->FieldObject();
     }
 
     // -- CONFIG -- //
@@ -70,16 +83,17 @@ abstract class fcForm {
     */
     abstract public function SaveRecord();
     /*----
-      PURPOSE: set or retrieve single value
+      PURPOSE: set or retrieve single value (native format)
     */
     public function RecordValue($sField,$val=NULL) {
 	if (!is_null($val)) {
-	    $this->arRec[$sField] = $val;
+	    $this->SetRecordValue($sField,$val);
 	}
 	if (is_array($this->arRec)) {
 	    if (array_key_exists($sField,$this->arRec)) {
 		return $this->arRec[$sField];
 	    } else {
+		echo 'FIELDS:'.clsArray::Render($this->arRec);
 		throw new exception('Attempting to read unknown field "'.$sField.'".');
 	    }
 	} else {
@@ -87,17 +101,39 @@ abstract class fcForm {
 	}
     }
     /*----
-      PURPOSE: set or retrieve all values in record
+      PURPOSE: allows explicitly setting NULL values.
     */
-    protected function RecordValues(array $arVals=NULL) {
+    public function SetRecordValue($sField,$val) {
+	$this->arRec[$sField] = $val;
+    }
+    /*----
+      PURPOSE: set or retrieve all values in record (native format)
+    */
+    protected function RecordValues_asNative(array $arVals=NULL) {
 	if (!is_null($arVals)) {
 	    $this->arRec = $arVals;
 	}
 	return $this->arRec;
     }
-
+    protected function RecordValues_asDisplay(array $arVals=NULL) {
+	if (!is_null($arVals)) {
+	    foreach ($arVals as $key => $val) {
+		if ($this->ControlExists($key)) {
+		    $oField = $this->FieldObject($key);
+		    $oField->ValueDisplay($val);
+		}
+	    }
+	}
+    }
     /*----
-      PURPOSE: sets default values to use for new records.
+      ACTION: set an individual default value to use for new records
+      WARNING: NewValues() will override any that you set here!
+    */
+    public function NewValue($sName,$val) {
+        $this->arNewVals[$sName] = $val;
+    }
+    /*----
+      ACTION: set or return default values to use for new records.
       INPUT: array of field names and SQL values
 	iVals[name] = raw SQL
 	if a value is set to NULL, then a new row *must* set that value to non-null before it will be added.
@@ -118,7 +154,7 @@ abstract class fcForm {
 	Also ensures that every Control has a value (default is NULL).
     */
     public function ClearValues() {
-	$this->RecordValues($this->NewValues());
+	$this->RecordValues_asDisplay($this->NewValues());
 	$arCtrls = $this->ControlArray();
 	foreach ($arCtrls as $sName => $oCtrl) {
 	    if (!array_key_exists($sName,$this->arRec)) {
@@ -188,7 +224,7 @@ abstract class fcForm_keyed extends fcForm {
             $arPost = $_POST[$sName];
             foreach ($arPost as $sKey => $arRec) {
                 $this->ClearValues();
-                $this->RecordValues($arRec);
+                $this->RecordValues_asSQL($arRec);
                 $this->Set_KeyString_toSave($sKey);
                 $this->SaveRecord();
             }

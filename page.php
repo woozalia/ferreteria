@@ -426,7 +426,7 @@ abstract class clsPageLogin extends clsPageBasic {
 	    $arPath = array();	// no path
 	}
 	$this->arPath = $arPath;
-	$this->oPath = new clsHTTPInput($arPath);;
+	$this->oPath = new clsHTTPInput($arPath);
     }
     public function PathObj() {
 	return $this->oPath;

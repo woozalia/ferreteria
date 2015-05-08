@@ -32,6 +32,7 @@ abstract class clsApp {
     abstract public function Page(clsPage $iObj=NULL);
     abstract public function Data(clsDatabase $iObj=NULL);
     abstract public function User();
+    abstract public function BaseURL();
 }
 abstract class cAppStandard extends clsApp {
     private $oPage;

@@ -95,6 +95,14 @@ class clsDataRecord_Menu extends clsDataSet {
 	}
 	return $this->arRIKeys;
     }
+    // this may make Value_IdentityKeys() obsolete
+    public function IdentityValues() {
+	$ar = array(
+	  'page'	=> $this->Table()->ActionKey(),
+	  'id'		=> $this->KeyValue(),
+	  );
+	return $ar;
+    }
 
     // -- HELPER PARAMETERS -- //
     // ++ ADMIN UI ++ //

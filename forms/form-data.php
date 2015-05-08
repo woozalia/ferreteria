@@ -42,13 +42,24 @@ class fcForm_DB extends fcForm_keyed {
     // ++ DATA STORAGE ++ //
 
     /*----
+      ACTION: get or set array of record values in SQL format
+      NOTE: ONLY sets values for which a control exists
       RETURNS: array of record values, SQL-ready to update or insert
     */
-    protected function RecordValues_SQL() {
-	$arI = $this->RecordValues();
+    protected function RecordValues_asSQL(array $arSQL=NULL) {
+	if (!is_null($arSQL)) {
+	    foreach ($arSQL as $key => $val) {
+		if ($this->ControlExists($key)) {
+		    $oField = $this->FieldObject($key);
+		    $oField->SetValueSQL($val);
+		}
+	    }
+	}
+	$arI = $this->RecordValues_asNative();
 	foreach ($arI as $key => $val) {
-	    $sql = SQLValue($val);
-	    $arO[$key] = $sql;
+	    $oField = $this->FieldObject($key);
+	    $oField->ValueNative($val);
+	    $arO[$key] = $oField->ValueSQL();
 	}
 	return $arO;
     }
@@ -56,7 +67,7 @@ class fcForm_DB extends fcForm_keyed {
       RULE: Call this before attempting to read data
     */
     public function LoadRecord() {
-	$this->RecordValues($this->RecordsObject()->Values());
+	$this->RecordValues_asSQL($this->RecordsObject()->Values());
 	$this->Set_KeyString_loaded($this->RecordsObject()->KeyValue());
     }
     /*----
@@ -64,12 +75,14 @@ class fcForm_DB extends fcForm_keyed {
     */
     public function SaveRecord() {
 	$tbl = $this->RecordsObject()->Table();
-	$arUpd = $this->RecordValues_SQL();
+	$arUpd = $this->RecordValues_asSQL();
 	$idUpd = $this->Get_KeyString_toSave();
 	if ($idUpd == KS_NEW_REC) {
 	    $tbl->Insert($arUpd);
+	    //echo 'SQL: '.$tbl->sqlExec; die();
 	} else {
 	    $tbl->Update_Keyed($arUpd,$idUpd);
+	    //echo 'SQL: '.$tbl->sqlExec; die();
 	}
     }
 
