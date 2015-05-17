@@ -16,7 +16,6 @@
 	flag. If this flag is not set by the time the node is rendered, the node will
 	be skipped (and not rendered).
 
-  REQUIRES: KS_CHAR_URL_ASSIGN must be defined (typically ':')
   HISTORY:
     2013-11-29 started
     2013-12-12 rewriting to use single path-segment for each menu item

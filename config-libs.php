@@ -107,6 +107,8 @@ $om = new clsModule(__FILE__, 'util/url.php');
 $om = new clsModule(__FILE__, 'widgets/data-cache.php');
   $om->AddClass('clsTableCache');
 $om = new clsModule(__FILE__, 'widgets/menu-action.php');
+  $om->AddClass('clsActionLink');
+  $om->AddClass('clsActionLink_modeless');
   $om->AddClass('clsActionLink_option');
 $om = new clsModule(__FILE__, 'widgets/menu-helper.php');
   $om->AddClass('clsMenuData_helper');

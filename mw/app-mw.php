@@ -40,7 +40,7 @@ class cDataRecord_MW extends clsDataRecord_Menu {
 	parent::InitVars();
 	$this->Value_IdentityKeys(array('page','id'));
     }
-
+    
     // -- SETUP -- //
     // ++ ACTION ++ //
 

@@ -23,26 +23,30 @@ class clsDataTable_Menu extends clsTable {
     }
 }
 class clsDataRecord_Menu extends clsDataSet {
+    private $arRIKeys;
+    private $oApp;
+    private $oLog;
 
     // ++ SETUP ++ //
 
     protected function InitVars() {
 	$this->arRIKeys = NULL;
+	$this->oApp = NULL;
+	$this->oLog = NULL;
     }
 
     // -- SETUP -- //
     // ++ BOILERPLATE ++ //
-
       // table classes that don't descend from this class can just copy/paste these methods
+      
       // ++ BOILERPLATE: event logging ++ //
 
     private $oLogger;
     protected function Log() {
-	if (empty($this->oLogger)) {
-	    $tLog = $this->Engine()->App()->Events();
+	if (is_null($this->oLog)) {
+	    $tLog = $this->EventTable();
 	    // alternative way to create Events object:
-	    //$tLog = VCM_Syslog::SpawnTable($this->Engine());
-	    $this->oLogger = new clsLogger_DataSet($this,$tLog);
+	    $this->oLog = new clsLogger_DataSet($this,$tLog);
 	}
 	return $this->oLogger;
     }
@@ -58,7 +62,7 @@ class clsDataRecord_Menu extends clsDataSet {
     public function EventListing() {
 	return $this->Log()->EventListing();
     }
-
+  
       // ++ BOILERPLATE: self-linkage ++ //
 
     /*----
@@ -80,6 +84,16 @@ class clsDataRecord_Menu extends clsDataSet {
     }
 
     // -- BOILERPLATE -- //
+    // ++ BOILERPLATE AUXILIARY ++ //
+    
+    protected function EventsClass() {
+	throw new exception('Need to define this when it is actually used...');
+    }
+    protected function EventTable() {
+	return $this->Engine()->Make($this->EventsClass());
+    }
+    
+    // -- BOILERPLATE AUXILIARY -- //
     // ++ HELPER PARAMETERS ++ //
 
     /*----
@@ -88,7 +102,6 @@ class clsDataRecord_Menu extends clsDataSet {
 	when redirecting.
 	If NULL, all keys will be preserved.
     */
-    private $arRIKeys;
     public function Value_IdentityKeys(array $arKeys=NULL) {
 	if (!is_null($arKeys)) {
 	    $this->arRIKeys = $arKeys;

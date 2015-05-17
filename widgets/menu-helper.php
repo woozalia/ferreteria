@@ -4,6 +4,7 @@
     manages action URLs
   HISTORY:
     2013-12-04 adapted from MediaWiki classes for standalone menu system
+    2015-05-08 MW data record classes have no App() method, so resorting to static call in _AdminURL() and BuildLink();
 */
 
 /*%%%%
@@ -30,7 +31,8 @@ class clsMenuData_helper {
     }
     static public function _AdminURL(clsRecs_keyed_abstract $iThis,array $iarArgs=NULL) {
 	$arLink = static::_AdminLink_array($iThis,$iarArgs);
-	$url = $iThis->Engine()->App()->Page()->SelfURL($arLink);
+	//$url = $iThis->Engine()->App()->Page()->SelfURL($arLink);
+	$url = clsApp::Me()->Page()->SelfURL_extend($arLink);
 	return $url;
     }
     // this can be made public if needed
@@ -174,7 +176,8 @@ class clsMenuData_helper {
     */
     public function BuildLink(array $arArgs,$sText=NULL,$sPopup=NULL) {
 	$sID = $this->ActionID();
-	$urlBase = $this->Recs()->Engine()->App()->BaseURL();
+	//$urlBase = $this->Recs()->Engine()->App()->BaseURL();
+	$urlBase = clsApp::Me()->BaseURL();
 	$uriPage = clsURL::FromArray($arArgs);
 	$url = $urlBase.'/'.$uriPage;
 	if (is_null($sText)) {
