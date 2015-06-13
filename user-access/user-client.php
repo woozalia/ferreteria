@@ -17,12 +17,14 @@ class clsUserClient extends clsDataSet {
     public function InitNew() {
 	$sAddr = clsHTTP::ClientAddress_string();
 	$sAgent = clsHTTP::ClientBrowser_string();
+	$nCRC = crc32($sAddr.' '.$sAgent);
+	$sCRC = sprintf('%u',$nCRC);	// make sure is unsigned
 	$arInit = array(
 	  'ID'		=> NULL,
 	  'Address'	=> $sAddr,
 	  'Browser'	=> $sAgent,
 	  'Domain'	=> gethostbyaddr($sAddr),
-	  'CRC'		=> crc32($sAddr.' '.$sAgent)
+	  'CRC'		=> $sCRC
 	  );
 	$this->Values($arInit);
 	//$this->isNew = TRUE;	// 2015-02-17 not used in this file; is it used elsewhere? Replace with method.
@@ -70,11 +72,6 @@ class clsUserClient extends clsDataSet {
 	} else {
 	    $sDomain = $this->Engine()->SafeParam($this->DomainString());
 	    $sBrowser = $this->Engine()->SafeParam($this->BrowserString());
-	    /*
-	    $sql = 'INSERT INTO `'.clsShopClients::TableName.'` (CRC, Address, Domain, Browser, WhenFirst)'
-	    .' VALUES("'.$this->CRC.'", "'.$this->Address.'", "'.$strDomain.'", "'.$strBrowser.'", NOW());';
-	    $this->objDB->Exec($sql);
-	    */
 	    $ar = array(
 	      'CRC'		=> SQLValue($this->CRC()),
 	      'Address'		=> SQLValue($this->AddressString()),
@@ -82,7 +79,13 @@ class clsUserClient extends clsDataSet {
 	      'Browser'		=> SQLValue($sBrowser),
 	      'WhenFirst'	=> 'NOW()'
 	      );
-	    $this->KeyValue($this->Table()->Insert($ar));
+	    $idNew = $this->Table()->Insert($ar);
+	    if ($idNew === FALSE) {
+		echo 'CLIENT RECORD TO ADD:'.clsArray::Render($ar);
+		echo 'SQL: '.$this->Table()->sqlExec.'<br>';
+		throw new exception('Could not insert new client record.');
+	    }
+	    $this->KeyValue($idNew);
 	}
     }
 

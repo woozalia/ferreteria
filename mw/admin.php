@@ -5,10 +5,10 @@
     $vgOut is usually set in menu.php
       It must be a descendant of clsRichText, which is defined in richtext.php
   HISTORY:
-    2010-04-06 
+    2010-04-06
 	clsAdminTable, clsAdminData, clsAdminData_Logged written (in menu.php)
     2010-10-25 clsAdminTable, clsAdminData extracted from menu.php
- 
+
 /*==========
   CLASS: clsAdminTable
   HISTORY:

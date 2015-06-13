@@ -54,7 +54,7 @@ abstract class clsMenuItem extends clsMenuNode {
     }
     protected function InitLinks($oRoot,$sPerm) {
 	$this->isAuth = FALSE;	// node has not been authorized yet
-	$oUser = clsApp::Me()->User();
+	$oUser = clsApp::Me()->User('clsMenuItem.InitLinks()');
 	if (is_object($oUser)) {
 	    $hasParent = !is_null($oRoot);
 	    $hasReq = !is_null($sPerm);
@@ -110,8 +110,8 @@ abstract class clsMenuItem extends clsMenuNode {
 	if (is_null($sPerm)) {
 	    // in this context, NULL permission means all users are authorized
 	    $this->isAuth = TRUE;	// node has been authorized
-	} elseif (clsApp::Me()->UserKnown()) {
-	    if (clsApp::Me()->User()->CanDo($sPerm)) {
+	} elseif (clsApp::Me()->UserKnown('clsMenuItem.NeedPermission()')) {
+	    if (clsApp::Me()->User('menu.NeedPermission()')->CanDo($sPerm)) {
 		// this item has been authorized for access
 		$this->isAuth = TRUE;	// node has been authorized
 	    }

@@ -55,7 +55,7 @@ class clsUserAccts extends clsTable {
 	if (is_null($rc)) {
 	    // username not found
 	    $oUser = NULL;
-	} elseif ($rc->AuthValid($iPass)) {
+	} elseif ($rc->PassMatches($iPass)) {
 	    $oUser = $rc;
 	} else {
 	    // username found, password wrong
@@ -164,6 +164,9 @@ class clsUserAcct extends fcDataRecs {
 	return $this->Value('EmailAddr');
     }
     public function SetPassword($sPass) {
+	if (empty($sPass)) {
+	    throw new exception('Internal error: setting blank password');
+	}
 	$t = $this->Table();
 	$sSalt = $t->MakeSalt();
 	$sHashed = $t->HashPass($sSalt,$sPass);
@@ -172,6 +175,8 @@ class clsUserAcct extends fcDataRecs {
 	  'PassSalt'	=> SQLValue($sSalt),
 	  );
 	$ok = $this->Update($ar);
+	echo "NEW PASSWORD: [$sPass]<br>";
+	echo 'STORED: '.clsArray::Render($ar); die();
 	return $ok;
     }
 
@@ -243,18 +248,19 @@ class clsUserAcct extends fcDataRecs {
     // -- DATA RECORDS ACCESS -- //
     // ++ BUSINESS LOGIC ++ //
 
-    public function AuthValid($iPass) {
+    public function PassMatches($iPass) {
 	// get salt for this user
 	$sSalt = $this->Value('PassSalt');
 
-	// hash salt+pass
-	$sHashed = $this->Table()->HashPass($sSalt,$iPass);
-	// see if it matches
-	return ($sHashed == $this->Value('PassHash'));
+	// hash [stored salt]+[given pass]
+	$sThisHashed = $this->Table()->HashPass($sSalt,$iPass);
+	// get stored hash
+	$sSavedHash = $this->Value('PassHash');
+
+	// see if they match
+	$ok = ($sThisHashed == $sSavedHash);
+	return $ok;
     }
-
-    // ++ BUSINESS LOGIC ++ //
-
     /*----
       RULES: For now, if a permission record with the given name exists and is assigned
 	to a group to which the user belongs, then the user has that permission.

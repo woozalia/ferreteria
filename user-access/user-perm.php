@@ -27,7 +27,7 @@ class clsUserPerms extends clsTable {
 
     // -- BUSINESS LOGIC -- //
 }
-class clsUserPerm extends clsVbzRecs {
+class clsUserPerm extends fcDataRecs {
 
     // ++ FIELD ACCESS ++ //
 

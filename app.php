@@ -38,6 +38,8 @@ abstract class cAppStandard extends clsApp {
     private $oPage;
     private $oSkin;
     private $oData;
+    private $rcSess;
+    private $rcUser;
 
     // ++ MAIN ++ //
 
@@ -90,15 +92,20 @@ abstract class cAppStandard extends clsApp {
 	return $this->oData;
     }
     public function Session() {
-	$tSess = $this->Data()->Sessions();
-	$oSess = $tSess->GetCurrent();
-	return $oSess;
+	if (empty($this->rcSess)) {
+	    $tSess = $this->Data()->Sessions();
+	    $this->rcSess = $tSess->GetCurrent();
+	}
+	return $this->rcSess;
     }
     public function Users($id=NULL) {
 	return $this->Make($this->UsersClass(),$id);
     }
     public function User() {
-	return $this->Session()->UserRecord();
+	if (empty($this->rcUser)) {
+	    $this->rcUser = $this->Session()->UserRecord();
+	}
+	return $this->rcUser;
     }
     /*----
       RETURNS: TRUE iff the user is logged in
@@ -154,7 +161,6 @@ abstract class cAppStandard extends clsApp {
 	} else {
 	    $sAddrToFull = $sToName.' <'.$sToAddr.'>';
 	}
-
 	$sHdr = 'From: '.$this->EmailAddr_FROM(date('Y'));
 	$ok = mail($sAddrToFull,$sSubj,$sMsg,$sHdr);
 	return $ok;

@@ -43,22 +43,22 @@ class clsMenu {
 	$this->Page = $iWikiPage;
 	$this->isSubActive = FALSE;
     }
-    public function WikiText($iAction) {
+    public function Render($iAction) {
 	$this->Action = $iAction;
 	if (isset($this->AllNodes[$iAction])) {
 	    $this->AllNodes[$iAction]->Activate();
 	    $this->isSubActive = TRUE;
 	}
-	$out = $this->WikiText_SubMenu($iAction);
+	$out = $this->Render_SubMenu($iAction);
 	return $out;
     }
-    public function WikiText_SubMenu($iAction) {
+    public function Render_SubMenu($iAction) {
 	$out = NULL;
 	foreach ($this->SubNodes as $objNode) {
 	    if (!is_null($out)) {
 		$out .= ' | ';
 	    }
-	    $out .= $objNode->WikiText($iAction);
+	    $out .= $objNode->Render($iAction);
 	}
 	return $out;
     }
@@ -107,15 +107,18 @@ abstract class clsMenuNode extends clsMenu {
 	$this->IsActive = TRUE;
 	$this->Parent->Activate();
     }
-    public function WikiText($iAction) {
+    public function Render($iAction) {
 	$wtSelf = $this->Root()->Page;
-	$wtItem = "[[$wtSelf/page".KS_CHAR_URL_ASSIGN."{$this->DoSpec}|{$this->Text}]]";
+	//$wtItem = "[[$wtSelf/page".KS_CHAR_URL_ASSIGN."{$this->DoSpec}|{$this->Text}]]";
+	$url = $wtSelf.'/page'.KS_CHAR_URL_ASSIGN.$this->DoSpec;
+	$sText = $this->Text;
+	$ftItem = "<a href='$url'>$sText</a>";
 //	if ($iAction == $this->DoSpec) {
 	if ($this->IsActive) {
-	    $out = "'''$wtItem'''";
+	    $out = "<b>$ftItem</b>";
 	    $this->Root()->Selected = $this;
 	} else {
-	    $out = $wtItem;
+	    $out = $ftItem;
 	}
 	return $out;
     }
@@ -123,8 +126,9 @@ abstract class clsMenuNode extends clsMenu {
 
 class clsMenuRow extends clsMenuNode {
     public function DoAction() {
-	$out = "<br>'''{$this->Text}''': ";
-	$out .= $this->WikiText_SubMenu($this->Root()->Action);
+        $sText = $this->Text;
+	$out = "<br><b>$sText</b>: ";
+	$out .= $this->Render_SubMenu($this->Root()->Action);
 	return $out;
     }
 }

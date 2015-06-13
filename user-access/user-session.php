@@ -33,22 +33,8 @@ class clsUserSessions extends clsTable {
 	return $rcSess;
     }
     /*----
-      RETURNS: the session's cookie value, if any
-    */
-    protected function GetCookie() {
-	$strSessKey = NULL;
-	if (array_key_exists(KS_USER_SESSION_KEY,$_COOKIE)) {
-	    $strSessKey = $_COOKIE[KS_USER_SESSION_KEY];
-	} elseif(!is_null($this->sCookieVal)) {
-	    $strSessKey = $this->sCookieVal;
-	}
-	return $strSessKey;
-    }
-    /*----
-      ACTION: sets the session's cookie value
+      ACTION: throws the session cookie to the browser
       RETURNS: TRUE iff successful
-      TODO: should probably unset $_COOKIE[key] if $iSessKey is NULL
-	(tidy up after ourselves)
       NOTES:
 	* HTTP only sets the cookie when the page is reloaded.
 	  Because of this, and because $_COOKIE is read-only,
@@ -58,22 +44,32 @@ class clsUserSessions extends clsTable {
 	  and end up creating multiple records for each new session.
 	  (It was creating 3 new records and using the last one.)
     */
-    protected function SetCookie($iSessKey=NULL) {
-	//if (!is_null($iSessKey)) {
-	    $this->SessKey = $iSessKey;
-	//}
-	if (defined('KS_SITE_DOMAIN')) {
-	    $sDomain = KS_SITE_DOMAIN;
-	} else {
-	    $sDomain = $_SERVER['SERVER_NAME'];
-	}
+    protected function ThrowCookie($iSessKey) {
+	$this->SessKey = $iSessKey;
+	$sDomain = KS_COOKIE_DOMAIN;
 	$sVal = $this->SessKey;
-	$ok = setcookie(KS_USER_SESSION_KEY,$sVal,0,'/','.'.$sDomain);
+	//$ok = setcookie(KS_USER_SESSION_KEY,$sVal,0,'/',$sDomain);
+	$ok = setcookie(KS_USER_SESSION_KEY,$sVal,0,'/');
 	if ($ok) {
 	    // store new cookie value (see NOTES above)
-	    $this->sCookieVal = $sVal;
+	    $this->CookieValue($sVal);
 	}
 	return $ok;
+    }
+    protected function CookieValue($sValue=NULL) {
+	if (!is_null($sValue)) {
+	    $this->sCookieVal = $sValue;
+	}
+	return $this->sCookieVal;
+    }
+    public function CurrentRecord(clsUserSession $rcSess=NULL) {
+	if (!is_null($rcSess)) {
+	    $this->rcSess = $rcSess;
+	}
+	return $this->rcSess;
+    }
+    public function HasCurrentRecord() {
+	return !is_null($this->rcSess);
     }
     /*----
       ACTION:
@@ -84,35 +80,54 @@ class clsUserSessions extends clsTable {
     */
     public function GetCurrent() {
 	$okSession = FALSE;
-	$strSessKey = $this->GetCookie();
+
+	$sSessKey = NULL;
+	if (array_key_exists(KS_USER_SESSION_KEY,$_COOKIE)) {
+	    $sSessKey = $_COOKIE[KS_USER_SESSION_KEY];
+	} elseif(!is_null($this->CookieValue())) {
+	    $sSessKey = $this->CookieValue();
+	}
+
 	$doNew = TRUE;
-	if (is_null($strSessKey)) {
+	if (is_null($sSessKey)) {
+	    throw new exception('Internal error: no session key, but we should not be here.');
 	} else {
-	    list($ID,$strToken) = explode('-',$strSessKey);
-	    if (!is_null($this->rcSess)) {
-		if ($this->rcSess->KeyValue() == $ID) {
+	    list($idRecd,$sToken) = explode('-',$sSessKey);
+	    if (empty($idRecd)) {
+		// TODO: this should just silently log a possible hacking attempt
+		throw new exception('Input Error: Received session cookie has no ID.');
+	    }
+	    // TODO: look up the ID and token in the session table
+
+	    if ($this->HasCurrentRecord()) {
+		$rcThis = $this->CurrentRecord();
+		$idThis = $rcThis->KeyValue();
+		if ($idThis == $idRecd) {
 		    $doNew = FALSE;
 		}
 	    }
 	    if ($doNew) {
-		$this->rcSess = $this->GetItem($ID);
+		$rcRecd = $this->GetItem($idRecd);
+		$this->CurrentRecord($rcRecd);
+		$rcThis = $rcRecd;
 	    }
 
-	    $okSession = $this->rcSess->IsValidNow($strToken);	// do session's creds match browser's creds?
+	    $okSession = $rcThis->IsValidNow($sToken);	// do session's creds match browser's creds?
 	}
 	if (!$okSession) {
 	  // no current/valid session, so make a new one:
-	    // add new record...
-	    $this->rcSess = $this->Create();
-	    // generate new session key
-	    $strSessKey = $this->rcSess->SessKey();
-	    $ok = $this->SetCookie($strSessKey);
+	    $rcThis = $this->Create();
+	  // add new record for the new session:
+	    $this->CurrentRecord($rcThis);
+	  // generate key from the new session:
+	    $sSessKey = $rcThis->SessKey();
+	    $ok = $this->ThrowCookie($sSessKey);
 	    if (!$ok) {
-		throw new exception('Internal Error: Cookie could not be sent for session key "'.$strSessKey.'".');
+		throw new exception('Internal Error: Cookie could not be sent for session key "'.$sSessKey.'".');
 		// if this happens, then some output was already sent, preventing the cookie.
 	    }
 	}
-	return $this->rcSess;
+	return $this->CurrentRecord();
     }
 }
 /* ===================
@@ -165,48 +180,6 @@ class clsUserSession extends clsDataSet {
     }
 
     // -- DATA TABLES -- //
-    // ++ ACTIONS ++ //
-
-    /*----
-      ACTION: Create a new session record from the current memory data.
-    */
-    public function Create() {
-	$ar = array(
-	  'ID_Client'	=> SQLValue($this->ClientID()),
-	  'ID_User'	=> SQLValue($this->UserID()),
-	  'Token'	=> SQLValue($this->Token()),
-	  'WhenCreated'	=> 'NOW()'
-	  );
-	$this->KeyValue($this->Table()->Insert($ar));
-	$rcClient = $this->ClientRecord_needed();
-	if (!$rcClient->isNew()) {
-	    $rcClient->Stamp();
-	}
-    }
-    /*----
-      ACTION: Attempts to log the user in with the given credentials.
-      RETURNS: user object if successful, NULL otherwise.
-    */
-    public function UserLogin($iUser,$iPass) {
-	$tUsers = $this->UserTable();
-	$oUser = $tUsers->Login($iUser,$iPass);
-	$this->SetUserRecord($oUser);		// set user for this session
-    }
-    /*----
-      ACTION: Logs the current user out. (Clears ID_User in session record.)
-    */
-    public function UserLogout() {
-	$this->ClearValue('ID_User');
-	$arUpd = array('ID_User'=>'NULL');
-	$this->Update($arUpd);
-    }
-    public function SaveUserID($idUser) {
-	$ar = array('ID_User'=>$idUser);
-	$this->Update($ar);			// save user ID to database
-	$this->Value('ID_User',$idUser);	// update it in RAM as well
-    }
-
-    // -- ACTIONS -- //
     // ++ STATUS/FIELD ACCESS ++ //
 
     protected function ClientID($id=NULL) {
@@ -220,12 +193,15 @@ class clsUserSession extends clsDataSet {
     }
     /*----
       NOTE: I can't think of any circumstances under which $this->HasValue('ID_User') would be false.
+      $sReason is for debugging. Remove it later.
     */
     public function HasUser() {
-	return !is_null($this->UserID());
+	$idUser = $this->UserID();
+	return !is_null($idUser);
     }
     /*-----
       RETURNS: TRUE if the stored session credentials match current reality (browser's credentials)
+      PUBLIC so clsUserSessions can call it
       HISTORY:
 	2015-04-26 This sometimes comes up with no record -- I'm guessing that happens when a matching
 	  Session isn't found. (Not sure why this isn't detected elsewhere.)
@@ -258,6 +234,62 @@ class clsUserSession extends clsDataSet {
     }
 
     // -- STATUS/FIELD ACCESS -- //
+    // ++ ACTIONS ++ //
+
+    /*----
+      ACTION: Make sure the Client ID is set correctly for the current browser client
+	If not set or doesn't match, get a new one.
+    */
+    protected function Make_ClientID() {
+	$rcCli = $this->ClientRecord_needed();
+	$this->ClientID($rcCli->KeyValue());
+	return $this->ClientID();
+    }
+    /*----
+      ACTION: Create a new session record from the current memory data.
+    */
+    public function Create() {
+	$ar = array(
+	  'ID_Client'	=> SQLValue($this->Make_ClientID()),
+	  'ID_User'	=> SQLValue($this->UserID()),
+	  'Token'	=> SQLValue($this->Token()),
+	  'WhenCreated'	=> 'NOW()'
+	  );
+	$idNew = $this->Table()->Insert($ar);
+	if ($idNew === FALSE) {
+	    throw new exception('Could not create new Session record.');
+	}
+	$this->KeyValue($idNew);
+	echo 'CURRENT VALUES:'.clsArray::Render($this->Values());
+	$rcClient = $this->ClientRecord_needed();
+	if (!$rcClient->isNew()) {
+	    $rcClient->Stamp();
+	}
+    }
+    /*----
+      ACTION: Attempts to log the user in with the given credentials.
+      RETURNS: user object if successful, NULL otherwise.
+    */
+    public function UserLogin($iUser,$iPass) {
+	$tUsers = $this->UserTable();
+	$oUser = $tUsers->Login($iUser,$iPass);
+	$this->SetUserRecord($oUser);		// set user for this session
+    }
+    /*----
+      ACTION: Logs the current user out. (Clears ID_User in session record.)
+    */
+    public function UserLogout() {
+	$this->ClearValue('ID_User');
+	$arUpd = array('ID_User'=>'NULL');
+	$this->Update($arUpd);
+    }
+    public function SaveUserID($idUser) {
+	$ar = array('ID_User'=>$idUser);
+	$this->Update($ar);			// save user ID to database
+	$this->Value('ID_User',$idUser);	// update it in RAM as well
+    }
+
+    // -- ACTIONS -- //
     // ++ CALCULATIONS ++ //
 
     /*----
@@ -336,12 +368,20 @@ class clsUserSession extends clsDataSet {
 	}
 	return $this->rcUser;
     }
+    // TODO: is this ever *supposed* to be called with oUser=NULL? If so, why? Document.
     public function SetUserRecord(clsUserAcct $oUser=NULL) {
 	$doChg = FALSE;
-	$idNew = $oUser->KeyValue();
+	if (is_null($oUser)) {
+	    $idNew = NULL;
+	} else {
+	    $idNew = $oUser->KeyValue();
+	}
 	if (is_null($this->rcUser)) {
 	    $doChg = TRUE;
 	} else {
+	    if (is_null($oUser)) {
+		throw new exception('This should not happen.');
+	    }
 	    $idOld = $this->Value('ID_User');
 	    if ($idOld != $idNew) {
 		$doChg = TRUE;
