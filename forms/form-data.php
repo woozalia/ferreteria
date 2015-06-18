@@ -47,6 +47,8 @@ class fcForm_DB extends fcForm_keyed {
       RETURNS: array of record values, SQL-ready to update or insert
     */
     protected function RecordValues_asSQL(array $arSQL=NULL) {
+	throw new exception('DEPRECATED; call either RecordValues_asSQL_set() or RecordValues_asSQL_get().');
+
 	if (!is_null($arSQL)) {
 	    foreach ($arSQL as $key => $val) {
 		if ($this->ControlExists($key)) {
@@ -64,18 +66,47 @@ class fcForm_DB extends fcForm_keyed {
 	return $arO;
     }
     /*----
+      ACTION: set internal data from array of SQL-format values
+    */
+    protected function RecordValues_asSQL_set(array $arSQL) {
+	$arFlds = $this->FieldArray();
+	foreach ($arSQL as $key => $val) {
+	    if (array_key_exists($key,$arFlds)) {
+		// ignore data fields for which there is no Field object
+		$oField = $arFlds[$key];
+		$oField->SetValueSQL($val);
+	    }
+	}
+    }
+    protected function RecordValues_asSQL_get() {
+	$arF = $this->FieldArray();
+	foreach ($arF as $key => $oField) {
+	    //echo "FIELD [$key] XLATES [".$oField->ValueNative().'] AS ['.$oField->ValueSQL().']<br>';
+	    $arO[$key] = $oField->ValueSQL();
+	}
+	return $arO;
+    }
+    /*----
+      ACTION: loads data from the Recordset object
       RULE: Call this before attempting to read data
     */
     public function LoadRecord() {
-	$this->RecordValues_asSQL($this->RecordsObject()->Values());
+	$ar = $this->RecordsObject()->Values();
+	$this->RecordValues_asSQL_set($ar);
 	$this->Set_KeyString_loaded($this->RecordsObject()->KeyValue());
     }
     /*----
       RULE: Call this to store data after changing
+      INPUT:
+	$this->RecordValues_asNative_get(): main list of values to save
+	$arUpd: array of additional values to save, in native format
     */
-    public function SaveRecord() {
+    public function SaveRecord(array $arUpd) {
+	//echo 'SaveRecord:'.clsArray::Render($arUpd);
 	$tbl = $this->RecordsObject()->Table();
-	$arUpd = $this->RecordValues_asSQL();
+	$this->RecordValues_asNative_set($arUpd);
+	$arUpd = $this->RecordValues_asSQL_get();
+	//echo 'FINAL SQL ARUPD:'.clsArray::Render($arUpd);
 	$idUpd = $this->Get_KeyString_toSave();
 	if ($idUpd == KS_NEW_REC) {
 	    $tbl->Insert($arUpd);

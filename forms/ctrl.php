@@ -67,6 +67,7 @@ abstract class fcFormControl {
     protected function ValueNative() {
 	return $this->FieldObject()->ValueNative();
     }
+
 }
 
 class fcFormControl_HTML extends fcFormControl {
@@ -258,6 +259,27 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	    return $out;
 	} else {
 	    return $this->NoDataString();
+	}
+	return $out;
+    }
+    /*----
+      NOTE: There's got to be a way of doing this that doesn't require iterating through all records.
+    */
+    protected function RenderValue() {
+        $rs = $this->Records();
+        if (is_null($rs)) {
+            return parent::RenderValue();
+        }
+        $out = NULL;
+	if ($rs->hasRows()) {
+            $vCurr = $this->FieldObject()->ValueNative();
+	    while ($rs->NextRow()) {
+		$id = $rs->KeyValue();
+		if ($id == $vCurr) {
+		    $out = $rs->AdminLink_name();
+		    break;
+		}
+	    }
 	}
 	return $out;
     }

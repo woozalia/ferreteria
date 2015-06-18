@@ -138,7 +138,6 @@ abstract class clsDatabase_abstract {
 
     // ENGINE WRAPPER FUNCTIONS
     public function engine_db_query($iSQL) {
-//echo '#2: ENGINE CLASS=['.get_class($this->Engine()).']<br>';		// comes up as clsDataEngine_MySQL
 	return $this->Engine()->db_query($iSQL);
     }
     public function engine_db_query_ok() {
@@ -340,15 +339,11 @@ class clsDataResult_MySQL extends clsDataResult {
 	2012-02-04 revised to use box['ok']
     */
     public function do_query($iConn,$iSQL) {
-//$ok = mysql_select_db('igov_app');
-//echo 'OK=['.$ok.']<br>';
 	$res = mysql_query($iSQL,$iConn);
 	if (is_resource($res)) {
-//echo 'GOT TO LINE '.__LINE__.'<br>';
 	    $this->Resource($res);
 	    $this->box['ok'] = TRUE;
 	} else {
-//echo 'GOT TO LINE '.__LINE__.' - SQL='.$iSQL.'<br>';
 	    $this->Resource(NULL);
 	    $this->box['ok'] = $res;	// TRUE if successful, false otherwise
 	}
@@ -449,12 +444,6 @@ class clsDataEngine_MySQL extends clsDataEngine_CliSrv {
 	$id = mysql_insert_id($this->objConn);
 	return $id;
     }
-/*
-    public function db_query_ok(array $iBox) {
-	$obj = new clsDataQuery_MySQL($iBox);
-	return $obj->QueryOkay();
-    }
-*/
     public function db_get_error() {
 	return mysql_error();
     }
@@ -633,7 +622,7 @@ class clsDatabase extends clsDatabase_abstract {
 	    }
 	}
     }
-    /*=====
+    /*----
       HISTORY:
 	2011-02-24 Now passing $this->Conn to mysql_query() because somehow the connection was getting set
 	  to the wrong database.
@@ -642,12 +631,10 @@ class clsDatabase extends clsDatabase_abstract {
 	$this->LogSQL($iSQL);
 	$ok = TRUE;
 	if ($this->OkToExecSQL($iSQL)) {
-    /*----
-      RETURNS: clsDataResult descendant
-    */
+	    // db_query() RETURNS: clsDataResult descendant
 	    $res = $this->Engine()->db_query($iSQL);
 	    if (!$res->is_okay()) {
-		$this->getError();
+		//$this->getError();
 		$ok = FALSE;
 	    }
 	}
@@ -700,7 +687,7 @@ class clsDatabase extends clsDatabase_abstract {
 		throw new exception('Could not create object of class "'.$iClass.'".');
 	    }
 	    if (!($rc instanceof clsRecs_abstract)) {
-		throw new exception('Requesting table-type class "'.$iClass.'" for recordset output.');
+		throw new exception('Class "'.$iClass.'" is not a recordset-type class.');
 	    }
 	} else {
 	    $rc = new clsDataSet($this);
