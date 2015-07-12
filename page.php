@@ -109,8 +109,7 @@ abstract class clsPage {
 	clsHTTP::Redirect($url);
     }
     public function RedirectHome($sMsg=NULL) {
-	echo __FILE__.' line '.__LINE__.'<br>';
-	$this->Redirect($this->BaseURL(),$sMsg);
+	$this->Redirect($this->BaseURL_rel(),$sMsg);
     }
     public function RedirectCurrent($sMsg=NULL) {
 	$this->Redirect($this->SelfURL(),$sMsg);
@@ -146,11 +145,15 @@ abstract class clsPage {
     */
     static protected function GetPathInfo() {
 	$uriReq = $_SERVER['REQUEST_URI'];
-	$idxBase = strpos($uriReq,KWP_PAGE_BASE);
-	if ($idxBase === FALSE) {
-	    throw new exception("Configuration needed: URI [$uriReq] does not include KWP_PAGE_BASE [".KWP_PAGE_BASE.'].');
+	if (KWP_PAGE_BASE == '') {
+	    $urlPath = $uriReq;
+	} else {
+	    $idxBase = strpos($uriReq,KWP_PAGE_BASE);
+	    if ($idxBase === FALSE) {
+		throw new exception("Configuration needed: URI [$uriReq] does not include KWP_PAGE_BASE [".KWP_PAGE_BASE.'].');
+	    }
+	    $urlPath = substr($uriReq,$idxBase+strlen(KWP_PAGE_BASE));
 	}
-	$urlPath = substr($uriReq,$idxBase+strlen(KWP_PAGE_BASE));
 	return $urlPath;
     }
 
@@ -304,7 +307,6 @@ abstract class clsPageLogin extends clsPageBasic {
     private $doEmail;
     private $doLogout;
     // display stuff
-    private $sTitle;	// page title string
     private $arPageHdrWidgets;
     // menu
     private $arPath;	// array of path params
@@ -366,15 +368,17 @@ abstract class clsPageLogin extends clsPageBasic {
     // ++ PAGE VALUES ++ //
 
     /*----
+      ALIAS for Skin()->PageTitle()
       RETURNS: string to use for page title
       NOTES: Needs to be public so page rendering classes
 	can change it from the default.
     */
     public function TitleString($sTitle=NULL) {
-	if (!is_null($sTitle)) {
+	return $this->Skin()->PageTitle($sTitle);
+/*	if (!is_null($sTitle)) {
 	    $this->sTitle = $sTitle;
 	}
-	return $this->sTitle;
+	return $this->sTitle;*/
     }
     protected function AuthToken($sNew=NULL) {
 	if (!is_null($sNew)) {
@@ -427,12 +431,23 @@ abstract class clsPageLogin extends clsPageBasic {
     }
 
     // -- DATA RECORD ACCESS -- //
+    // ++ CONFIGURATION ++ //
+
+    public function BaseURL_rel() {
+	return KWP_APP_RELATIVE;
+    }
+    public function BaseURL_abs() {
+	return KWP_APP_ABSOLUTE;
+    }
+/*
+    abstract protected function BaseURL_rel();	// the home URL for the current page/class
+    protected function BaseURL_abs() {
+	return KWP_APP_ABSOLUTE.$this->BaseURL_rel();
+    } */
+
+    // -- CONFIGURATION -- //
     // ++ PATH/URL/REQUEST MANAGEMENT ++ //
 
-    abstract protected function BaseURL();	// the home URL for the current page/class
-    protected function BaseURL_absolute() {
-	return KWP_APP_ABSOLUTE.$this->BaseURL();
-    }
     protected function AuthURL($idToken,$sToken) {
 	return KWP_LOGIN_ABSOLUTE.static::AuthURLPart($idToken,$sToken);
     }
@@ -447,7 +462,7 @@ abstract class clsPageLogin extends clsPageBasic {
 	}
 	// this part stays the same:
 	//$urlBase = $this->MenuPainter()->BaseURL();	// shouldn't the Page define this?
-	$urlBase = $this->BaseURL();
+	$urlBase = $this->BaseURL_rel();
 //	$urlNode = $this->PathStr();
 
 	$oNode = $this->MenuNode();
@@ -463,13 +478,18 @@ abstract class clsPageLogin extends clsPageBasic {
 	} else {
 	    $arAll = $arArgs;
 	}
-	$url = $urlBase.clsURL::FromArray($arAll,KS_CHAR_URL_ASSIGN);		// rebuild the path
-	//die('DOREL:['.$doRel.'] URL:'.$url);
+	$url = $urlBase.'/'.clsURL::FromArray($arAll,KS_CHAR_URL_ASSIGN);		// rebuild the path
 	return $url;
+    }
+    /*----
+      RETURNS: SelfURL, extended by the arguments in $arArgs
+    */
+    public function SelfURL_extend(array $arArgs) {
     }
     private $oPath;
     protected function ParsePath() {
-	$fp = clsURL::RemoveBasePath($this->BaseURL());
+	// get current URL's path relative to base
+	$fp = clsURL::PathRelativeTo($this->BaseURL_rel());
 	if (is_string($fp)) {
 	    $arPath = clsURL::ParsePath($fp);
 	} else {

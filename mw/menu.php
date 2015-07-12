@@ -244,7 +244,7 @@ class SpecialPageApp extends SpecialPage {
 	$vgUserName = $wgUser->getName();
 	$mwoTitleMe = $this->getTitle();
 
-	$wpBase = $this->BaseURL();
+	$wpBase = $this->BaseURL_abs();
 	$wkBase = $mwoTitleMe->getPrefixedText();
 
 	$this->objRT_Wiki = new clsRT_Wiki($wkBase);	// OMGkluge
@@ -276,9 +276,30 @@ class SpecialPageApp extends SpecialPage {
     /*----
       RETURNS: URL of basic Special page with no URL arguments
     */
+    /* 2015-06-25 DEPRECATED; use BaseURL_rel() or BaseURL_abs() instead.
     public function BaseURL() {
 	$mwoTitle = $this->getTitle();
 	$wp = $mwoTitle->getFullURL();
+	return $wp;
+    }*/
+    /*----
+      RETURNS: Absolute URL for the base folder of the current application (Special Page)
+	Not sure whethere there is supposed to be a trailing slash.
+    */
+    public function BaseURL_abs() {
+	$mwoTitle = $this->getTitle();
+	$wp = $mwoTitle->getFullURL();
+	return $wp;
+    }
+    /*----
+      RETURNS: Domain-relative URL for the base folder of the current application (Special Page)
+	Not sure whethere there is supposed to be a trailing slash.
+    */
+    public function BaseURL_rel() {
+	global $wgScriptPath;
+
+	$mwoTitle = $this->getTitle();
+	$wp = $wgScriptPath.'/'.$mwoTitle->getBaseTitle();
 	return $wp;
     }
     protected function InitArKeep() {
@@ -1113,40 +1134,6 @@ class clsWikiSection {
 	$this->arMenu = $iMenu;
 	$this->arKeep = self::$arKeepDefault;
     }
-/*
-2011-03-30 who is using these?
-2011-10-17 ArgsToKeep() and ArgsToAdd() were being used by SpecialWorkFerret clsWFSession.SectionHdr(); checking to see if actually needed...
-  no, they aren't -- DEPRECATED -- use $vgPage-> functions instead.
-    public function ArgsToKeep(array $iKeep) {
-	$this->arKeep = $iKeep;
-    }
-    public function ArgsToAdd(array $iAdd) {
-	$this->arAdd = $iAdd;
-    }
-    protected function ArrayCheck(array $iarCheck) {
-	if (is_array($this->arAdd)) {
-	    $arOut = array_unique(array_merge($iarCheck,$this->arAdd));
-	} else {
-	    $arOut = $iarCheck;
-	}
-	return $arOut;
-    }
-    public function SelfURL() {
-	$arLink = $this->SelfArray();
-	$objPage = $this->objFmt->Page();
-	$wpPath = $objPage->SelfURL($arLink,TRUE);
-	return $wpPath;
-    }
-    public function SelfArray() {
-	$objPage = $this->objFmt->Page();
-	if (is_array($this->arKeep)) {
-	    foreach ($this->arKeep as $key) {
-		$arLink[$key] = $objPage->Arg($key);
-	    }
-	}
-	return $this->ArrayCheck($arLink);
-    }
-*/
     /*-----
       PURPOSE: Add an action link to the menu
       USED BY: any admin page that adds an action link to a section (e.g. "edit")

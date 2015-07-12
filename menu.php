@@ -368,7 +368,7 @@ class clsMenuPainter_UL extends clsMenuPainter {
 	return $out;
     }
     public function RenderIndent() {
-	return "\n<ul>";
+	return "\n<ul class=painted-menu>";
     }
     public function RenderOutdent() {
 	return "\n</ul>";

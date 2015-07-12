@@ -32,7 +32,8 @@ abstract class clsApp {
     abstract public function Page(clsPage $iObj=NULL);
     abstract public function Data(clsDatabase $iObj=NULL);
     abstract public function User();
-    abstract public function BaseURL();
+    //abstract public function BaseURL_abs();
+    //abstract public function BaseURL_rel();
 }
 abstract class cAppStandard extends clsApp {
     private $oPage;
@@ -58,7 +59,7 @@ abstract class cAppStandard extends clsApp {
     // ++ CLASS NAMES ++ //
 
     protected function SessionsClass() {
-	return 'clsUserSessions';
+	return KS_CLASS_USER_SESSIONS;
     }
 
     // -- CLASS NAMES -- //
@@ -185,7 +186,7 @@ class clsDatabase_UserAuth extends clsDatabase {
     }
 */
     public function Sessions($id=NULL) {
-	return $this->Make('clsUserSessions',$id);
+	return $this->Make(KS_CLASS_USER_SESSIONS,$id);
     }
     public function Clients($id=NULL) {
 	return $this->Make('clsUserClients',$id);

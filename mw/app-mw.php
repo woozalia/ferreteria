@@ -35,12 +35,12 @@ class clsApp_MW extends cAppStandard {
 class cDataRecord_MW extends clsDataRecord_Menu {
 
     // ++ SETUP ++ //
-
+/* 2015-06-25 this is redundant now
     protected function InitVars() {
 	parent::InitVars();
 	$this->Value_IdentityKeys(array('page','id'));
     }
-
+*/
     // -- SETUP -- //
     // ++ ACTION ++ //
 

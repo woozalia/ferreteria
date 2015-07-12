@@ -8,10 +8,9 @@
     2013-11-09 backported improved Session classes back into user-session.php
 */
 /* ===================
-  CLASS: clsUserSessions
   PURPOSE: Collectively handles user sessions
 */
-class clsUserSessions extends clsTable {
+class fctUserSessions extends clsTable {
     protected $SessKey;
     private $sCookieVal;
     private $rcSess;
@@ -22,7 +21,7 @@ class clsUserSessions extends clsTable {
 	parent::__construct($iDB);
 	  $this->Name(self::TableName);
 	  $this->KeyName('ID');
-	  $this->ClassSng('clsUserSession');
+	  $this->ClassSng(KS_CLASS_USER_SESSION);
 	$this->rcSess = NULL;
 	$this->sCookieVal = NULL;
     }
@@ -62,7 +61,7 @@ class clsUserSessions extends clsTable {
 	}
 	return $this->sCookieVal;
     }
-    public function CurrentRecord(clsUserSession $rcSess=NULL) {
+    public function CurrentRecord(fcrUserSession $rcSess=NULL) {
 	if (!is_null($rcSess)) {
 	    $this->rcSess = $rcSess;
 	}
@@ -72,11 +71,12 @@ class clsUserSessions extends clsTable {
 	return !is_null($this->rcSess);
     }
     /*----
-      ACTION:
+      ACTION: returns a Session object for the current connection, whether or not one already exists
 	* gets session key and auth from cookie
 	* if session object exists, tries to reuse it
       HISTORY:
-	2012-10-13 Added caching of the session object to avoid creating multiple copies.
+	2012-10-13 Added caching of the Session object to avoid creating multiple copies.
+	2015-06-23 Was throwing an error if there was no session key; it should just make a new session. (Fixed.)
     */
     public function GetCurrent() {
 	$okSession = FALSE;
@@ -89,9 +89,8 @@ class clsUserSessions extends clsTable {
 	}
 
 	$doNew = TRUE;
-	if (is_null($sSessKey)) {
-	    throw new exception('Internal error: no session key, but we should not be here.');
-	} else {
+	if (!is_null($sSessKey)) {
+	    // if we already have a session key, see if the session is still valid
 	    list($idRecd,$sToken) = explode('-',$sSessKey);
 	    if (empty($idRecd)) {
 		// TODO: this should just silently log a possible hacking attempt
@@ -114,6 +113,7 @@ class clsUserSessions extends clsTable {
 
 	    $okSession = $rcThis->IsValidNow($sToken);	// do session's creds match browser's creds?
 	}
+
 	if (!$okSession) {
 	  // no current/valid session, so make a new one:
 	    $rcThis = $this->Create();
@@ -130,11 +130,10 @@ class clsUserSessions extends clsTable {
 	return $this->CurrentRecord();
     }
 }
-/* ===================
-  CLASS: clsUserSession
+/* %%%%
   PURPOSE: Represents a single user session record
 */
-class clsUserSession extends clsDataSet {
+class fcrUserSession extends clsDataSet {
     private $rcClient;
     protected $rcUser;
 
@@ -201,7 +200,7 @@ class clsUserSession extends clsDataSet {
     }
     /*-----
       RETURNS: TRUE if the stored session credentials match current reality (browser's credentials)
-      PUBLIC so clsUserSessions can call it
+      PUBLIC so fctUserSessions can call it
       HISTORY:
 	2015-04-26 This sometimes comes up with no record -- I'm guessing that happens when a matching
 	  Session isn't found. (Not sure why this isn't detected elsewhere.)
@@ -260,7 +259,6 @@ class clsUserSession extends clsDataSet {
 	    throw new exception('Could not create new Session record.');
 	}
 	$this->KeyValue($idNew);
-	echo 'CURRENT VALUES:'.clsArray::Render($this->Values());
 	$rcClient = $this->ClientRecord_needed();
 	if (!$rcClient->isNew()) {
 	    $rcClient->Stamp();

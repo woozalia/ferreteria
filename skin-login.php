@@ -10,10 +10,10 @@ abstract class clsSkin_login extends clsSkin_standard {
 	return $this->RenderLogoutLink();
     }
     public function RenderLoginLink($sText='log in') {
-	return '<a href="'.KWP_LOGIN.'">'.$sText.'</a>';
+	return '<a href="'.KWP_REL_LOGIN.'">'.$sText.'</a>';
     }
     public function RenderLogoutLink($sText='log out') {
-	return '<a href="'.KWP_LOGOUT.'">'.$sText.'</a>';
+	return '<a href="'.KWP_REL_LOGOUT.'">'.$sText.'</a>';
     }
     public function RenderLoginForm($sUName=NULL) {
 	return

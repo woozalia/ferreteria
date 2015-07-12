@@ -25,11 +25,11 @@ class clsDataTable_Menu extends clsTable {
 class clsDataRecord_Menu extends clsDataSet {
 
     // ++ SETUP ++ //
-
+/*
     protected function InitVars() {
 	$this->arRIKeys = NULL;
     }
-
+*/
     // -- SETUP -- //
     // ++ BOILERPLATE ++ //
 
@@ -80,7 +80,7 @@ class clsDataRecord_Menu extends clsDataSet {
     }
 
     // -- BOILERPLATE -- //
-    // ++ HELPER PARAMETERS ++ //
+    // ++ HELPER CALLBACKS ++ //
 
     /*----
       MEANING: keys for preserving page identity
@@ -88,14 +88,14 @@ class clsDataRecord_Menu extends clsDataSet {
 	when redirecting.
 	If NULL, all keys will be preserved.
     */
+    /* 2015-06-23 DEPRECATED use IdentityValues() instead
     private $arRIKeys;
     public function Value_IdentityKeys(array $arKeys=NULL) {
 	if (!is_null($arKeys)) {
 	    $this->arRIKeys = $arKeys;
 	}
 	return $this->arRIKeys;
-    }
-    // this may make Value_IdentityKeys() obsolete
+    }*/
     public function IdentityValues() {
 	$ar = array(
 	  'page'	=> $this->Table()->ActionKey(),
@@ -103,8 +103,11 @@ class clsDataRecord_Menu extends clsDataSet {
 	  );
 	return $ar;
     }
+    public function BaseURL_rel() {
+	return $this->Engine()->App()->Page()->BaseURL_rel();
+    }
 
-    // -- HELPER PARAMETERS -- //
+    // -- HELPER CALLBACKS -- //
     // ++ ADMIN UI ++ //
 
     public function AdminRows(array $arFields) {

@@ -34,27 +34,36 @@ class clsURL {
 	  after the first "?" or "#".
       HISTORY:
 	2014-04-02 Rewritten; renamed from RemoveBaseURI() to RemoveBasePath()
-	2014-04-27 Found bug in
+	2014-04-27 Found bug in something but forgot to finish making a note about it.
     */
-    static public function RemoveBasePath($urlBase,$wpFull=NULL) {
+    static public function PathRelativeTo($urlBase,$wpFull=NULL) {
 	if (is_null($wpFull)) {
 	    $wsRight = $_SERVER["REQUEST_URI"];
 	} else {
 	    $wsRight = $wpFull;
 	}
-	$urlLeft = $urlBase;
-	// $fpRight is the part after the domain; $urlLeft is a complete URL
-	$wpLeft = parse_url($urlLeft,PHP_URL_PATH);	// get the post-domain part
-	// remove ?query and #fragment
-	//$wpRight = parse_url($wsRight,PHP_URL_PATH);	// this doesn't work reliably
-	$wpRight = xtString::_DelTail($wsRight,'#?');
-	$idx = strpos($wpRight,$wpLeft);
-	if ($idx == 0) {
-	    $wpOut = substr($wpRight,strlen($wpLeft));		// remove URL base
+	if ($urlBase == '') {
+	    // base is root = nothing to calculate
+	    $wpOut = $wsRight;
 	} else {
-	    $wpOut = $wpRight;	// base does not match beginning of full path
+	    $urlLeft = $urlBase;
+	    // $fpRight is the part after the domain; $urlLeft is a complete URL
+	    $wpLeft = parse_url($urlLeft,PHP_URL_PATH);	// get the post-domain part
+	    // remove ?query and #fragment
+	    //$wpRight = parse_url($wsRight,PHP_URL_PATH);	// this doesn't work reliably
+	    $wpRight = xtString::_DelTail($wsRight,'#?');
+	    $idx = strpos($wpRight,$wpLeft);
+	    if ($idx == 0) {
+		$wpOut = substr($wpRight,strlen($wpLeft));		// remove URL base
+	    } else {
+		$wpOut = $wpRight;	// base does not match beginning of full path
+	    }
 	}
 	return $wpOut;
+    }
+    static public function RemoveBasePath($urlBase,$wpFull=NULL) {
+	// TODO: this is DEPRECATED - replace all references with calls to PathRelativeTo()
+	return self::PathRelativeTo($urlBase,$wpFull);
     }
     static public function RemoveBaseURI_OLD($fpBaseURL,$sPath=NULL) {
 	if (is_null($sPath)) {

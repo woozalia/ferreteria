@@ -327,12 +327,12 @@ abstract class fcForm_keyed extends fcForm {
             foreach ($arPost as $sKey => $arDsp) {
                 $this->Set_KeyString_toSave($sKey);
                 $arNtv = $this->DisplayToNative_array($arDsp);
-//                echo __FILE__.' line '.__LINE__."<br>\n";
+                //echo __FILE__.' line '.__LINE__."<br>\n";
                 $arSet = $this->FieldArray_changed();
-//                echo 'CHANGED:'.clsArray::Render($arSet);
-//                echo 'RECEIVED:'.clsArray::Render($arNtv);
+                //echo 'CHANGED:'.clsArray::Render($arSet);
+                //echo 'RECEIVED:'.clsArray::Render($arNtv);
                 $arAll = clsArray::Merge($arNtv,$arSet);
-//                echo 'UPDATE:'.clsArray::Render($arAll);
+                //echo 'UPDATE:'.clsArray::Render($arAll);
                 $this->SaveRecord($arAll);
                 // clear this record's values in case there's another record
                 $this->ClearValues();

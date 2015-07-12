@@ -236,7 +236,7 @@ class clsNavLink extends clsNavText {
 	} else {
 	    $sPopup = $this->Popup();
 	    $htPopup = is_null($sPopup)?'':(' title="'.htmlspecialchars($sPopup).'"');
-	    $out = '<a href="'.$this->URL().'"'.$htPopup.'>'.parent::Render().'</a>';
+	    $out = '<a href="'.$url.'"'.$htPopup.'>'.parent::Render().'</a>';
 	}
 	return $out;
     }
@@ -250,15 +250,6 @@ class clsNavLink extends clsNavText {
 */
 class clsNav_LabeledLink extends clsNavLink {
     public function Render() {
-/*
-	$sPopup = $this->Popup();
-	$htPopup = is_null($sPopup)?'':(' title="'.htmlspecialchars($sPopup).'"');
-	if ($this->State() == self::KI_CURRENT) {
-	    $out = parent::Render();	// active links show as plain text
-	} else {
-	    $out = '<a href="'.$this->URL().'"'.$htPopup.'>'.parent::Render().'</a>';
-	}
-*/
 	return $this->Name().parent::Render();
     }
 }
