@@ -73,6 +73,16 @@ abstract class clsActionLink_base extends clsActionWidget {
     // ++ STATUS/OPTIONS ++ //
 
     /*----
+      RETURNS: TRUE if the current URL causes this link to be selected
+	May also return a value rather than TRUE/FALSE.
+    */
+    abstract public function Selected();
+    /*----
+      RETURNS: the string to use in the URL
+    */
+    abstract protected function LinkKey();
+    abstract protected function HasGroup();
+    /*----
       ACTION: Sets the default UseRelativeURL value for new objects
     */
     static private $doRelDefault = FALSE;
@@ -107,7 +117,6 @@ abstract class clsActionLink_base extends clsActionWidget {
     // -- STATUS/OPTIONS -- //
     // ++ VALUES ++ //
 
-    abstract protected function Values_forLink();
     /*----
       ACTION: sets a bunch of values to be used as defaults
 	if there is not already a value for each key.
@@ -153,12 +162,46 @@ abstract class clsActionLink_base extends clsActionWidget {
     }
 
     // -- DISPLAY -- //
+    // ++ CALCULATIONS ++ //
+    
+    /*----
+      RETURNS: array of link's values, adjusted as needed for link behavior
+	i.e. if link should toggle OFF, then the appropriate array value
+	is set FALSE.
+      VERSION:
+	if there is a group key:
+	  if selected, sets group key FALSE to remove it from URL
+	  if NOT selected, sets group key to link key
+	if there is NO group key:
+	  if selected, sets link key FALSE to remove it from URL
+	  if NOT selected, sets link key TRUE to put it in the URL
+    */
+    protected function Values_forLink() {
+	$ar = $this->Values();
+
+	$lk = $this->LinkKey();
+	if ($this->HasGroup()) {
+	    $gk = $this->GroupKey();
+	    if ($this->Selected()) {
+		$ar[$gk] = FALSE;
+	    } else {
+		$ar[$gk] = $lk;
+	    }
+	} else {
+	    $ar[$lk] = !$this->Selected();
+	}
+
+	return $ar;
+    }
+
+    // -- CALCULATIONS -- //
 }
 /*%%%%
   PURPOSE: handles a single action-link (e.g. [edit]) on a section header
   TODO: This should be renamed; it's a particular type of link, possibly obsolete.
 */
-abstract class clsActionLink extends clsActionLink_base {
+class clsActionLink_modeless extends clsActionLink_base {
+    private $sKey;	// string for URL
     private $sDisp;	// text to display
 
     /*----
@@ -166,21 +209,36 @@ abstract class clsActionLink extends clsActionLink_base {
 	iarData = list of URL values to always preserve
 	iDisp = text to display
     */
-    public function __construct(array $iarData,$iDisp,$iDescr=NULL) {
+    public function __construct(array $iarData,$sKey,$sDisp,$sDescr=NULL) {
 	parent::__construct($iarData);
-	$this->sDisp = $iDisp;
-	$this->Description($iDescr);
+	$this->sKey = $sKey;
+	$this->sDisp = $sDisp;
+	$this->Description($sDescr);
 	$this->objSect = NULL;
 	$this->isActive = FALSE;
     }
     protected function DisplayText() {
 	return $this->sDisp;
     }
+    protected function LinkKey() {
+	return $this->sKey;
+    }
+    protected function HasGroup() {
+	return FALSE;
+    }
+    
+    // ++ CEMENT ++ //
+    
     /*----
       RETURNS: TRUE if the current URL causes this link to be selected
 	May also return a value rather than TRUE/FALSE.
     */
-    abstract public function Selected();
+    public function Selected() {
+	return FALSE;
+    }
+
+    // -- CEMENT -- //
+    
     /*----
       RETURNS: array of link's values, adjusted as needed for link behavior
 	i.e. if link should toggle OFF, then the appropriate array value
@@ -190,6 +248,7 @@ abstract class clsActionLink extends clsActionLink_base {
 	It may be that this class should do that, and we need
 	  a clsWikiSectionLink_toggle to do what this one does now.
     */
+    /* 2015-05-08 this doesn't work anymore
     protected function Values_forLink() {
 	$ar = $this->Values();
 
@@ -198,6 +257,7 @@ abstract class clsActionLink extends clsActionLink_base {
 
 	return $ar;
     }
+    */
 }
 /*%%%%
   PURPOSE: handles a group of links where only one link in the group can be activated at one time
@@ -255,35 +315,6 @@ class clsActionLink_option extends clsActionLink_base {
 	} else {
 	    return $this->sDi0;
 	}
-    }
-    /*----
-      RETURNS: array of link's values, adjusted as needed for link behavior
-	i.e. if link should toggle OFF, then the appropriate array value
-	is set FALSE.
-      VERSION:
-	if there is a group key:
-	  if selected, sets group key FALSE to remove it from URL
-	  if NOT selected, sets group key to link key
-	if there is NO group key:
-	  if selected, sets link key FALSE to remove it from URL
-	  if NOT selected, sets link key TRUE to put it in the URL
-    */
-    protected function Values_forLink() {
-	$ar = $this->Values();
-
-	$lk = $this->LinkKey();
-	if ($this->HasGroup()) {
-	    $gk = $this->GroupKey();
-	    if ($this->Selected()) {
-		$ar[$gk] = FALSE;
-	    } else {
-		$ar[$gk] = $lk;
-	    }
-	} else {
-	    $ar[$lk] = !$this->Selected();
-	}
-
-	return $ar;
     }
 }
 /*%%%%

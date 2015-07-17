@@ -7,8 +7,8 @@
     2013-10-25 stripped Session classes out of VbzCart shop.php for use in ATC project
     2013-11-09 backported improved Session classes back into user-session.php
 */
-/* ===================
-  PURPOSE: Collectively handles user sessions
+/*%%%%
+  PURPOSE: Handles the table of user sessions
 */
 class fctUserSessions extends clsTable {
     protected $SessKey;
@@ -32,7 +32,7 @@ class fctUserSessions extends clsTable {
 	return $rcSess;
     }
     /*----
-      ACTION: throws the session cookie to the browser
+      ACTION: tosses the session cookie to the browser
       RETURNS: TRUE iff successful
       NOTES:
 	* HTTP only sets the cookie when the page is reloaded.
@@ -130,7 +130,7 @@ class fctUserSessions extends clsTable {
 	return $this->CurrentRecord();
     }
 }
-/* %%%%
+/*%%%%
   PURPOSE: Represents a single user session record
 */
 class fcrUserSession extends clsDataSet {
@@ -192,7 +192,6 @@ class fcrUserSession extends clsDataSet {
     }
     /*----
       NOTE: I can't think of any circumstances under which $this->HasValue('ID_User') would be false.
-      $sReason is for debugging. Remove it later.
     */
     public function HasUser() {
 	$idUser = $this->UserID();

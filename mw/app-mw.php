@@ -3,6 +3,7 @@
   PURPOSE: App framework descendants for MediaWiki
   HISTORY:
     2014-06-17 Created for WorkFerret.
+    2015-07-12 resolving conflicts with other edited version
 */
 
 class clsApp_MW extends cAppStandard {
@@ -12,6 +13,7 @@ class clsApp_MW extends cAppStandard {
     public function User() {
 	throw new exception('Who is calling this?');
     }
+
     // ++ CEMENTING ++ //
 
     public function Page(clsPage $obj=NULL) {
@@ -34,14 +36,6 @@ class clsApp_MW extends cAppStandard {
 
 class cDataRecord_MW extends clsDataRecord_Menu {
 
-    // ++ SETUP ++ //
-/* 2015-06-25 this is redundant now
-    protected function InitVars() {
-	parent::InitVars();
-	$this->Value_IdentityKeys(array('page','id'));
-    }
-*/
-    // -- SETUP -- //
     // ++ ACTION ++ //
 
     public function CreateEvent(array $arArgs) {

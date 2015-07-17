@@ -7,7 +7,7 @@ HISTORY:
 */
 
 define('KS_CLASS_USER_SESSIONS',	'fctUserSessions');
-define('KS_CLASS_USER_SESSION',	'fcrUserSession');
+define('KS_CLASS_USER_SESSION',		'fcrUserSession');
 define('KS_CLASS_USER_GROUPS',		'clsUserGroups');
 //define('KS_CLASS_USER_GROUP',		'clsUserGroup');
 define('KS_CLASS_USER_PERMISSIONS',	'clsUserPerms');

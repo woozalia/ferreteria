@@ -131,8 +131,6 @@ class fcFormField {
       PURPOSE: allows explicitly setting NULL values.
     */
     public function SetValueSQL($sqlVal) {
-	//echo "SetValueSQL($sqlVal)<br>";
-	//echo " => [".$this->Convert_SQLToNative($sqlVal).']<br>';
 	$this->SetValueNative($this->Convert_SQLToNative($sqlVal));
     }
 
@@ -222,10 +220,7 @@ class fcFormField_Time extends fcFormField {
 	}
     }
     public function Convert_SQLToNative($sqlVal) {
-	//echo "Convert_SQLToNative($sqlVal)<br>";
-	//$sqlVal = trim($sqlVal,'"');
 	$dt = strtotime($sqlVal);
-	//echo " => [$dt]<br>";
 	if ($dt === FALSE) {
 	    // strtotime() returns FALSE if it can't parse the string
 	    // This includes blank/NULL.

@@ -175,8 +175,6 @@ class clsUserAcct extends fcDataRecs {
 	  'PassSalt'	=> SQLValue($sSalt),
 	  );
 	$ok = $this->Update($ar);
-	echo "NEW PASSWORD: [$sPass]<br>";
-	echo 'STORED: '.clsArray::Render($ar); die();
 	return $ok;
     }
 
@@ -261,6 +259,7 @@ class clsUserAcct extends fcDataRecs {
 	$ok = ($sThisHashed == $sSavedHash);
 	return $ok;
     }
+
     /*----
       RULES: For now, if a permission record with the given name exists and is assigned
 	to a group to which the user belongs, then the user has that permission.

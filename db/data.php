@@ -49,6 +49,7 @@
     2012-01-28 (wzl) clsDataEngine classes
     2012-12-31 (wzl) improved error handling in clsDataEngine_MySQL.db_open()
     2013-01-24 (wzl) clsDatabase_abstract:: SelfClass() and Spawn()
+    2015-07-15 resolving conflicts with other edited version
   FUTURE:
     API FIXES:
       GetData() should not have an $iClass parameter, or it should be the last parameter.

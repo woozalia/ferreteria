@@ -162,6 +162,7 @@ abstract class cAppStandard extends clsApp {
 	} else {
 	    $sAddrToFull = $sToName.' <'.$sToAddr.'>';
 	}
+
 	$sHdr = 'From: '.$this->EmailAddr_FROM(date('Y'));
 	$ok = mail($sAddrToFull,$sSubj,$sMsg,$sHdr);
 	return $ok;

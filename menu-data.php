@@ -3,6 +3,7 @@
   PURPOSE: menu-aware data base class
   HISTORY:
     2014-06-10 Extracting useful non-vbz-specific bits from vbz-data.php
+    2015-07-12 resolving conflicts with other edited version
 */
 class clsDataTable_Menu extends clsTable {
     /*----
@@ -24,16 +25,9 @@ class clsDataTable_Menu extends clsTable {
 }
 class clsDataRecord_Menu extends clsDataSet {
 
-    // ++ SETUP ++ //
-/*
-    protected function InitVars() {
-	$this->arRIKeys = NULL;
-    }
-*/
-    // -- SETUP -- //
     // ++ BOILERPLATE ++ //
-
       // table classes that don't descend from this class can just copy/paste these methods
+
       // ++ BOILERPLATE: event logging ++ //
 
     private $oLogger;
@@ -82,20 +76,6 @@ class clsDataRecord_Menu extends clsDataSet {
     // -- BOILERPLATE -- //
     // ++ HELPER CALLBACKS ++ //
 
-    /*----
-      MEANING: keys for preserving page identity
-	Only the keys specified in this array should be preserved
-	when redirecting.
-	If NULL, all keys will be preserved.
-    */
-    /* 2015-06-23 DEPRECATED use IdentityValues() instead
-    private $arRIKeys;
-    public function Value_IdentityKeys(array $arKeys=NULL) {
-	if (!is_null($arKeys)) {
-	    $this->arRIKeys = $arKeys;
-	}
-	return $this->arRIKeys;
-    }*/
     public function IdentityValues() {
 	$ar = array(
 	  'page'	=> $this->Table()->ActionKey(),

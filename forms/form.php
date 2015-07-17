@@ -6,6 +6,7 @@
   HISTORY:
     2015-03-29 starting from scratch
     2015-06-13 trying to resolve redundancy between "new" (default) values being stored here and being stored in the Field object -- they *should* be stored in the Field.
+    2015-07-16 resolving conflicts with other edited version
 */
 
 abstract class fcForm {
@@ -62,10 +63,10 @@ abstract class fcForm {
     /*----
       ACTION: Add a Field object to the Form, or retrieve one
     */
-    public function FieldObject($sName,$val=NULL) {
+    public function FieldObject($sName,fcFormField $oField=NULL) {
 	//return $this->ControlObject($sName)->FieldObject();
-	if (!is_null($val)) {
-	    $this->arFlds[$sName] = $val;
+	if (!is_null($oField)) {
+	    $this->arFlds[$sName] = $oField;
 	}
 	if (!array_key_exists($sName,$this->arFlds)) {
 	    throw new exception("Attempting to retrieve nonexistent Field object [$sName].");

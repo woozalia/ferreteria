@@ -4,6 +4,8 @@
     manages action URLs
   HISTORY:
     2013-12-04 adapted from MediaWiki classes for standalone menu system
+    2015-05-08 MW data record classes have no App() method, so resorting to static call in _AdminURL() and BuildLink();
+    2015-07-12 resolving conflicts with other edited version
 */
 
 /*%%%%
@@ -33,7 +35,8 @@ class clsMenuData_helper {
     */
     static public function _AdminURL(clsRecs_keyed_abstract $iThis,array $iarArgs=NULL) {
 	$arLink = static::_AdminLink_array($iThis,$iarArgs);
-	$url = $iThis->Engine()->App()->Page()->SelfURL($arLink);
+	//$url = $iThis->Engine()->App()->Page()->SelfURL($arLink);
+	$url = clsApp::Me()->Page()->SelfURL_extend($arLink);
 	return $url;
     }
     // this can be made public if needed
@@ -155,7 +158,7 @@ class clsMenuData_helper {
 	2012-12-31 After moving this code to clsAdminData_helper, modifying new-record handling
 	  to use object field values. Also, no longer any need for a static function, so merging
 	  with dynamic version.
-      TODO: This should probably be deprecated.
+	2015-07-16 I had a note that "This should probably be deprecated", but I don't know why I thought that.
     */
     public function AdminLink($sText=NULL,$sPopup=NULL,array $arArgs=NULL) {
 	$txtID = $this->ActionID();
@@ -179,6 +182,19 @@ class clsMenuData_helper {
 	$sID = $this->ActionID();
 	//$urlBase = $this->Recs()->Engine()->App()->Page()->BaseURL_rel();
 	echo "URLBASE=[$urlBase]<br>";
+	$uriPage = clsURL::FromArray($arArgs);
+	$url = $urlBase.'/'.$uriPage;
+	if (is_null($sText)) {
+	    $sText = $this->ActionID();
+	}
+	$htTitle = is_null($sPopup)?'':(' title="'.htmlspecialchars($sPopup).'"');
+	return "<a href='$url'$htTitle>$sText</a>";
+    } */
+    /* 2015-07-16 old version
+    public function BuildLink(array $arArgs,$sText=NULL,$sPopup=NULL) {
+	$sID = $this->ActionID();
+	//$urlBase = $this->Recs()->Engine()->App()->BaseURL();
+	$urlBase = clsApp::Me()->BaseURL();
 	$uriPage = clsURL::FromArray($arArgs);
 	$url = $urlBase.'/'.$uriPage;
 	if (is_null($sText)) {
@@ -212,6 +228,26 @@ class clsMenuData_helper {
 	$url = $this->Recs()->Engine()->App()->Page()->SelfURL($arArgs);
 	return $url;
     } */
+    /* 2015-07-16 old version
+    protected function RecURL() {
+	$arArgs = NULL;
+	if (method_exists($this->Recs(),'Value_IdentityKeys')) {
+	    $rc = $this->Recs();
+	    $arKeys = $rc->Value_IdentityKeys();
+	    if (is_array($arKeys)) {
+		$oPage = $rc->Engine()->App()->Page();
+		foreach ($arKeys as $key) {
+		    $arArgs[$key] = $oPage->PathArg($key);
+		}
+	    } else {
+		echo '<b>Error</b>: $arKeys is not an array; value=['.$arKeys.'], recordset class=['.get_class($rc).'].';
+		throw new exception('Internal error: $arKeys is not an array.');
+	    }
+	}
+	// NOTE: This will choke when next used in Ferreteria's App framework -- but we just need to write SelfURL_extend().
+	$url = $this->Recs()->Engine()->App()->Page()->SelfURL_extend($arArgs);
+	return $url;
+    } */
     /*----
       HISTORY:
 	2012-12-31 After moving code to Helper, making this dynamic
@@ -220,11 +256,9 @@ class clsMenuData_helper {
 	2015-06-23 some simplifications
 	  $arArgs is NOT ignored; it overrides the record's current values
 	  No longer calling $this->RecURL() (now commented out).
-
     */
     public function AdminRedirect(array $arArgs=NULL,$sText=NULL) {
 	clsHTTP::DisplayOnReturn($sText);
-	//echo 'ARARGS:'.clsArray::Render($arArgs);
 	$url = $this->AdminURL($arArgs);
 	echo 'REDIRECTING to '.$url.' and saving the following text:<br>'.$sText;
 	clsHTTP::Redirect($url,array(),FALSE,HTTP_REDIRECT_POST);

@@ -102,20 +102,15 @@ class fcForm_DB extends fcForm_keyed {
 	$arUpd: array of additional values to save, in native format
     */
     public function SaveRecord(array $arUpd) {
-	//echo 'SaveRecord - RAW:'.clsArray::Render($arUpd);
 	$tbl = $this->RecordsObject()->Table();
 	$this->RecordValues_asNative_set($arUpd);
 	$this->ProcessRecord_beforeSave();
 	$arUpd = $this->RecordValues_asSQL_get();
-	//echo 'SaveRecord - SQL:'.clsArray::Render($arUpd);
-	//echo 'FINAL SQL ARUPD:'.clsArray::Render($arUpd);
 	$idUpd = $this->Get_KeyString_toSave();
 	if ($idUpd == KS_NEW_REC) {
 	    $tbl->Insert($arUpd);
-	    //echo 'SQL: '.$tbl->sqlExec; die();
 	} else {
 	    $tbl->Update_Keyed($arUpd,$idUpd);
-	    //echo 'SQL: '.$tbl->sqlExec; die();
 	}
     }
     /*----

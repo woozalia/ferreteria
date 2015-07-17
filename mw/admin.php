@@ -8,8 +8,9 @@
     2010-04-06
 	clsAdminTable, clsAdminData, clsAdminData_Logged written (in menu.php)
     2010-10-25 clsAdminTable, clsAdminData extracted from menu.php
-
-/*==========
+    2015-07-16 resolving conflicts with other edited version
+*/
+/*%%%%
   CLASS: clsAdminTable
   HISTORY:
     2010-10-04 Moved ActionKey() back into data.php, because it's useful for logging.

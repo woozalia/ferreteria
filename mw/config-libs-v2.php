@@ -5,19 +5,18 @@
   HISTORY:
     2015-03-14 this library index file created
     2015-04-29 added check for SMW_SCHEMA_VERSION - SMW library is optional
+    2015-05-08 moved common (version-independent) files into config-libs-both.php
 */
 
 $fp = dirname( __FILE__ );
 clsModule::BasePath($fp.'/');
 
+require_once($fp.'/config-libs-both.php');
+
 $om = new clsModule(__FILE__, 'db-conn-mw.php');
   $om->AddClass('fcDataConn_MW');
-$om = new clsModule(__FILE__, 'menu.php');
-  $om->AddClass('SpecialPageApp');
-$om = new clsModule(__FILE__, 'richtext.php');
-  $om->AddClass('clsRT_HTML');
-  $om->AddClass('clsRT_Wiki');
-if (defined('SMW_SCHEMA_VERSION')) {
+
+  if (defined('SMW_SCHEMA_VERSION')) {
     $om = new clsModule(__FILE__, 'smw/SMWv'.SMW_SCHEMA_VERSION.'/db-conn-smw.php');
         $om->AddClass('fcDataConn_SMW');
         $om->AddClass('w3smwPage');

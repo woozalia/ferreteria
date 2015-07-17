@@ -355,7 +355,7 @@ abstract class clsPageLogin extends clsPageBasic {
       RETURNS: TRUE iff user is logged in
     */
     protected function IsLoggedIn() {
-	return $this->App()->Session()->HasUser('clsPageLogin.IsLoggedIn()');
+	return $this->App()->Session()->HasUser();
     }
     protected function Success($bOk=NULL) {
 	if (!is_null($bOk)) {
@@ -484,8 +484,9 @@ abstract class clsPageLogin extends clsPageBasic {
     /*----
       RETURNS: SelfURL, extended by the arguments in $arArgs
     */
+    /* 2015-07-16 commenting out, because there's no code here
     public function SelfURL_extend(array $arArgs) {
-    }
+    } */
     private $oPath;
     protected function ParsePath() {
 	// get current URL's path relative to base
@@ -687,10 +688,36 @@ abstract class clsPageLogin extends clsPageBasic {
 	    $this->sPassX = $_POST[KSF_USER_CTRL_SET_PASS2];
 	}
     }
+    /* 2015-07-16 other version
+    protected function ParseInput_Login() {
+	$this->isLogin	= $isLogin	= !empty($_POST[KSF_USER_BTN_LOGIN]);
+	$this->isReset	= $isReset	= !empty($_POST[KSF_USER_BTN_SET_PASS]);
+	$this->isNew	= $isNew	= !empty($_POST[KSF_USER_BTN_NEW_ACCT]);
+	$this->doEmail	= $isEmReq	= !empty($_POST['btnSendAuth']);
+	$this->isAuth	= $doGetAuth	= !empty($_GET['auth']);
+	$this->doLogout	= $doLogout	= $this->ReqArgBool('exit');
+
+	if ($isLogin) {
+	    $this->LoginName($_POST['uname']);
+	    $this->sPass = $_POST[KSF_USER_CTRL_ENTER_PASS];
+	} elseif ($isReset) {
+	    $this->sPass = $_POST[KSF_USER_CTRL_SET_PASS1];
+	    $this->sPassX = $_POST[KSF_USER_CTRL_SET_PASS2];
+	    $this->AuthToken(clsHTTP::Request()->GetText('auth'));
+	} elseif ($isEmReq) {	// requesting password request email
+	    $this->EmailAddress($_POST['uemail']);
+	}
+    } */
+    /*----
+      NOTE 1: There probably needs to be a URL_PostLogin() method, because
+	some apps have the login page on a separate URL and some don't.
+    */
     protected function HandleInput_Login() {
 	if ($this->doLogout) {
 	    $this->DoLogout();
-	    $this->Reload();
+	    // see NOTE 1
+	    clsHTTP::Redirect($this->BaseURL());
+	    //$this->Reload();
 	}
  	if ($this->doEmail) {
 	    $this->TitleString('Send Password Reset Email');
@@ -813,7 +840,7 @@ abstract class clsPageLogin extends clsPageBasic {
       RETURNS: rendered HTML
       ASSUMES: user is not (yet) logged in
     */
-    private $doShowLogin;
+    private $doShowLogin;	// can be altered by subsidiary fx()
     protected function RenderUserAccess() {
 	$oSkin = $this->Skin();
 	$ht = $this->SectionHeader($this->TitleString());
@@ -1105,14 +1132,14 @@ abstract class clsPageLogin extends clsPageBasic {
 		$ok = FALSE;
 		if (!is_null($sCtrler)) {
 		    $id = $this->PathArg('id');
-		    $rc = $this->Data()->Make($sCtrler,$id);
-		    $tbl = $this->Data()->Make($sCtrler);
 		    $this->TitleString($oNode->Title());
 		    if (is_null($id)) {
+			$tbl = $this->Data()->Make($sCtrler);
 			// surely this duplicates other code -- but where, and why isn't it being triggered? (https://vbz.net/admin/page:ord/)
 			$out = $tbl->MenuExec($this->PathArgs());
 		    } else {
 			//$rc2 = $tbl->GetItem($id);
+			$rc = $this->Data()->Make($sCtrler,$id);
 			$out = $rc->MenuExec($this->PathArgs());
 		    }
 		    return $out;
