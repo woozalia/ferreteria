@@ -6,6 +6,8 @@ HISTORY:
   2014-01-11 created
 */
 
+define('KS_CLASS_USER_SESSIONS',	'fctUserSessions');
+define('KS_CLASS_USER_SESSION',		'fcrUserSession');
 define('KS_CLASS_USER_GROUPS',		'clsUserGroups');
 //define('KS_CLASS_USER_GROUP',		'clsUserGroup');
 define('KS_CLASS_USER_PERMISSIONS',	'clsUserPerms');
@@ -29,7 +31,7 @@ $om = new clsModule(__FILE__, 'user-acct-x-group.php');
 $om = new clsModule(__FILE__, 'user-client.php');
   $om->AddClass('clsUserClients');
 $om = new clsModule(__FILE__, 'user-session.php');
-  $om->AddClass('clsUserSessions');
+  $om->AddClass(KS_CLASS_USER_SESSIONS);
 $om = new clsModule(__FILE__, 'user-token.php');
   $om->AddClass('clsUserTokens');
 $om = new clsModule(__FILE__, 'user-group-x-perm.php');

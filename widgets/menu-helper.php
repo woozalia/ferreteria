@@ -5,6 +5,7 @@
   HISTORY:
     2013-12-04 adapted from MediaWiki classes for standalone menu system
     2015-05-08 MW data record classes have no App() method, so resorting to static call in _AdminURL() and BuildLink();
+    2015-07-12 resolving conflicts with other edited version
 */
 
 /*%%%%
@@ -18,21 +19,31 @@ class clsMenuData_helper {
 
 //=====
 // STATIC section
-    static public function _AdminLink(clsRecs_keyed_abstract $iThis,$iText=NULL,$iPopup=NULL,array $arArgs=NULL) {
-	$txtShow = is_null($iText)?($iThis->KeyString()):$iText;
-	$objSelf = static::_Spawn();
-	$objSelf->Recs($iThis);
-// TODO: probably need to rethink this
-	$arBase = $iThis->IdentityValues();
-	$arAll = clsArray::Merge($arBase,$arArgs);
+    static public function _AdminLink(clsRecs_keyed_abstract $rcThis,$sText=NULL,$sPopup=NULL,array $arArgs=NULL) {
+	$txtShow = is_null($sText)?($rcThis->KeyString()):$sText;
+	$objSelf = static::_Spawn();			// make an object so we can call dynamic methods
+	$objSelf->Recs($rcThis);			// give the object a pointer to the recordset
+	$arBase = $rcThis->IdentityValues();		// get the recordset's identity array
+	$arAll = clsArray::Merge($arBase,$arArgs);	// override anything that needs overriding
 
-	$out = $objSelf->BuildLink($arAll,$iText,$iPopup);
+	//$out = $objSelf->BuildLink($arAll,$sText,$SPopup);
+	$out = $objSelf->AdminLink($sText,$sPopup,$arArgs);	// render the link
 	return $out;
     }
-    static public function _AdminURL(clsRecs_keyed_abstract $iThis,array $iarArgs=NULL) {
-	$arLink = static::_AdminLink_array($iThis,$iarArgs);
+    /*----
+      HISTORY:
+	2015-07-29 rewritten to call $this->AdminURL()
+	  (in accordance with note-to-self of many months' standing)
+    */
+    static public function _AdminURL(clsRecs_keyed_abstract $rcThis,array $arArgs=NULL) {
+	$objSelf = static::_Spawn();			// make an object so we can call dynamic methods
+	$objSelf->Recs($rcThis);			// give the object a pointer to the recordset
+	$url = $objSelf->AdminURL($arArgs);
+    /* 2015-07-29 old version
+	$arLink = static::_AdminLink_array($rcThis,$iarArgs);
 	//$url = $iThis->Engine()->App()->Page()->SelfURL($arLink);
 	$url = clsApp::Me()->Page()->SelfURL_extend($arLink);
+	*/
 	return $url;
     }
     // this can be made public if needed
@@ -154,18 +165,17 @@ class clsMenuData_helper {
 	2012-12-31 After moving this code to clsAdminData_helper, modifying new-record handling
 	  to use object field values. Also, no longer any need for a static function, so merging
 	  with dynamic version.
-      TODO: This should probably be deprecated.
+	2015-07-16 I had a note that "This should probably be deprecated", but I don't know why I thought that.
     */
-    public function AdminLink($iText=NULL,$iPopup=NULL,array $iarArgs=NULL) {
+    public function AdminLink($sText=NULL,$sPopup=NULL,array $arArgs=NULL) {
 	$txtID = $this->ActionID();
-
-	$arLink = $this->AdminLink_array($iarArgs);
-	$txtShow = is_null($iText)?($txtID):$iText;
-
+	$txtShow = is_null($sText)?($txtID):$sText;
+	$url = $this->AdminURL($arArgs);
+/*
+	$arLink = $this->AdminLink_array($arArgs);
 	$url = $this->Recs()->Engine()->App()->Page()->SelfURL_basic($arLink);
-
-	$out = clsHTML::BuildLink($url,$txtShow,$iPopup);
-
+*/
+	$out = clsHTML::BuildLink($url,$txtShow,$sPopup);
 	return $out;
     }
     /*----
@@ -174,6 +184,20 @@ class clsMenuData_helper {
 	Text: sText if set, otherwise the current ActionID
 	Title (popup): $sPopup if set
     */
+    /* 2015-06-23 who calls this, and why?
+    public function BuildLink($urlBase, array $arArgs,$sText=NULL,$sPopup=NULL) {
+	$sID = $this->ActionID();
+	//$urlBase = $this->Recs()->Engine()->App()->Page()->BaseURL_rel();
+	echo "URLBASE=[$urlBase]<br>";
+	$uriPage = clsURL::FromArray($arArgs);
+	$url = $urlBase.'/'.$uriPage;
+	if (is_null($sText)) {
+	    $sText = $this->ActionID();
+	}
+	$htTitle = is_null($sPopup)?'':(' title="'.htmlspecialchars($sPopup).'"');
+	return "<a href='$url'$htTitle>$sText</a>";
+    } */
+    /* 2015-07-16 old version
     public function BuildLink(array $arArgs,$sText=NULL,$sPopup=NULL) {
 	$sID = $this->ActionID();
 	//$urlBase = $this->Recs()->Engine()->App()->BaseURL();
@@ -185,7 +209,33 @@ class clsMenuData_helper {
 	}
 	$htTitle = is_null($sPopup)?'':(' title="'.htmlspecialchars($sPopup).'"');
 	return "<a href='$url'$htTitle>$sText</a>";
-    }
+    } */
+    /*----
+      INPUT: $arArgs overrides the current URL values
+    */
+    /* 2015-06-23 commenting out until I figure out what it's FOR
+    protected function RecURL(array $arArgs=NULL) {
+	if (method_exists($this->Recs(),'Value_IdentityKeys')) {
+	    $rc = $this->Recs();
+
+    	    $arKeys = $rc->Value_IdentityKeys();
+	    if (is_array($arKeys)) {
+		$oPage = $rc->Engine()->App()->Page();
+		foreach ($arKeys as $key) {
+		    if (!array_key_exists($key,$arArgs)) {
+			$arArgs[$key] = $oPage->PathArg($key);
+		    }
+		}
+	    } else {
+		echo '<b>Error</b>: $arKeys is not an array; value=['.$arKeys.'], recordset class=['.get_class($rc).'].';
+		throw new exception('Internal error: $arKeys is not an array.');
+	    }
+	}
+	// NOTE: I had originally written this to call SelfURL_extend(), but I don't remember how that was supposed to be different from SelfURL().
+	$url = $this->Recs()->Engine()->App()->Page()->SelfURL($arArgs);
+	return $url;
+    } */
+    /* 2015-07-16 old version
     protected function RecURL() {
 	$arArgs = NULL;
 	if (method_exists($this->Recs(),'Value_IdentityKeys')) {
@@ -204,18 +254,33 @@ class clsMenuData_helper {
 	// NOTE: This will choke when next used in Ferreteria's App framework -- but we just need to write SelfURL_extend().
 	$url = $this->Recs()->Engine()->App()->Page()->SelfURL_extend($arArgs);
 	return $url;
-    }
+    } */
     /*----
       HISTORY:
 	2012-12-31 After moving code to Helper, making this dynamic
 	2013-01-04 Do we need both this and the static _AdminLink() method? How are they different?
 	2014-06-10 $arArgs is now IGNORED
+	2015-06-23 some simplifications
+	  $arArgs is NOT ignored; it overrides the record's current values
+	  No longer calling $this->RecURL() (now commented out).
     */
     public function AdminRedirect(array $arArgs=NULL,$sText=NULL) {
 	clsHTTP::DisplayOnReturn($sText);
-	$url = $this->RecURL();
+	$url = $this->AdminURL($arArgs);
 	echo 'REDIRECTING to '.$url.' and saving the following text:<br>'.$sText;
 	clsHTTP::Redirect($url,array(),FALSE,HTTP_REDIRECT_POST);
 	die();	// don't do any more work (including accidentally erasing the cookie)
+    }
+    /*----
+      RETURNS: URL for the current record
+    */
+    protected function AdminURL(array $arArgs=NULL) {
+	$rc = $this->Recs();
+	$arLink = clsArray::Merge($rc->IdentityValues(),$arArgs);
+	$urlAdd = clsURL::FromArray($arLink);
+	//$urlBase = $this->Recs()->Engine()->App()->Page()->BaseURL_rel();
+	//$urlBase = $this->Recs()->Engine()->App()->BaseURL_rel();
+	$urlBase = clsApp::Me()->BaseURL_rel();
+	return $urlBase.'/'.$urlAdd;
     }
 }

@@ -15,7 +15,7 @@ class fcSectionHeader_MW {
 	    $oLink->BaseURL($urlPage);
 	    $ftMenu .= $oLink->Render();
 	}
-	
+
 	$out = "\n<h$nLevel><span class='mw-headline'>$sTitle</span>"
 	  ."<span class='mw-editsection'>$ftMenu</span>"
 	  ."</h$nLevel>";
@@ -31,7 +31,7 @@ abstract class fcSectionWidget {
     private $sKey;	// text for URL
     private $sShow;	// text to show
     private $sLong;	// longer text (if any)
-    
+
     // ++ SETUP ++ //
 
     public function __construct($sKey,$sShow,$sLong=NULL) {
@@ -70,10 +70,10 @@ abstract class fcSectionWidget {
 	}
 	return $this->sLong;
     }
-    
+
     // -- CONFIGURATION -- //
     // ++ ABSTRACT ++ //
-    
+
     /*----
       ACTION: render the widget
     */
@@ -95,7 +95,7 @@ class fcSectionMenuItem extends fcSectionWidget {
 	$urlBase = $this->BaseURL();
 	$urlAdd = $this->KeyText();
 	$url = "$urlBase$urlAdd";
-	$out = 
+	$out =
 	  '<span class="mw-editsection">'
 	  .'<span class="mw-editsection-bracket">[</span>'
 	  ."<a href='$url'$htTitle>$sShow</a>"

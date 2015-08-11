@@ -5,18 +5,47 @@
     $vgOut is usually set in menu.php
       It must be a descendant of clsRichText, which is defined in richtext.php
   HISTORY:
-    2010-04-06 
+    2010-04-06
 	clsAdminTable, clsAdminData, clsAdminData_Logged written (in menu.php)
     2010-10-25 clsAdminTable, clsAdminData extracted from menu.php
- 
-/*==========
+    2015-07-16 resolving conflicts with other edited version
+*/
+/*%%%%
   CLASS: clsAdminTable
   HISTORY:
     2010-10-04 Moved ActionKey() back into data.php, because it's useful for logging.
       No more need for this class; deprecated now.
     2010-10-19 ...except for AdminLink() (when did I add that?)
+    2015-07-21 added clsAdminTable::AdminURL(), but it needs to be generalized to pull ID keys from the Table object
+      ...and so does AdminLink, even more so.
 */
 class clsAdminTable extends clsTable_key_single {
+    protected function PageObject() {
+	//return $this->Engine()->App()->Page();
+	return SpecialPageApp::Me()->Page();
+    }
+    protected function BaseURL_rel() {
+	return SpecialPageApp::Me()->BaseURL_rel();
+    }
+    public function AdminURL($sShow=NULL,$sPopup=NULL) {
+	global $vgOut;
+
+	$arLink = array(
+	  'page'	=> $this->ActionKey(),
+	  );
+	//$out = $vgOut->SelfLink($arLink,$sShow,$sPopup);
+	/*$oPage = $this->PageObject();
+	if (!is_object($oPage)) {
+	    throw new exception('Internal error: Asked for Page object, got '.gettype($oPage));
+	}
+	$urlBase = $oPage->BaseURL_rel();*/
+	$urlBase = $this->BaseURL_rel();
+	$urlAdd = clsURL::FromArray($arLink);
+	//echo "BASE=[$urlBase] ADD=[$urlAdd] ";
+	$out = $urlBase.'/'.$urlAdd;
+	//echo "OUT=[$out]<br>"; die();
+	return $out;
+    }
     /*----
       USED BY: VbzAdmin::VbzAdminItems::AdminLink()
       HISTORY:

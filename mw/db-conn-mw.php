@@ -13,7 +13,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     private $mwDB;
 
     // ++ SETUP ++ //
-    
+
     public function __construct(DatabaseBase $oMWDB) {
 	$this->MWDB($oMWDB);
     }
@@ -23,7 +23,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
 	}
 	return $this->mwDB;
     }
-    
+
     // -- SETUP -- //
     // ++ INHERITED ++ //
 
@@ -47,9 +47,9 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     public function Sanitize_PageTitle($sName,$idNSpace) {
 	return $this->Sanitize_andQuote(static::NormalizeTitle($sName,$idNSpace));
     }
-    
+
     // -- INHERITED -- //
-    
+
     /*----
       ACTION: Convert title into normalized DB-key format
 	Surely there's some MW function which already does this...?
@@ -70,9 +70,9 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     }
 
     // ++ DATA RETRIEVAL ++ //
-    
+
     public function Recordset($sSQL) {
-    
+
 	$mwoRe = $this->MWDB()->query($sSQL);	// $mwoRe is a ResultWrapper http://svn.wikimedia.org/doc/classResultWrapper.html
 	$poRes = $mwoRe->result;
 
@@ -92,7 +92,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
 
 	return $this->ProcessResultset($poRes);
     }
-    
+
     // -- DATA RETRIEVAL -- //
     protected function PrepareItem(clsRecs_abstract $iItem) {
 	$iItem->objDB = $this;
@@ -152,7 +152,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
 
 	$db = $this->MWDB();
 //	$db =& wfGetDB( DB_SLAVE );
-/*	
+/*
 	$sql = $db->selectSQLText(
 	  $arTables,	// tables (string or array)
 	  $arFields,	// fields to return
@@ -171,7 +171,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
 	  $arOptions,
 	  $arJoins	// joins (array)
 	);
-	
+
 // debugging
 //$sql = $db->lastQuery();
 //echo "SQL=[$sql]<br>";

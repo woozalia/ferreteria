@@ -43,6 +43,9 @@ class clsUGroup_x_UPerm extends clsTable_abstract {
       RETURN: Records for all permissions assigned to the given group
     */
     public function UPermRecords($idUGroup) {
+	if (empty($idUGroup)) {
+	    throw new exception('Trying to get permissions without specifying group.');
+	}
 	$sql = 'SELECT up.*'
 	  .' FROM '.KS_TABLE_UGROUP_X_UPERM.' AS axp'
 	  .' LEFT JOIN '.KS_TABLE_USER_PERMISSION.' AS up'

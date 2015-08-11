@@ -3,6 +3,7 @@
   PURPOSE: menu-aware data base class
   HISTORY:
     2014-06-10 Extracting useful non-vbz-specific bits from vbz-data.php
+    2015-07-12 resolving conflicts with other edited version
 */
 class clsDataTable_Menu extends clsTable {
     /*----
@@ -22,31 +23,22 @@ class clsDataTable_Menu extends clsTable {
 	}
     }
 }
-class clsDataRecord_Menu extends clsDataSet {
-    private $arRIKeys;
-    private $oApp;
-    private $oLog;
-
-    // ++ SETUP ++ //
-
-    protected function InitVars() {
-	$this->arRIKeys = NULL;
-	$this->oApp = NULL;
-	$this->oLog = NULL;
-    }
-
-    // -- SETUP -- //
+/*%%%%
+  PURPOSE: intermediate recordset class that doesn't assume a standalone application implemented with Ferreteria
+*/
+class clsDataRecord_admin extends clsDataSet {
     // ++ BOILERPLATE ++ //
       // table classes that don't descend from this class can just copy/paste these methods
-      
+
       // ++ BOILERPLATE: event logging ++ //
 
     private $oLogger;
     protected function Log() {
-	if (is_null($this->oLog)) {
-	    $tLog = $this->EventTable();
+	if (empty($this->oLogger)) {
+	    $tLog = $this->Engine()->App()->Events();
 	    // alternative way to create Events object:
-	    $this->oLog = new clsLogger_DataSet($this,$tLog);
+	    //$tLog = VCM_Syslog::SpawnTable($this->Engine());
+	    $this->oLogger = new clsLogger_DataSet($this,$tLog);
 	}
 	return $this->oLogger;
     }
@@ -62,7 +54,7 @@ class clsDataRecord_Menu extends clsDataSet {
     public function EventListing() {
 	return $this->Log()->EventListing();
     }
-  
+
       // ++ BOILERPLATE: self-linkage ++ //
 
     /*----
@@ -84,31 +76,8 @@ class clsDataRecord_Menu extends clsDataSet {
     }
 
     // -- BOILERPLATE -- //
-    // ++ BOILERPLATE AUXILIARY ++ //
-    
-    protected function EventsClass() {
-	throw new exception('Need to define this when it is actually used...');
-    }
-    protected function EventTable() {
-	return $this->Engine()->Make($this->EventsClass());
-    }
-    
-    // -- BOILERPLATE AUXILIARY -- //
-    // ++ HELPER PARAMETERS ++ //
+    // ++ HELPER CALLBACKS ++ //
 
-    /*----
-      MEANING: keys for preserving page identity
-	Only the keys specified in this array should be preserved
-	when redirecting.
-	If NULL, all keys will be preserved.
-    */
-    public function Value_IdentityKeys(array $arKeys=NULL) {
-	if (!is_null($arKeys)) {
-	    $this->arRIKeys = $arKeys;
-	}
-	return $this->arRIKeys;
-    }
-    // this may make Value_IdentityKeys() obsolete
     public function IdentityValues() {
 	$ar = array(
 	  'page'	=> $this->Table()->ActionKey(),
@@ -117,7 +86,7 @@ class clsDataRecord_Menu extends clsDataSet {
 	return $ar;
     }
 
-    // -- HELPER PARAMETERS -- //
+    // -- HELPER CALLBACKS -- //
     // ++ ADMIN UI ++ //
 
     public function AdminRows(array $arFields) {
@@ -174,4 +143,18 @@ class clsDataRecord_Menu extends clsDataSet {
     }
 
     // -- ADMIN UI -- //
+}
+/*%%%%
+  PURPOSE: not sure. The implementation of BaseURL_rel() only works within Ferreteria's app framework,
+    but surely there's a more general way of handling this.
+*/
+class clsDataRecord_Menu extends clsDataRecord_admin {
+
+    // ++ HELPER CALLBACKS ++ //
+
+    public function BaseURL_rel() {
+	return $this->Engine()->App()->Page()->BaseURL_rel();
+    }
+
+    // -- HELPER CALLBACKS -- //
 }

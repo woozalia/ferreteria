@@ -26,7 +26,7 @@ class clsUserGroups extends clsTable {
 
     // -- BUSINESS LOGIC -- //
 }
-class clsUserGroup extends clsVbzRecs {
+class clsUserGroup extends fcDataRecs {
 
     // ++ FIELD ACCESS ++ //
 

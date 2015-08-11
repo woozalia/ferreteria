@@ -10,10 +10,10 @@ abstract class clsSkin_login extends clsSkin_standard {
 	return $this->RenderLogoutLink();
     }
     public function RenderLoginLink($sText='log in') {
-	return '<a href="'.KWP_LOGIN.'">'.$sText.'</a>';
+	return '<a href="'.KWP_REL_LOGIN.'">'.$sText.'</a>';
     }
     public function RenderLogoutLink($sText='log out') {
-	return '<a href="'.KWP_LOGOUT.'">'.$sText.'</a>';
+	return '<a href="'.KWP_REL_LOGOUT.'">'.$sText.'</a>';
     }
     public function RenderLoginForm($sUName=NULL) {
 	return
@@ -43,7 +43,7 @@ abstract class clsSkin_login extends clsSkin_standard {
     protected function RenderUserModify($iAuth,$iUser,$sButtonName,$sButtonText) {
 	$htUser = htmlspecialchars($iUser);
 	if (is_null($iUser)) {
-	    $ctUser = '<input name=uname size=10 value="'.$htUser.'">';
+	    $ctUser = '<input name=uname size=16 value="'.$htUser.'">';
 	} else {
 	    $ctUser = "<b>$htUser</b>";
 	}
@@ -54,8 +54,8 @@ abstract class clsSkin_login extends clsSkin_standard {
 <center>
 <table>
   <tr><td align=right>Username:</td><td>$ctUser</td></tr>
-  <tr><td align=right>New Password:</td><td><input type=password name=$cnPass1 size=10></td></tr>
-  <tr><td align=right>Password again:</td><td><input type=password name=$cnPass2 size=10></td></tr>
+  <tr><td align=right>New Password:</td><td><input type=password name=$cnPass1 size=40></td></tr>
+  <tr><td align=right>Password again:</td><td><input type=password name=$cnPass2 size=40></td></tr>
   <tr><td colspan=2 align=center><input type=submit value="$sButtonText" name="$sButtonName"></td></tr>
 </table>
 </center>

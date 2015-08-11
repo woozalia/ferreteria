@@ -13,7 +13,17 @@
     2013-10-23 stripped for use with ATC app (renamed as app.php)
     2013-11-11 re-adapted for general library (split off page classes from app.php into page.php)
 */
+define('KSF_USER_BTN_LOGIN'		,'btnLogIn');
+define('KSF_USER_BTN_SET_PASS'		,'btnSetPass');
+define('KSF_USER_BTN_NEW_ACCT'		,'btnNewAcct');
+define('KSF_USER_CTRL_ENTER_PASS'	,'upass');
+define('KSF_USER_CTRL_SET_PASS1'	,'upass1');
+define('KSF_USER_CTRL_SET_PASS2'	,'upass2');
 
+/*%%%%
+  PURPOSE: base type for all Page classes
+    Needs to work regardless of whether app is standalone or a plug-in.
+*/
 abstract class clsPage {
     private $oApp;
     private $oDoc;
@@ -22,26 +32,14 @@ abstract class clsPage {
 
     public function __construct() {}
 
-    /*-----
-      USAGE: main entry point
-      OUTPUT: depends on how document object is handled.
-	Simplest is probably to create a child DoPage() which calls parent (this one) first,
-	then tells Doc() to render itself.
-    */
-    public function DoPage() {
-	try {
-	    $this->ParseInput();
-	    $this->HandleInput();
-	    $this->PreSkinBuild();
-	    $this->Skin()->Build();	// tell the skin to fill in its pieces
-	    $this->PostSkinBuild();
-	    $this->Skin()->DoPage();
-	} catch(exception $e) {
-	    $this->DoEmailException($e);
-	}
-    }
-
     // -- SETUP -- //
+    // ++ INFORMATION ++ //
+
+    // 2015-07-23 if requiring these at this level causes problems, they can be temporarily commented until we can straighten things out.
+    abstract public function BaseURL_rel();
+    abstract public function BaseURL_abs();
+
+    // -- INFORMATION -- //
     // ++ APP FRAMEWORK ++ //
 
     public function App(clsApp $iObj=NULL) {
@@ -62,6 +60,74 @@ abstract class clsPage {
     }
 
     // -- APP FRAMEWORK -- //
+    // ++ UTILITIES ++ //
+
+    /*----
+      ACTION: Redirects the page to the given URL, while preserving the optional Message in a cookie.
+    */
+    public function Redirect($url,$sMsg=NULL) {
+	if (!is_null($sMsg)) {
+	    setcookie(KS_MESSAGE_COOKIE,$sMsg,0,'/');
+	}
+	clsHTTP::Redirect($url);
+    }
+    public function RedirectHome($sMsg=NULL) {
+	$this->Redirect($this->BaseURL_rel(),$sMsg);
+    }
+    public function RedirectCurrent($sMsg=NULL) {
+	$this->Redirect($this->SelfURL(),$sMsg);
+    }
+    /*----
+      ACTION: Reload the page
+      PURPOSE: Removes form submissions so we can hit reload without repeating actions
+    */
+    public function Reload() {
+	clsHTTP::Redirect($this->SelfURL());
+    }
+    /*----
+      ACTION: Look for Message information in the cookie.
+	Remove it from cookie if found.
+      RETURNS: message string if found, NULL if not found.
+    */
+    static protected function GetRedirectMessage() {
+	if (array_key_exists(KS_MESSAGE_COOKIE,$_COOKIE)) {
+	    $sMsg = $_COOKIE[KS_MESSAGE_COOKIE];
+	    setcookie(KS_MESSAGE_COOKIE,NULL);	// delete the cookie
+	    return $sMsg;
+	} else {
+	    return NULL;
+	}
+    }
+
+    // -- UTILITIES -- //
+}
+
+/*%%%%
+  PURPOSE: base Page type for standalone applications
+*/
+abstract class clsPageStandalone extends clsPage {
+    // ++ EXECUTION ++ //
+
+    /*-----
+      USAGE: main entry point
+      OUTPUT: depends on how document object is handled.
+	Simplest is probably to create a child DoPage() which calls parent (this one) first,
+	then tells Doc() to render itself.
+    */
+    public function DoPage() {
+	try {
+	    $this->ParseInput();
+	    $this->HandleInput();
+	    $this->PreSkinBuild();
+	    $this->Skin()->Build();	// tell the skin to fill in its pieces
+	    $this->PostSkinBuild();
+	    $this->Skin()->DoPage();
+	} catch(exception $e) {
+	    $this->DoEmailException($e);
+	}
+    }
+
+    // -- EXECUTION -- //
     // ++ PAGE GENERATION ++ //
 
     /*-----
@@ -103,11 +169,15 @@ abstract class clsPage {
     */
     static protected function GetPathInfo() {
 	$uriReq = $_SERVER['REQUEST_URI'];
-	$idxBase = strpos($uriReq,KWP_PAGE_BASE);
-	if ($idxBase === FALSE) {
-	    throw new exception("Configuration needed: URI [$uriReq] does not include KWP_PAGE_BASE [".KWP_PAGE_BASE.'].');
+	if (KWP_PAGE_BASE == '') {
+	    $urlPath = $uriReq;
+	} else {
+	    $idxBase = strpos($uriReq,KWP_PAGE_BASE);
+	    if ($idxBase === FALSE) {
+		throw new exception("Configuration needed: URI [$uriReq] does not include KWP_PAGE_BASE [".KWP_PAGE_BASE.'].');
+	    }
+	    $urlPath = substr($uriReq,$idxBase+strlen(KWP_PAGE_BASE));
 	}
-	$urlPath = substr($uriReq,$idxBase+strlen(KWP_PAGE_BASE));
 	return $urlPath;
     }
 
@@ -121,7 +191,7 @@ abstract class clsPage {
       probably be eliminated, and have the App just
       call Skin->DoPage() directly)
 */
-abstract class clsPageBasic extends clsPage {
+abstract class clsPageBasic extends clsPageStandalone {
 
     // ++ EXCEPTION HANDLING ++ //
 
@@ -221,18 +291,27 @@ abstract class clsPageLogin extends clsPageBasic {
 	$url = '?auth='.$idToken.':'.$sTokenHex;
 	return $url;
     }
+    /*----
+      ACTION: Look for Auth information in the user input.
+	If found, check it for validity.
+      RETURNS: array with results, or NULL if not found
+    */
     protected static function ParseAuth() {
-	$sAuth = $_REQUEST['auth'];
+	if (array_key_exists('auth',$_REQUEST)) {
+	    $sAuth = $_REQUEST['auth'];
 
-	$id = strtok($sAuth, ':');	// string before ':' is auth-email ID
-	$sHex = strtok(':');		// string after ':' is token (in hexadecimal)
-	//$sToken = hex2bin($sHex);	// requires PHP 5.4
-	$sBin = pack("H*",$sHex);	// equivalent to hex2bin()
-	$arOut = array(
-	  'auth'	=> $sAuth,	// unparsed -- for forms
-	  'id'		=> $id,
-	  'bin'		=> $sBin	// binary format
-	  );
+	    $id = strtok($sAuth, ':');	// string before ':' is auth-email ID
+	    $sHex = strtok(':');		// string after ':' is token (in hexadecimal)
+	    //$sToken = hex2bin($sHex);	// requires PHP 5.4
+	    $sBin = pack("H*",$sHex);	// equivalent to hex2bin()
+	    $arOut = array(
+	      'auth'	=> $sAuth,	// unparsed -- for forms
+	      'id'		=> $id,
+	      'bin'		=> $sBin	// binary format
+	      );
+	} else {
+	    $arOut = NULL;
+	}
 	return $arOut;
     }
 
@@ -252,7 +331,6 @@ abstract class clsPageLogin extends clsPageBasic {
     private $doEmail;
     private $doLogout;
     // display stuff
-    private $sTitle;	// page title string
     private $arPageHdrWidgets;
     // menu
     private $arPath;	// array of path params
@@ -314,15 +392,17 @@ abstract class clsPageLogin extends clsPageBasic {
     // ++ PAGE VALUES ++ //
 
     /*----
+      ALIAS for Skin()->PageTitle()
       RETURNS: string to use for page title
       NOTES: Needs to be public so page rendering classes
 	can change it from the default.
     */
     public function TitleString($sTitle=NULL) {
-	if (!is_null($sTitle)) {
+	return $this->Skin()->PageTitle($sTitle);
+/*	if (!is_null($sTitle)) {
 	    $this->sTitle = $sTitle;
 	}
-	return $this->sTitle;
+	return $this->sTitle;*/
     }
     protected function AuthToken($sNew=NULL) {
 	if (!is_null($sNew)) {
@@ -367,17 +447,33 @@ abstract class clsPageLogin extends clsPageBasic {
 	return $this->rcUser;
     }
     protected function SetUserRecord(clsUserAcct $rc) {
-	$rc->FirstRow();	// make sure first (only) row is loaded
-	$this->rcUser = $rc;
-	$this->LoginName($rc->UserName());
+	if ($rc->HasRows()) {
+	    $rc->FirstRow();	// make sure first (only) row is loaded
+	    $this->rcUser = $rc;
+	    $this->LoginName($rc->UserName());
+	} // maybe later set a flag if no rows
     }
 
     // -- DATA RECORD ACCESS -- //
+    // ++ CONFIGURATION ++ //
+
+    public function BaseURL_rel() {
+	return KWP_APP_RELATIVE;
+    }
+    public function BaseURL_abs() {
+	return KWP_APP_ABSOLUTE;
+    }
+/*
+    abstract protected function BaseURL_rel();	// the home URL for the current page/class
+    protected function BaseURL_abs() {
+	return KWP_APP_ABSOLUTE.$this->BaseURL_rel();
+    } */
+
+    // -- CONFIGURATION -- //
     // ++ PATH/URL/REQUEST MANAGEMENT ++ //
 
-    abstract protected function BaseURL();	// the home URL for the current page/class
     protected function AuthURL($idToken,$sToken) {
-	return $this->BaseURL().static::AuthURLPart($idToken,$sToken);
+	return KWP_LOGIN_ABSOLUTE.static::AuthURLPart($idToken,$sToken);
     }
     /*----
       USED BY: SelfLink(), AuthURL(), and clsActionLink_base->SelfURL()
@@ -390,7 +486,7 @@ abstract class clsPageLogin extends clsPageBasic {
 	}
 	// this part stays the same:
 	//$urlBase = $this->MenuPainter()->BaseURL();	// shouldn't the Page define this?
-	$urlBase = $this->BaseURL();
+	$urlBase = $this->BaseURL_rel();
 //	$urlNode = $this->PathStr();
 
 	$oNode = $this->MenuNode();
@@ -406,20 +502,19 @@ abstract class clsPageLogin extends clsPageBasic {
 	} else {
 	    $arAll = $arArgs;
 	}
-	$url = $urlBase.clsURL::FromArray($arAll,KS_CHAR_URL_ASSIGN);		// rebuild the path
-	//die('DOREL:['.$doRel.'] URL:'.$url);
+	$url = $urlBase.'/'.clsURL::FromArray($arAll,KS_CHAR_URL_ASSIGN);		// rebuild the path
 	return $url;
     }
     /*----
-      ACTION: Reload the page
-      PURPOSE: Removes form submissions so we can hit reload without repeating actions
+      RETURNS: SelfURL, extended by the arguments in $arArgs
     */
-    public function Reload() {
-	clsHTTP::Redirect($this->SelfURL());
-    }
+    /* 2015-07-16 commenting out, because there's no code here
+    public function SelfURL_extend(array $arArgs) {
+    } */
     private $oPath;
     protected function ParsePath() {
-	$fp = clsURL::RemoveBasePath($this->BaseURL());
+	// get current URL's path relative to base
+	$fp = clsURL::PathRelativeTo($this->BaseURL_rel());
 	if (is_string($fp)) {
 	    $arPath = clsURL::ParsePath($fp);
 	} else {
@@ -598,6 +693,34 @@ abstract class clsPageLogin extends clsPageBasic {
 	$this->isAuth	= $doGetAuth	= !empty($_GET['auth']);
 	$this->doLogout	= $doLogout	= $this->ReqArgBool('exit');
 
+	$doChgPass = $isReset;		// $isReset = resetting pw for existing user
+
+	if ($isLogin || $isNew) {
+	    $this->LoginName($_POST['uname']);
+	    if ($isNew) {
+		$doChgPass = TRUE;	// new user, so setting this user's password for the first time
+	    } else {
+		$this->sPass = $_POST[KSF_USER_CTRL_ENTER_PASS];
+	    }
+	} elseif ($isReset) {
+	    $this->AuthToken(clsHTTP::Request()->GetText('auth'));
+	} elseif ($isEmReq) {	// requesting password request email
+	    $this->EmailAddress($_POST['uemail']);
+	}
+	if ($doChgPass) {
+	    $this->sPass = $_POST[KSF_USER_CTRL_SET_PASS1];
+	    $this->sPassX = $_POST[KSF_USER_CTRL_SET_PASS2];
+	}
+    }
+    /* 2015-07-16 other version
+    protected function ParseInput_Login() {
+	$this->isLogin	= $isLogin	= !empty($_POST[KSF_USER_BTN_LOGIN]);
+	$this->isReset	= $isReset	= !empty($_POST[KSF_USER_BTN_SET_PASS]);
+	$this->isNew	= $isNew	= !empty($_POST[KSF_USER_BTN_NEW_ACCT]);
+	$this->doEmail	= $isEmReq	= !empty($_POST['btnSendAuth']);
+	$this->isAuth	= $doGetAuth	= !empty($_GET['auth']);
+	$this->doLogout	= $doLogout	= $this->ReqArgBool('exit');
+
 	if ($isLogin) {
 	    $this->LoginName($_POST['uname']);
 	    $this->sPass = $_POST[KSF_USER_CTRL_ENTER_PASS];
@@ -608,11 +731,17 @@ abstract class clsPageLogin extends clsPageBasic {
 	} elseif ($isEmReq) {	// requesting password request email
 	    $this->EmailAddress($_POST['uemail']);
 	}
-    }
+    } */
+    /*----
+      NOTE 1: There probably needs to be a URL_PostLogin() method, because
+	some apps have the login page on a separate URL and some don't.
+    */
     protected function HandleInput_Login() {
 	if ($this->doLogout) {
 	    $this->DoLogout();
+	    // see NOTE 1
 	    clsHTTP::Redirect($this->BaseURL());
+	    //$this->Reload();
 	}
  	if ($this->doEmail) {
 	    $this->TitleString('Send Password Reset Email');
@@ -633,6 +762,101 @@ abstract class clsPageLogin extends clsPageBasic {
 	// this can be overridden to show a default public page
     }
     /*----
+      PURPOSE: process User Access forms which require an auth token
+    */
+    protected function UserAccess_ProcessAuth(array $ar) {
+	$ht = NULL;
+	$oSkin = $this->Skin();
+	if ($ar['ok']) {
+	    $ht = $this->UserAccess_ProcessAuth_valid($ar);
+	} else {
+	    switch($ar['err']) {
+	      case 'EXP':	// token has expired
+		$ht .= $oSkin->ErrorMessage('Sorry, that token seems to have expired.');
+		// TODO : log this so we have data for determining if tokens need to live longer
+		break;
+	      case 'INV':	// invalid token
+		$ht .= $oSkin->ErrorMessage('That does not seem to be a valid authorization token.');
+		// TODO : log this as a possible hacking attempt
+		break;
+	    }
+	}
+	return $ht;
+    }
+    /*----
+      PURPOSE: process User Access forms for when a valid auth token has been received
+    */
+    protected function UserAccess_ProcessAuth_valid(array $ar) {
+	$oSkin = $this->Skin();
+	$ht = NULL;
+	// find out if this email address matches an existing user account
+	$this->sEmail	= $ar['em_s'];	// grab the email to go back into the "request another" form
+	$sAuth		= $ar['auth'];	// authorization code
+	$rcU = $this->UserTable()->FindEmail($this->sEmail);
+	$qU = $rcU->RowCount();
+	if ($qU == 0) {
+	    // this is a new account
+	    $ht .= $oSkin->SuccessMessage('You can now set your username and password.');
+	    $ht .= $oSkin->RenderUserCreate($sAuth);
+	} elseif ($qU == 1) {
+	    $rcU->NextRow();	// load the only row
+	    // updating an existing account
+	    $sLogin = $rcU->UserName();
+	    $ht .= $oSkin->SuccessMessage('You can now change your password.');
+	    $ht .= $oSkin->RenderUserUpdate($sAuth,$sLogin);
+	} else {
+	    // two or more accounts have that same email address
+	    throw new exception('Two accounts with the same email -- handling to be written!');
+	}
+	$this->doShowLogin = FALSE;	// no need to show login option
+	$ht .= $oSkin->HLine();
+
+	return $ht;
+    }
+    /*----
+      PURPOSE: process User Access forms when a user-creation request has been received
+    */
+    protected function UserAccess_CreateRequest(array $ar) {
+	$ht = NULL;
+	$this->CheckAuth();
+	if ($this->Success()) {
+	    // check for duplicate username
+	    $sUser = $this->App()->UserName();
+	    $tUsers = $this->App()->Users();
+	    if ($tUsers->UserExists($sUser)) {
+		// the username already exists -- can't create it
+		$ht .= $oSkin->ErrorMessage('The username "'.$sUser.'" already exists; please choose another.<br>');
+		$ht .= $oSkin->Input_UserSet($ar['auth'],NULL);
+		$ht .= $oSkin->HLine();
+	    } else {
+		// name is available -- attempt to create the record
+		$ht .= $this->CreateAccount($this->EmailAddress());
+	    }
+	}
+	return $ht;
+    }
+    /*----
+      PURPOSE: process User Access forms when a password-reset request has been received
+    */
+    protected function UserAccess_ResetRequest() {
+	$ht = NULL;
+	// check token, but don't display messages
+	$this->CheckAuth();
+	if ($this->Success()) {
+	    // auth token checks out
+	    // check for duplicate username
+	    $tblUsers = $this->App()->Users();
+	    $sUser = $this->LoginName();
+	    $ht .= $this->ChangePassword($this->EmailAddress(),$this->sPass,$this->sPassX);
+	    if (!$this->Success()) {	// if that didn't work...
+		$ok = FALSE;
+		$this->IsAuthLink(TRUE);	// display form again
+	    }
+
+	}	// END authorized
+	return $ht;
+    }
+    /*----
       ACTION: gets the user logged in by rendering/handling the following:
 	* log-in form
 	* account creation form with email authorization
@@ -640,11 +864,12 @@ abstract class clsPageLogin extends clsPageBasic {
       RETURNS: rendered HTML
       ASSUMES: user is not (yet) logged in
     */
+    private $doShowLogin;	// can be altered by subsidiary fx()
     protected function RenderUserAccess() {
 	$oSkin = $this->Skin();
 	$ht = $this->SectionHeader($this->TitleString());
 	$oEmAuth = $this->Data()->EmailAuth();
-	$doShowLogin = TRUE;	// By default, we'll still show the login form if not logged in
+	$this->doShowLogin = TRUE;	// By default, we'll still show the login form if not logged in
 	$isEmailAuth = FALSE;	// Assume this page is not an email authorization link...
 
 	$ht = NULL;
@@ -652,91 +877,38 @@ abstract class clsPageLogin extends clsPageBasic {
 	while (!$ok) {
 	    $ok = TRUE; 	// assume success
 
-	  // check auth link and display form if it checks out
+	    // check auth link and display form if it checks out
 	    if ($this->IsAuthLink()) {
-		// auth pre-empts regular log-in stuff, to avoid confusion
+
+		// this is an AUTH link, so ignore any other stuff
+
 		$ar = $this->CheckAuth();	// check token
-		if ($ar['ok']) {
-		    // find out if this email address matches an existing user account
-		    $this->sEmail	= $ar['em_s'];	// grab the email to go back into the "request another" form
-		    $sAuth		= $ar['auth'];	// authorization code
-		    $rcU = $this->UserTable()->FindEmail($this->sEmail);
-		    $qU = $rcU->RowCount();
-		    if ($qU == 0) {
-			// this is a new account
-			$ht .= $oSkin->SuccessMessage('You can now set your username and password.');
-			$ht .= $oSkin->RenderUserCreate($sAuth);
-		    } elseif ($qU == 1) {
-			$rcU->NextRow();	// load the only row
-			// updating an existing account
-			$sLogin = $rcU->UserName();
-			$ht .= $oSkin->SuccessMessage('You can now change your password.');
-			$ht .= $oSkin->RenderUserUpdate($sAuth,$sLogin);
-		    } else {
-			// two or more accounts have that same email address
-			throw new exception('Two accounts with the same email -- handling to be written!');
-		    }
-		    $doShowLogin = FALSE;	// no need to show login option
-    //		$isEmailAuth = TRUE;	// this is an email auth -- modify the message
-		    $ht .= $oSkin->HLine();
-		} else {
-		    switch($ar['err']) {
-		      case 'EXP':	// token has expired
-			$ht .= $oSkin->ErrorMessage('Sorry, that token seems to have expired.');
-			// TODO : log this so we have data for determining if tokens need to live longer
-			break;
-		      case 'INV':	// invalid token
-			$ht .= $oSkin->ErrorMessage('That does not seem to be a valid authorization token.');
-			// TODO : log this as a possible hacking attempt
-			break;
-		    }
+		$ht = $this->UserAccess_ProcessAuth($ar);
+
+		if ($this->IsCreateRequest()) {
+		    $ht .= $this->UserAccess_CreateRequest($ar);
+		} elseif ($this->IsResetRequest()) {	// password change request submitted
+		    $ht .= $this->UserAccess_ResetRequest();
 		}
 
-	    } elseif ($this->IsCreateRequest()) {
-	  // CREATE USER form has been submitted
-
-		$this->CheckAuth();
-		if ($this->Success()) {
-		    // check for duplicate username
-		    $sUser = $this->UserName();
-		    $tUsers = $this->App()->Users();
-		    if ($tUsers->UserExists($sUser)) {
-			// the username already exists -- can't create it
-			$ht .= $oSkin->ErrorMessage('The username "'.$sUser.'" already exists; please choose another.<br>');
-			$ht .= $oSkin->Input_UserSet($ar['auth'],NULL);
-			$ht .= $oSkin->HLine();
-		    } else {
-			// name is available -- attempt to create the record
-			$ht .= $this->CreateAccount($this->EmailAddress());
-		    }
-		}
-
-	    } elseif ($this->IsResetRequest()) {	// password change request submitted
-	  // CHANGE PASSWORD form has been submitted
-
-		// check token, but don't display messages
-		$this->CheckAuth();
-		if ($this->Success()) {
-		    // auth token checks out
-		    // check for duplicate username
-		    $tblUsers = $this->App()->Users();
-		    $sUser = $this->LoginName();
-		    $ht .= $this->ChangePassword($this->EmailAddress(),$this->sPass,$this->sPassX);
-		    if (!$this->Success()) {	// if that didn't work...
-			$ok = FALSE;
-			$this->IsAuthLink(TRUE);	// display form again
-		    }
-
-		}	// END authorized
-	    // END is reset
 	    } elseif($this->doEmail) {
+
+		// REQUEST AUTH LINK form has been submitted
+
 		$ht .= $this->SendPassReset_forAddr(
 		  $this->EmailAddress(),
 		  $this->LoginName()
 		  );
 	    // END do email
 	    } elseif($this->isLogin) {
-		// login was tried, but we're still here (not logged in), so it must have failed:
+		if ($this->IsLoggedIn()) {
+		    $sUser = $this->LoginName();
+		    $sSite = KS_SITE_SHORT;
+		    $htMsg = $oSkin->SuccessMessage("Welcome to $sSite, $sUser.");
+		    $this->RedirectHome($htMsg);
+		}
+
+		// LOGIN FAILED: login was tried, but we're still here (not logged in), so it must have failed:
 
 		$ht .= $oSkin->ErrorMessage('Sorry, the given username/password combination was not valid.');
 		$ht .= $oSkin->HLine();
@@ -745,7 +917,7 @@ abstract class clsPageLogin extends clsPageBasic {
 		// TODO : log as possible illicit hacking attempt
 	    }
 
-	    if ($doShowLogin) {
+	    if ($this->doShowLogin) {
 		$ht .= "\n<b>If you already have a user account on this site</b>, you can log in now:<br>"
 		  .$this->RenderLogin($this->LoginName())
 		  .$oSkin->HLine();
@@ -768,7 +940,13 @@ abstract class clsPageLogin extends clsPageBasic {
 	$out = NULL;
 	$oSkin = $this->Skin();
 	$tblUsers = $this->App()->Users();
-	$rcUser = $tblUsers->AddUser($this->LoginName(),$this->sPass,$sEmail);
+	$sUser = $this->LoginName();
+	$sPass = $this->sPass;
+	if (is_null($sUser)) {
+	    echo 'POST:'.clsArray::Render($_POST);
+	    throw new exception('Internal error: trying to add NULL user.');
+	}
+	$rcUser = $tblUsers->AddUser($sUser,$sPass,$sEmail);
 	if (is_null($rcUser)) {
 	    // display error message
 	    $out .= $oSkin->ErrorMessage('There has been a mysterious database problem.');
@@ -782,7 +960,8 @@ abstract class clsPageLogin extends clsPageBasic {
 	      $sSubj,$sMsgErr);
 
 	    $out .= 'For some reason, your username could not be created. The admin is being alerted.<hr>';
-	    $doShowLogin = FALSE;	// not much point in giving them a login option when they're trying to create an account
+	    $out .= $sMsgErr;
+	    $this->doShowLogin = FALSE;	// not much point in giving them a login option when they're trying to create an account
 	    //throw new exception('Dumping stack to help with debugging.');
 	} else {
 	    // display success message
@@ -792,7 +971,7 @@ abstract class clsPageLogin extends clsPageBasic {
 	    $oSess = $this->App()->Session();
 	    $oSess->SaveUserID($idUser);
 	} // END account created
-	return $out.'[/ChangePassword]';
+	return $out;
     }
     protected function ChangePassword($sEmail,$sPass,$sPassX) {
 	$out = NULL;
@@ -814,6 +993,7 @@ abstract class clsPageLogin extends clsPageBasic {
 		    } else {
 			$out .= $oSkin->ErrorMessage('Internal error: could not change password for "'.$sUser.'"!');
 		    }
+		    $this->RedirectHome($out);
 		} else {
 		    // could this be tripped by a hack? To be investigated...
 		    throw new exception('This really should not happen: token email address does not match found user record.');
@@ -976,14 +1156,15 @@ abstract class clsPageLogin extends clsPageBasic {
 		$ok = FALSE;
 		if (!is_null($sCtrler)) {
 		    $id = $this->PathArg('id');
-		    $obj = $this->Data()->Make($sCtrler,$id);
-		    $tbl = $this->Data()->Make($sCtrler);
+		    $this->TitleString($oNode->Title());
 		    if (is_null($id)) {
+			$tbl = $this->Data()->Make($sCtrler);
 			// surely this duplicates other code -- but where, and why isn't it being triggered? (https://vbz.net/admin/page:ord/)
 			$out = $tbl->MenuExec($this->PathArgs());
 		    } else {
-			$rc2 = $tbl->GetItem($id);
-			$out = $obj->MenuExec($this->PathArgs());
+			//$rc2 = $tbl->GetItem($id);
+			$rc = $this->Data()->Make($sCtrler,$id);
+			$out = $rc->MenuExec($this->PathArgs());
 		    }
 		    return $out;
 		}

@@ -9,19 +9,22 @@
     2015-05-02 changed format conversion functions from static to dynamic.
       Although they don't need to access any object-local data, they may need to be
         affected by object-local options.
+    2015-06-13 values are now stored locally (vValue) rather than in Form object.
 */
 
 class fcFormField {
     private $sName;
     private $vValue;
+    private $vDefault;
     private $sqlForBlank;
 
     // ++ SETUP ++ //
 
     public function __construct(fcForm $oForm, $sName) {
-	$this->FormObject($oForm);
-	$this->NameString($sName);
-	$this->sqlForBlank = 'NULL';
+	$this->NameString($sName);	// set name before connecting to form
+	$this->FormObject($oForm);	// connect to form
+	$this->sqlForBlank = 'NULL';	// default SQL value
+	$this->vDefault = NULL;		// default native value
     }
 
     // -- SETUP -- //
@@ -30,6 +33,7 @@ class fcFormField {
     protected function FormObject(fcForm $oForm=NULL) {
 	if (!is_null($oForm)) {
 	    $this->oForm = $oForm;
+	    $oForm->FieldObject($this->NameString(),$this);
 	}
 	return $this->oForm;
     }
@@ -57,20 +61,48 @@ class fcFormField {
     // ++ DATA ACCESS ++ //
 
     /*----
+      RETURNS: TRUE iff the value has been explicitly set
+      NOTE: We may eventually need to have a flag for this; for now, we just look
+	at whether the value is NULL or not.
+      USAGE: for when code needs to explicitly set certain values to be saved. The Form object
+	will allow explicitly-set values to override $_POSTed values.
+    */
+    public function IsChanged() {
+	return !is_null($this->vValue);
+    }
+    /*----
       ACTION: set and/or return the value of the field.
       VERSION: generic - stores/returns value directly
       HISTORY:
 	2011-03-29 renamed from Value() to ValStore()
 	2015-03-30 adapted from Forms v1
+	2015-06-14 changed the way Form values are stored
     */
     public function ValueNative($val=NULL) {
-	return $this->FormObject()->RecordValue($this->NameString(),$val);
+//	return $this->FormObject()->RecordValue($this->NameString(),$val);
+	if (!is_null($val)) {
+	    $this->vValue = $val;
+	}
+	return $this->vValue;
     }
     /*----
       PURPOSE: allows explicitly setting NULL values.
     */
     public function SetValueNative($val) {
-	return $this->FormObject()->SetRecordValue($this->NameString(),$val);
+	$this->vValue = $val;
+    }
+    /*----
+      PURPOSE: set the default value (value to use for new records)
+    */
+    public function SetDefaultNative($val) {
+        $this->vDefault = $val;
+    }
+    /*----
+      PURPOSE: set the current value to the default value
+      USAGE: when initializing a field for editing a new record
+    */
+    public function UseDefault() {
+        $this->SetValueNative($this->vDefault);
     }
     /*----
       ACTION: returns and/or sets the displayable representation of the field's value
@@ -105,9 +137,11 @@ class fcFormField {
     // -- DATA ACCESS -- //
     // ++ FORMAT CONVERSION ++ //
 
-    protected function Convert_DisplayToNative($sVal) { return $sVal; }
-    protected function Convert_NativeToDisplay($sVal) { return htmlspecialchars($sVal); }
-    protected function Convert_SQLToNative($sqlVal) { return $sqlVal; }
+    // These have to be PUBLIC so FORM can convert arrays without changing values.
+
+    public function Convert_DisplayToNative($sVal) { return $sVal; }
+    public function Convert_NativeToDisplay($sVal) { return htmlspecialchars($sVal); }
+    public function Convert_SQLToNative($sqlVal) { return $sqlVal; }
     //protected function Convert_NativeToSQL($sVal) { return is_null($sVal)?'NULL':$sVal; }
 
     // -- FORMAT CONVERSION -- //
@@ -173,10 +207,10 @@ class fcFormField_Time extends fcFormField {
     // -- OPTIONS -- //
     // ++ FORMAT CONVERSION ++ //
 
-    protected function Convert_DisplayToNative($sVal) {
+    public function Convert_DisplayToNative($sVal) {
 	return strtotime($sVal);
     }
-    protected function Convert_NativeToDisplay($dtVal) {
+    public function Convert_NativeToDisplay($dtVal) {
         if (empty($dtVal)) {
             return '';
 	} elseif (is_numeric($dtVal)) {
@@ -185,7 +219,7 @@ class fcFormField_Time extends fcFormField {
 	    return '??"'.$dtVal.'"';
 	}
     }
-    protected function Convert_SQLToNative($sqlVal) {
+    public function Convert_SQLToNative($sqlVal) {
 	$dt = strtotime($sqlVal);
 	if ($dt === FALSE) {
 	    // strtotime() returns FALSE if it can't parse the string
@@ -194,7 +228,7 @@ class fcFormField_Time extends fcFormField {
 	}
 	return $dt;
     }
-    protected function Convert_NativeToSQL($dtVal) {
+    public function Convert_NativeToSQL($dtVal) {
 	if (is_numeric($dtVal)) {
 	    return '"'.date('Y-m-d H:i:s',$dtVal).'"';
 	} elseif (empty($dtVal)) {
@@ -213,17 +247,17 @@ class fcFormField_Time extends fcFormField {
 }
 
 class fcFormField_Bit extends fcFormField {
-    protected function Convert_DisplayToNative($sVal) {
+    public function Convert_DisplayToNative($sVal) {
 	// TODO: not sure how this shows up...
 	return $sVal;
     }
-    protected function Convert_NativeToDisplay($bVal) {
+    public function Convert_NativeToDisplay($bVal) {
 	return $bVal?'YES':'no';
     }
-    protected function Convert_SQLToNative($sqlVal) {
+    public function Convert_SQLToNative($sqlVal) {
 	return (ord($sqlVal) != 0);
     }
-    protected function Convert_NativeToSQL($bVal) {
+    public function Convert_NativeToSQL($bVal) {
 	 return $bVal?chr(1):chr(0);
     }
 }

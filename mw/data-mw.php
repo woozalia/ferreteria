@@ -119,7 +119,7 @@ class clsMWData extends clsDatabase_abstract {
 
 	$db = $this->MWDB();
 //	$db =& wfGetDB( DB_SLAVE );
-/*	
+/*
 	$sql = $db->selectSQLText(
 	  $arTables,	// tables (string or array)
 	  $arFields,	// fields to return
@@ -138,7 +138,7 @@ class clsMWData extends clsDatabase_abstract {
 	  $arOptions,
 	  $arJoins	// joins (array)
 	);
-	
+
 // debugging
 //$sql = $db->lastQuery();
 //echo "SQL=[$sql]<br>";

@@ -7,6 +7,8 @@
 
 $om = new clsModule(__FILE__, 'app-specialpage.php');
   $om->AddClass('SpecialPageApp');
+$om = new clsModule(__FILE__, 'mw-page.php');
+  $om->AddClass('fcPage_MW');
 $om = new clsModule(__FILE__, 'page-section.php');
   $om->AddClass('clsWikiFormatter');
 $om = new clsModule(__FILE__, 'page-section-v3.php');

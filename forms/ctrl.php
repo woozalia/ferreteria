@@ -229,6 +229,29 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
     }
 
     // -- OPTIONS -- //
+    // ++ CACHING ++ //
+
+    /*----
+      RETURNS: array of field arrays, one per dataset row: array[key,field name] = field value
+    */
+    private $arRecs;
+    protected function Rows() {
+	if (empty($this->arRecs)) {
+	    $rs = $this->Records();
+	    if (is_null($rs)) {
+		$this->arRecs = NULL;
+	    } elseif ($rs->hasRows()) {
+		while ($rs->NextRow()) {
+		    $id = $rs->KeyValue();
+		    $arRecs[$id] = $rs->Values();
+		}
+		$this->arRecs = $arRecs;
+	    }
+	}
+	return $this->arRecs;
+    }
+
+    // -- CACHING -- //
     // ++ IMPLEMENTATION ++ //
 
     protected function RenderEditor() {
@@ -249,16 +272,68 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 		}
 	    }
             $vDeflt = $this->FieldObject()->ValueNative();
+
+            /*
 	    while ($rs->NextRow()) {
 		$id = $rs->KeyValue();
-		$oRow = new fcDropChoice($id,$rs->Text_forList());
+		$oRow = new fcDropChoice($id,$rs->ListItem_Text());
 		$out .= $oRow->RenderHTML($id == $vDeflt);
 	    }
+	    */
+
+	    $arRecs = $this->Rows();
+	    foreach ($arRecs as $id => $arRow) {
+		$rs->Values($arRow);
+		$oRow = new fcDropChoice($id,$rs->ListItem_Text());
+		$out .= $oRow->RenderHTML($id == $vDeflt);
+	    }
+
 	    $out .= "\n</select>\n";
 	    return $out;
 	} else {
 	    return $this->NoDataString();
 	}
+	return $out;
+    }
+
+    /*----
+      NOTE: There's got to be a way of doing this that doesn't require iterating through all records.
+    */
+    protected function RenderValue() {
+	$arRecs = $this->Rows();
+
+        if (is_null($arRecs)) {
+            $out = parent::RenderValue();
+        } else {
+            $vCurr = $this->FieldObject()->ValueNative();
+            $arRec = clsArray::Nz($arRecs,$vCurr);
+            if (is_null($arRec)) {
+		$out = "<i>?$vCurr?</i>";
+            } else {
+		$rs = $this->Records();	// get a copy of the recordset object
+		$rs->Values($arRec);	// give it the row we want to display
+		$out = $rs->ListItem_Link();
+	    }
+	}
+
+	/* 2015-07-21 old version
+	$rs = $this->Records();
+        if (is_null($rs)) {
+            return parent::RenderValue();
+        }
+        $out = NULL;
+	if ($rs->hasRows()) {
+            $vCurr = $this->FieldObject()->ValueNative();
+	    while ($rs->NextRow()) {
+		$id = $rs->KeyValue();
+		if ($id == $vCurr) {
+		    $out = $rs->AdminLink_name();
+		    break;
+		}
+	    }
+	}
+	*/
+
 	return $out;
     }
 

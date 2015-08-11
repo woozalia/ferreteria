@@ -17,20 +17,14 @@ if (!defined('KS_CHAR_URL_ASSIGN')) {
       (e.g. this class) to pass them the right kind of base URL. Not sure
       how to fix the conceptual model.
 */
-class SpecialPageApp extends SpecialPage {
+abstract class SpecialPageApp extends SpecialPage {
     // DYNAMIC
     protected $args;	// URL arguments as an array
     private $arKeep;	// arguments to preserve (in every menu item) from the current page
     private $arAdd;	// arguments to add to every menu item
     protected $objRT_HTML,$objRT_Wiki;
 
-    static protected $me;
-    static public function Me(SpecialPageApp $oApp=NULL) {
-	if (!is_null($oApp)) {
-	    self::$me = $oApp;
-	}
-	return self::$me;
-    }
+    // ++ SETUP ++ //
 
     public function __construct($iName='') {
 	//global $wgScriptPath;
@@ -41,17 +35,100 @@ class SpecialPageApp extends SpecialPage {
 	parent::__construct($iName);
 	self::Me($this);			// there can be only one
 
+	$sClass = $this->PageClass();
+	$oPage = new $sClass;
+	$sClass = $this->AppClass();
+	$oApp = new $sClass;
+	$oApp->Page($oPage);		// connects App and Page
+	//$oApp->MWPageObject($this);	// connects App and SpecialPage
+
 //	$vgPage = $this;
 	$vgUserName = $wgUser->getName();
 	$mwoTitleMe = $this->getTitle();
 
-	$wpBase = $this->BaseURL();
+	$wpBase = $this->BaseURL_rel();
 	$wkBase = $mwoTitleMe->getPrefixedText();
 
 	$this->objRT_Wiki = new clsRT_Wiki($wkBase);	// OMGkluge
 	$this->objRT_HTML = new clsRT_HTML($wpBase);
 	$this->InitArKeep();
     }
+    /*----
+      INPUT:
+	iarClassNames: array of names of classes to load
+    */
+/* 2015-07-16 old version
+    public function RegObjs(array $iarClassNames) {
+	foreach ($iarClassNames as $strCls) {
+	    $tbl = $this->DB()->Make($strCls);
+	    $strAct = $tbl->ActionKey();
+	    $arTbls[$strAct] = $tbl;
+	}
+	$this->arTbls = $arTbls;
+    } */
+    private $arClassNames;
+    public function RegObjs(array $arClassNames) {
+	$this->arClassNames = $arClassNames;
+    }
+    public function TableArray(array $arTbls=NULL) {
+	if (!is_null($this->arClassNames)) {
+	    $oDB = $this->DB();
+	    foreach ($this->arClassNames as $strCls) {
+		$tbl = $oDB->Make($strCls);
+		$strAct = $tbl->ActionKey();
+		$arTbls[$strAct] = $tbl;
+	    }
+	    $this->arTbls = $arTbls;
+	}
+	return $this->arTbls;
+    }
+
+    // -- SETUP -- //
+    // ++ CLASS NAMES ++ //
+
+    protected function PageClass() {
+	return 'fcPage_MW';
+    }
+    protected function AppClass() {
+	return 'clsApp_MW';
+    }
+
+    // -- CLASS NAMES -- //
+    // ++ APP FRAMEWORK ++ //
+
+    static protected $me;
+    static public function Me(SpecialPageApp $oApp=NULL) {
+	if (!is_null($oApp)) {
+	    self::$me = $oApp;
+	}
+	return self::$me;
+    }
+    private $oPage;
+    public function Page(clsPage $oPage=NULL) {
+	if (is_null($oPage)) {
+	    if (empty($this->oPage)) {
+		$sClass = $this->PageClass();
+		$this->oPage = new $sClass();
+	    }
+	} else {
+	    $this->oPage = $oPage;
+	    $oPage->App($this);
+	}
+	return $this->oPage;
+    }
+    private $oApp;
+    protected function App() {
+	if (is_null($this->oApp)) {
+	    $sClass = $this->AppClass();
+	    $this->oApp = new $sClass();
+	}
+	return $this->oApp;
+    }
+    abstract protected function DB();
+
+    // -- APP FRAMEWORK -- //
+    // ++ MW CALLBACK ++ //
+
     /*----
       PURPOSE: For some reason, parent::execute() resets $vgPage -- so we need to set it after that.
 	$vgPage was originally being set in __construct(), but that was getting overwritten.
@@ -63,6 +140,10 @@ class SpecialPageApp extends SpecialPage {
 	parent::execute($subPage);
 	$vgPage = $this;
     }
+
+    // -- MW CALLBACK -- //
+    // ++ CONFIGURATION ++ //
+
     /*----
       OLD NOTE - not sure if still true:
 	USAGE: Must be called before parent::SetHeaders()
@@ -78,6 +159,10 @@ class SpecialPageApp extends SpecialPage {
       RETURNS: URL of basic Special page with no URL arguments
     */
     public function BaseURL() {
+	throw new exception('BaseURL() is deprecated; call BaseURL_rel() or BaseURL_abs() (which needs to be written).');
+    }
+    // should this be moved to fcPage_MW?
+    public function BaseURL_rel() {
 	$mwoTitle = $this->getTitle();
 	$wp = $mwoTitle->getFullURL();
 	return $wp;
@@ -95,11 +180,10 @@ class SpecialPageApp extends SpecialPage {
 
 	$vgOut = $this->objRT_Wiki;
     }
-/*
-    public function RichTextObj() {
-	return $vgOut;
-    }
-*/
+
+    // -- CONFIGURATION -- //
+    // ++ URL PARSING ++ //
+
     /*----
       ACTION: Parses variable arguments from the URL
 	The URL is formatted as a series of arguments /arg:val/arg:val/..., so that we can always refer directly
@@ -345,70 +429,60 @@ class SpecialPageApp extends SpecialPage {
 	return $out;
     }
     /*----
-      INPUT:
-	iarClassNames: array of names of classes to load
-    */
-    public function RegObjs(array $iarClassNames) {
-	foreach ($iarClassNames as $strCls) {
-	    $tbl = $this->DB()->Make($strCls);
-	    $strAct = $tbl->ActionKey();
-	    $arTbls[$strAct] = $tbl;
-	}
-	$this->arTbls = $arTbls;
-    }
-    /*----
       ACTION: handles arguments embedded in the URL
       REQUIRES: classes must be registered in $this->arTbls (use $this->RegObjs())
       HISTORY:
 	2011-10-15 moved here from SpecialVbzAdmin.php and renamed from doAdminLookup() to HandlePageArgs()
     */
+    private $sPage, $tbl, $rec, $idRec, $doRec;
     protected function HandlePageArgs() {
 	if (isset($this->args['page'])) {
-	    $page = $this->args['page'];
+	    $sPage = $this->args['page'];
 	} else {
-	    $page = NULL;
+	    $sPage = NULL;
 	}
 
-	$idObj = NULL;
-	$doObj = FALSE;
+	$idRec = NULL;
+	$doRec = FALSE;
 	$doNew = FALSE;
-	if (!is_null($page)) {
+	if (!is_null($sPage)) {
 	    if (isset($this->args['id'])) {
-		$doObj = TRUE;
-		$idObj = $this->args['id'];
-		if ($idObj == 'new') {
+		$doRec = TRUE;
+		$idRec = $this->args['id'];
+		if ($idRec == KS_NEW_REC) {
 // an ID of NULL tells GetItem() to create a new object rather than loading an existing record
-		    $idObj = NULL;
+		    $idRec = NULL;
 		    $doNew = TRUE;
 		}
 	    }
 	}
-	$this->page = $page;
-	$this->doObj = $doObj;
-	$this->idObj = $idObj;
+	$this->sPage = $sPage;
+	$this->doRec = $doRec;
+	$this->idRec = $idRec;
 
 	$tbl = NULL;
-	$obj = NULL;
-	if (array_key_exists($page,$this->arTbls)) {
-	    $tbl = $this->arTbls[$page];
-	    if ($doObj) {
-		$obj = $tbl->GetItem($idObj);
-		if (!$doNew && $obj->IsNew()) {
+	$rec = NULL;
+	$arTbls = $this->TableArray();
+	if (array_key_exists($sPage,$arTbls)) {
+	    $tbl = $arTbls[$sPage];
+	    if ($doRec) {
+		$rec = $tbl->GetItem($idRec);
+		if (!$doNew && $rec->IsNew()) {
 		    $out = '<b>Internal Error</b>: Record was expected, but none found. Check the URL.';
 		    $out .= '<ul>';
 		    $out .= '<li><b>requested ID</b>: '.$idObj;
 		    global $sql;
 		    $out .= '<li><b>SQL used</b>: '.$sql;
 		    $out .= '<li><b>Table class</b>: '.get_class($tbl);
-		    $out .= '<li><b>Record class</b>: '.get_class($obj);
+		    $out .= '<li><b>Record class</b>: '.get_class($rec);
 		    $out .= '</ul>';
 
 		    echo $out; $out=NULL;
 		    throw new exception('Expected record was not found.');
 		}
 
-		if (method_exists($obj,'PageTitle')) {
-		    $this->SetTitle($obj->PageTitle());
+		if (method_exists($rec,'PageTitle')) {
+		    $this->SetTitle($rec->PageTitle());
 		}
 	    } else {
 		if (method_exists($tbl,'PageTitle')) {
@@ -417,6 +491,17 @@ class SpecialPageApp extends SpecialPage {
 	    }
 	}
 	$this->tbl = $tbl;
-	$this->obj = $obj;
+	$this->rec = $rec;
     }
+    protected function PageArg_Table() {
+	return $this->tbl;
+    }
+    protected function PageArg_Record() {
+	return $this->rec;
+    }
+    protected function PageArg_PageName() {
+	return $this->sPage;
+    }
+
+    // -- URL PARSING -- //
 }

@@ -11,6 +11,9 @@
     2013-11-11 re-adapted for general library
 */
 
+define('KWP_FERRETERIA_DOC','http://htyp.org/User:Woozle/Ferreteria');
+define('KWP_FERRETERIA_DOC_ERRORS',KWP_FERRETERIA_DOC.'/errors');
+
 /*%%%%
   CLASS: clsApp
   PURPOSE: base class -- container for the application
@@ -32,12 +35,15 @@ abstract class clsApp {
     abstract public function Page(clsPage $iObj=NULL);
     abstract public function Data(clsDatabase $iObj=NULL);
     abstract public function User();
-    abstract public function BaseURL();
+    //abstract public function BaseURL_abs();
+    //abstract public function BaseURL_rel();
 }
 abstract class cAppStandard extends clsApp {
     private $oPage;
     private $oSkin;
     private $oData;
+    private $rcSess;
+    private $rcUser;
 
     // ++ MAIN ++ //
 
@@ -56,7 +62,7 @@ abstract class cAppStandard extends clsApp {
     // ++ CLASS NAMES ++ //
 
     protected function SessionsClass() {
-	return 'clsUserSessions';
+	return KS_CLASS_USER_SESSIONS;
     }
 
     // -- CLASS NAMES -- //
@@ -90,15 +96,20 @@ abstract class cAppStandard extends clsApp {
 	return $this->oData;
     }
     public function Session() {
-	$tSess = $this->Data()->Sessions();
-	$oSess = $tSess->GetCurrent();
-	return $oSess;
+	if (empty($this->rcSess)) {
+	    $tSess = $this->Data()->Sessions();
+	    $this->rcSess = $tSess->GetCurrent();
+	}
+	return $this->rcSess;
     }
     public function Users($id=NULL) {
 	return $this->Make($this->UsersClass(),$id);
     }
     public function User() {
-	return $this->Session()->UserRecord();
+	if (empty($this->rcUser)) {
+	    $this->rcUser = $this->Session()->UserRecord();
+	}
+	return $this->rcUser;
     }
     /*----
       RETURNS: TRUE iff the user is logged in
@@ -179,7 +190,7 @@ class clsDatabase_UserAuth extends clsDatabase {
     }
 */
     public function Sessions($id=NULL) {
-	return $this->Make('clsUserSessions',$id);
+	return $this->Make(KS_CLASS_USER_SESSIONS,$id);
     }
     public function Clients($id=NULL) {
 	return $this->Make('clsUserClients',$id);

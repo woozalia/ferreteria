@@ -378,14 +378,21 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
 	    return $this->Table()->KeyName($sKey);
 	}
     }
+    /*----
+     RETURNS: TRUE iff the recordset is attached to a table.
+      This is mainly for debugging, because orphaned recordsets have very limited capabilities.
+    */
+    public function HasTable() {
+	return is_object($this->Table());
+    }
     /*-----
       FUNCTION: KeyValue()
     */
     public function KeyValue($iVal=NULL) {
-	if (!is_object($this->Table)) {
+	if (!$this->HasTable()) {
 	    throw new Exception('Recordset needs a Table object to retrieve key value.');
 	}
-	if (!is_array($this->Row) && !is_null($this->Row)) {
+	if (!is_array($this->Values()) && !is_null($this->Row)) {
 	    throw new Exception('Row needs to be an array or NULL, but type is '.gettype($this->Row).'. This may be an internal error.');
 	}
 	$strKeyName = $this->KeyName();

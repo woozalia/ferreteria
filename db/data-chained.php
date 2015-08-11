@@ -416,7 +416,9 @@ class clsIndexer_Table_chained extends clsIndexer_Table {
 	    assert('!is_array($iID); /* TABLE='.$this->TableObj()->Name().' */');
 	    $oTbl = $this->TableObj();
 	    $sql = $oTbl->SQL_forSelect();
-	    $sql .= ' WHERE '.$this->TableObj()->KeyNameRet().'='.$iID;
+	    $sqlID = SQLValue($iID);
+	    $sqlKey = $this->TableObj()->KeyNameRet();
+	    $sql .= " WHERE `$sqlKey`=$sqlID";
 	    $objItem = $oTbl->DataSQL($sql);
 	    $objItem->NextRow();
 	}

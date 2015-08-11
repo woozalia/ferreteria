@@ -21,11 +21,11 @@ class fcDataTable extends clsDataTable_Menu {
 class fcDataRecs extends clsDataRecord_Menu {
 
     // ++ SETUP ++ //
-
+/*
     protected function InitVars() {
 	$this->Value_IdentityKeys(array('page','id'));
     }
-
+*/
     // -- SETUP -- //
 
 }

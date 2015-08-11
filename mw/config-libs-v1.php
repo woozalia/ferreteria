@@ -13,6 +13,7 @@ clsModule::BasePath($fp.'/');
 require_once($fp.'/config-libs-both.php');
 
 $om = new clsModule(__FILE__, 'admin.php');
+  $om->AddClass('clsAdminTable');
   $om->AddClass('clsAdminData');
 $om = new clsModule(__FILE__, 'app-mw.php');
   $om->AddClass('clsApp_MW');
