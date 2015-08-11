@@ -429,6 +429,35 @@ abstract class SpecialPageApp extends SpecialPage {
 	return $out;
     }
     /*----
+      INPUT:
+	iarClassNames: array of names of classes to load
+    */
+/* 2015-07-16 old version
+    public function RegObjs(array $iarClassNames) {
+	foreach ($iarClassNames as $strCls) {
+	    $tbl = $this->DB()->Make($strCls);
+	    $strAct = $tbl->ActionKey();
+	    $arTbls[$strAct] = $tbl;
+	}
+	$this->arTbls = $arTbls;
+    } */
+    private $arClassNames;
+    public function RegObjs(array $arClassNames) {
+	$this->arClassNames = $arClassNames;
+    }
+    public function TableArray(array $arTbls=NULL) {
+	if (!is_null($this->arClassNames)) {
+	    $oDB = $this->DB();
+	    foreach ($this->arClassNames as $strCls) {
+		$tbl = $oDB->Make($strCls);
+		$strAct = $tbl->ActionKey();
+		$arTbls[$strAct] = $tbl;
+	    }
+	    $this->arTbls = $arTbls;
+	}
+	return $this->arTbls;
+    }
+    /*----
       ACTION: handles arguments embedded in the URL
       REQUIRES: classes must be registered in $this->arTbls (use $this->RegObjs())
       HISTORY:
@@ -461,13 +490,13 @@ abstract class SpecialPageApp extends SpecialPage {
 	$this->idRec = $idRec;
 
 	$tbl = NULL;
-	$rec = NULL;
+	$obj = NULL;
 	$arTbls = $this->TableArray();
-	if (array_key_exists($sPage,$arTbls)) {
-	    $tbl = $arTbls[$sPage];
-	    if ($doRec) {
-		$rec = $tbl->GetItem($idRec);
-		if (!$doNew && $rec->IsNew()) {
+	if (array_key_exists($page,$arTbls)) {
+	    $tbl = $arTbls[$page];
+	    if ($doObj) {
+		$obj = $tbl->GetItem($idObj);
+		if (!$doNew && $obj->IsNew()) {
 		    $out = '<b>Internal Error</b>: Record was expected, but none found. Check the URL.';
 		    $out .= '<ul>';
 		    $out .= '<li><b>requested ID</b>: '.$idObj;

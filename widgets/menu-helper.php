@@ -6,6 +6,8 @@
     2013-12-04 adapted from MediaWiki classes for standalone menu system
     2015-05-08 MW data record classes have no App() method, so resorting to static call in _AdminURL() and BuildLink();
     2015-07-12 resolving conflicts with other edited version
+    2015-08-11 resolving conflicts with other edited version again
+      How did this even happen, since I've only been editing here on cloud2?
 */
 
 /*%%%%
@@ -280,6 +282,7 @@ class clsMenuData_helper {
 	$urlAdd = clsURL::FromArray($arLink);
 	//$urlBase = $this->Recs()->Engine()->App()->Page()->BaseURL_rel();
 	//$urlBase = $this->Recs()->Engine()->App()->BaseURL_rel();
+	//return $rc->BaseURL_rel().'/'.$urlAdd;
 	$urlBase = clsApp::Me()->BaseURL_rel();
 	return $urlBase.'/'.$urlAdd;
     }

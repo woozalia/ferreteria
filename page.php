@@ -160,6 +160,42 @@ abstract class clsPageStandalone extends clsPage {
     // ++ UTILITIES ++ //
 
     /*----
+      ACTION: Redirects the page to the given URL, while preserving the optional Message in a cookie.
+    */
+    public function Redirect($url,$sMsg=NULL) {
+	if (!is_null($sMsg)) {
+	    setcookie(KS_MESSAGE_COOKIE,$sMsg,0,'/');
+	}
+	clsHTTP::Redirect($url);
+    }
+    public function RedirectHome($sMsg=NULL) {
+	$this->Redirect($this->BaseURL_rel(),$sMsg);
+    }
+    public function RedirectCurrent($sMsg=NULL) {
+	$this->Redirect($this->SelfURL(),$sMsg);
+    }
+    /*----
+      ACTION: Reload the page
+      PURPOSE: Removes form submissions so we can hit reload without repeating actions
+    */
+    public function Reload() {
+	clsHTTP::Redirect($this->SelfURL());
+    }
+    /*----
+      ACTION: Look for Message information in the cookie.
+	Remove it from cookie if found.
+      RETURNS: message string if found, NULL if not found.
+    */
+    static protected function GetRedirectMessage() {
+	if (array_key_exists(KS_MESSAGE_COOKIE,$_COOKIE)) {
+	    $sMsg = $_COOKIE[KS_MESSAGE_COOKIE];
+	    setcookie(KS_MESSAGE_COOKIE,NULL);	// delete the cookie
+	    return $sMsg;
+	} else {
+	    return NULL;
+	}
+    }
+    /*----
       RETURNS: The rest of the URI after KWP_PAGE_BASE
       REQUIRES: KWP_PAGE_BASE must be set to the base URL for the expected request (e.g. '/cat/')
       REASON: $SERVER[PATH_INFO] is often unavailable; $SERVER[REQUEST_URI] is more reliable,
