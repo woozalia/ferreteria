@@ -23,15 +23,11 @@ class clsDataTable_Menu extends clsTable {
 	}
     }
 }
-<<<<<<< HEAD
 /*%%%%
   PURPOSE: intermediate recordset class that doesn't assume a standalone application implemented with Ferreteria
 */
 class clsDataRecord_admin extends clsDataSet {
-=======
-class clsDataRecord_Menu extends clsDataSet {
 
->>>>>>> 737dc6e076250ed8b638d9354b9629821b39fa65
     // ++ BOILERPLATE ++ //
       // table classes that don't descend from this class can just copy/paste these methods
 

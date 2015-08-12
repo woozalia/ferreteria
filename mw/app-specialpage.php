@@ -17,7 +17,7 @@ if (!defined('KS_CHAR_URL_ASSIGN')) {
       (e.g. this class) to pass them the right kind of base URL. Not sure
       how to fix the conceptual model.
 */
-abstract class SpecialPageApp extends SpecialPage {
+class SpecialPageApp extends SpecialPage {
     // DYNAMIC
     protected $args;	// URL arguments as an array
     private $arKeep;	// arguments to preserve (in every menu item) from the current page
@@ -52,35 +52,6 @@ abstract class SpecialPageApp extends SpecialPage {
 	$this->objRT_Wiki = new clsRT_Wiki($wkBase);	// OMGkluge
 	$this->objRT_HTML = new clsRT_HTML($wpBase);
 	$this->InitArKeep();
-    }
-    /*----
-      INPUT:
-	iarClassNames: array of names of classes to load
-    */
-/* 2015-07-16 old version
-    public function RegObjs(array $iarClassNames) {
-	foreach ($iarClassNames as $strCls) {
-	    $tbl = $this->DB()->Make($strCls);
-	    $strAct = $tbl->ActionKey();
-	    $arTbls[$strAct] = $tbl;
-	}
-	$this->arTbls = $arTbls;
-    } */
-    private $arClassNames;
-    public function RegObjs(array $arClassNames) {
-	$this->arClassNames = $arClassNames;
-    }
-    public function TableArray(array $arTbls=NULL) {
-	if (!is_null($this->arClassNames)) {
-	    $oDB = $this->DB();
-	    foreach ($this->arClassNames as $strCls) {
-		$tbl = $oDB->Make($strCls);
-		$strAct = $tbl->ActionKey();
-		$arTbls[$strAct] = $tbl;
-	    }
-	    $this->arTbls = $arTbls;
-	}
-	return $this->arTbls;
     }
 
     // -- SETUP -- //
@@ -124,7 +95,6 @@ abstract class SpecialPageApp extends SpecialPage {
 	}
 	return $this->oApp;
     }
-    abstract protected function DB();
 
     // -- APP FRAMEWORK -- //
     // ++ MW CALLBACK ++ //
@@ -182,70 +152,12 @@ abstract class SpecialPageApp extends SpecialPage {
     }
 
     // -- CONFIGURATION -- //
-    // ++ URL PARSING ++ //
-
-    /*----
-      ACTION: Parses variable arguments from the URL
-	The URL is formatted as a series of arguments /arg:val/arg:val/..., so that we can always refer directly
-	  to any particular item as a wiki page title while also not worrying about hierarchy/order.
-	  An arg can also appear without a val (/arg/...), in which case it is treated as a flag set to TRUE.
-      TODO: This can probably be replaced by clsURL::ParsePath($par);
-    */
-    protected function GetArgs($par) {
-	$args_raw = preg_split('/\//',$par);
-	foreach($args_raw as $arg_raw) {
-	    if (strpos($arg_raw,KS_CHAR_URL_ASSIGN) !== FALSE) {
-		list($key,$val) = preg_split('/'.KS_CHAR_URL_ASSIGN.'/',$arg_raw);
-		$this->args[$key] = $val;
-	    } else {
-		$this->args[$arg_raw] = TRUE;
-	    }
-	}
-    }
-    /*----
-      RETURNS: array of all arguments found in URL,
-	or just the arguments listed in $iList
-    */
-    public function Args(array $iList=NULL) {
-	if (is_array($iList)) {
-	    foreach ($iList as $name) {
-		$arOut[$name] = $this->Arg($name);
-	    }
-	    return $arOut;
-	} else {
-	    return $this->args;
-	}
-    }
-    /*----
-      RETURNS: value of single specified argument from URL
-      HISTORY:
-	2012-02-26 changed default return from FALSE to NULL
-	  NULL is easier to test for.
-    */
-    public function Arg($iName) {
-	if (isset($this->args[$iName])) {
-	    return $this->args[$iName];
-	} else {
-	    return NULL;
-	}
-    }
-    // Alias for compatibility with other Ferreteria Page classes
-    public function PathArg($sName) {
-	return $this->Arg($sName);
-    }
-    /*----
-      HISTORY:
-	2013-08-26 added so we could avoid adding nonexistent data to the URL
-    */
-    public function HasArg($iName) {
-	return isset($this->args[$iName]);
-    }
-
-    /*====
-      SECTION: link generation
+    // ++ URL GENERATION ++ //
+    /*++++
       HISTORY:
 	2011-03-30 adapted from clsWikiSection to SpecialPageApp
     */
+
     public function ArgsToKeep(array $iKeep) {
 	$this->arKeep = $iKeep;
     }
@@ -428,35 +340,67 @@ abstract class SpecialPageApp extends SpecialPage {
 	}
 	return $out;
     }
+
+    // -- URL GENERATION -- //
+    // ++ URL PARSING ++ //
+
     /*----
-      INPUT:
-	iarClassNames: array of names of classes to load
+      ACTION: Parses variable arguments from the URL
+	The URL is formatted as a series of arguments /arg:val/arg:val/..., so that we can always refer directly
+	  to any particular item as a wiki page title while also not worrying about hierarchy/order.
+	  An arg can also appear without a val (/arg/...), in which case it is treated as a flag set to TRUE.
+      TODO: This can probably be replaced by clsURL::ParsePath($par);
     */
-/* 2015-07-16 old version
-    public function RegObjs(array $iarClassNames) {
-	foreach ($iarClassNames as $strCls) {
-	    $tbl = $this->DB()->Make($strCls);
-	    $strAct = $tbl->ActionKey();
-	    $arTbls[$strAct] = $tbl;
-	}
-	$this->arTbls = $arTbls;
-    } */
-    private $arClassNames;
-    public function RegObjs(array $arClassNames) {
-	$this->arClassNames = $arClassNames;
-    }
-    public function TableArray(array $arTbls=NULL) {
-	if (!is_null($this->arClassNames)) {
-	    $oDB = $this->DB();
-	    foreach ($this->arClassNames as $strCls) {
-		$tbl = $oDB->Make($strCls);
-		$strAct = $tbl->ActionKey();
-		$arTbls[$strAct] = $tbl;
+    protected function GetArgs($par) {
+	$args_raw = preg_split('/\//',$par);
+	foreach($args_raw as $arg_raw) {
+	    if (strpos($arg_raw,KS_CHAR_URL_ASSIGN) !== FALSE) {
+		list($key,$val) = preg_split('/'.KS_CHAR_URL_ASSIGN.'/',$arg_raw);
+		$this->args[$key] = $val;
+	    } else {
+		$this->args[$arg_raw] = TRUE;
 	    }
-	    $this->arTbls = $arTbls;
 	}
-	return $this->arTbls;
     }
+    /*----
+      RETURNS: array of all arguments found in URL,
+	or just the arguments listed in $iList
+    */
+    public function Args(array $iList=NULL) {
+	if (is_array($iList)) {
+	    foreach ($iList as $name) {
+		$arOut[$name] = $this->Arg($name);
+	    }
+	    return $arOut;
+	} else {
+	    return $this->args;
+	}
+    }
+    /*----
+      RETURNS: value of single specified argument from URL
+      HISTORY:
+	2012-02-26 changed default return from FALSE to NULL
+	  NULL is easier to test for.
+    */
+    public function Arg($iName) {
+	if (isset($this->args[$iName])) {
+	    return $this->args[$iName];
+	} else {
+	    return NULL;
+	}
+    }
+    // Alias for compatibility with other Ferreteria Page classes
+    public function PathArg($sName) {
+	return $this->Arg($sName);
+    }
+    /*----
+      HISTORY:
+	2013-08-26 added so we could avoid adding nonexistent data to the URL
+    */
+    public function HasArg($iName) {
+	return isset($this->args[$iName]);
+    }
+
     /*----
       ACTION: handles arguments embedded in the URL
       REQUIRES: classes must be registered in $this->arTbls (use $this->RegObjs())
@@ -533,4 +477,50 @@ abstract class SpecialPageApp extends SpecialPage {
     }
 
     // -- URL PARSING -- //
+}
+
+/*%%%%
+  PURPOSE: SpecialPage using data-driven menu (URL-parsing)
+*/
+abstract class SpecialPage_DataMenu extends SpecialPageApp {
+
+    // ++ ABSTRACT ++ //
+
+    abstract protected function DB();	// app-related DB (for URL parsing)
+
+    // -- ABSTRACT -- //
+    // ++ SETUP ++ //
+
+    public function TableArray(array $arTbls=NULL) {
+	if (!is_null($this->arClassNames)) {
+	    $oDB = $this->DB();
+	    foreach ($this->arClassNames as $strCls) {
+		$tbl = $oDB->Make($strCls);
+		$strAct = $tbl->ActionKey();
+		$arTbls[$strAct] = $tbl;
+	    }
+	    $this->arTbls = $arTbls;
+	}
+	return $this->arTbls;
+    }
+     /*----
+      INPUT:
+	iarClassNames: array of names of classes to load
+    */
+/* 2015-07-16 old version
+    public function RegObjs(array $iarClassNames) {
+	foreach ($iarClassNames as $strCls) {
+	    $tbl = $this->DB()->Make($strCls);
+	    $strAct = $tbl->ActionKey();
+	    $arTbls[$strAct] = $tbl;
+	}
+	$this->arTbls = $arTbls;
+    } */
+    private $arClassNames;
+    public function RegObjs(array $arClassNames) {
+	$this->arClassNames = $arClassNames;
+    }
+
+    // -- SETUP -- //
+
 }
