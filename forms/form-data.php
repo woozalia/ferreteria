@@ -91,16 +91,10 @@ class fcForm_DB extends fcForm_keyed {
       RULE: Call this before attempting to read data
     */
     public function LoadRecord() {
-<<<<<<< HEAD
 	$rc = $this->RecordsObject();
 	$ar = $rc->Values();
 	$this->RecordValues_asSQL_set($ar);
 	$this->Set_KeyString_loaded($rc->KeyValue());
-=======
-	$ar = $this->RecordsObject()->Values();
-	$this->RecordValues_asSQL_set($ar);
-	$this->Set_KeyString_loaded($this->RecordsObject()->KeyValue());
->>>>>>> 737dc6e076250ed8b638d9354b9629821b39fa65
     }
     /*----
       RULE: Call this to store data after changing

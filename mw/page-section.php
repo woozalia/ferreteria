@@ -94,8 +94,10 @@ class clsWikiSection2 {
 	$this->AddLink($iLink);
 	return $iLink;
     }
+    /*----
+      CALLED BY AddLink_local() and AddLink_state()
+    */
     public function AddPageDefaults_toLink(clsWikiSectionLink_base $iLink) {
-    throw new exception('How do we get here?');
 	$iLink->Values_default($this->PageData());
     }
     public function AddPageValues_toLink(clsWikiSectionLink $iLink) {

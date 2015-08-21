@@ -16,6 +16,7 @@ class fcPage_MW extends clsPage {
 	return $this->App()->BaseURL_rel();
     }
     public function BaseURL_abs() {
+    throw new exception('Who calls this?');
 	return $this->App()->BaseURL_abs();
     }
 //    protected function App_BaseURL_rel() {

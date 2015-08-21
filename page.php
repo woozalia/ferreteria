@@ -25,7 +25,6 @@ define('KSF_USER_CTRL_SET_PASS2'	,'upass2');
     Needs to work regardless of whether app is standalone or a plug-in.
 */
 abstract class clsPage {
-    private $oApp;
     private $oDoc;
 
     // ++ SETUP ++ //
@@ -42,12 +41,21 @@ abstract class clsPage {
     // -- INFORMATION -- //
     // ++ APP FRAMEWORK ++ //
 
+/* 2015-08-20 old version
+    private $oApp;
     public function App(clsApp $iObj=NULL) {
 	if (!is_null($iObj)) {
 	    $this->oApp = $iObj;
+	} elseif(is_null($this->oApp)) {
+	    $this->oApp = clsApp::Me();
 	}
 	return $this->oApp;
     }
+*/
+    public function App(clsApp $iObj=NULL) {
+	return clsApp::Me();
+    }
+
     private $oSkin;
     public function Skin() {
 	if (empty($this->oSkin)) {
