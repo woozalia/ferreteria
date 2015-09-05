@@ -434,28 +434,28 @@ class SpecialPageApp extends SpecialPage {
 	$this->idRec = $idRec;
 
 	$tbl = NULL;
-	$obj = NULL;
+	$rc = NULL;
 	$arTbls = $this->TableArray();
-	if (array_key_exists($page,$arTbls)) {
-	    $tbl = $arTbls[$page];
-	    if ($doObj) {
-		$obj = $tbl->GetItem($idObj);
-		if (!$doNew && $obj->IsNew()) {
+	if (array_key_exists($sPage,$arTbls)) {
+	    $tbl = $arTbls[$sPage];
+	    if ($doRec) {
+		$rc = $tbl->GetItem($idRec);
+		if (!$doNew && $rc->IsNew()) {
 		    $out = '<b>Internal Error</b>: Record was expected, but none found. Check the URL.';
 		    $out .= '<ul>';
-		    $out .= '<li><b>requested ID</b>: '.$idObj;
+		    $out .= '<li><b>requested ID</b>: '.$idRec;
 		    global $sql;
 		    $out .= '<li><b>SQL used</b>: '.$sql;
 		    $out .= '<li><b>Table class</b>: '.get_class($tbl);
-		    $out .= '<li><b>Record class</b>: '.get_class($rec);
+		    $out .= '<li><b>Record class</b>: '.get_class($rc);
 		    $out .= '</ul>';
 
 		    echo $out; $out=NULL;
 		    throw new exception('Expected record was not found.');
 		}
 
-		if (method_exists($rec,'PageTitle')) {
-		    $this->SetTitle($rec->PageTitle());
+		if (method_exists($rc,'PageTitle')) {
+		    $this->SetTitle($rc->PageTitle());
 		}
 	    } else {
 		if (method_exists($tbl,'PageTitle')) {
@@ -464,7 +464,7 @@ class SpecialPageApp extends SpecialPage {
 	    }
 	}
 	$this->tbl = $tbl;
-	$this->rec = $rec;
+	$this->rec = $rc;
     }
     protected function PageArg_Table() {
 	return $this->tbl;

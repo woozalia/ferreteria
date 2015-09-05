@@ -7,6 +7,7 @@
 
 $om = new clsModule(__FILE__, 'app-specialpage.php');
   $om->AddClass('SpecialPageApp');
+  $om->AddClass('SpecialPage_DataMenu');
 $om = new clsModule(__FILE__, 'menu.php');
   $om->AddClass('clsMenu');
 $om = new clsModule(__FILE__, 'mw-page.php');

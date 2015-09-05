@@ -72,8 +72,9 @@ class clsUserClient extends clsDataSet {
 	} else {
 	    $sDomain = $this->Engine()->SafeParam($this->DomainString());
 	    $sBrowser = $this->Engine()->SafeParam($this->BrowserString());
+	    $sCRC = sprintf('%u',$this->CRC());
 	    $ar = array(
-	      'CRC'		=> SQLValue($this->CRC()),
+	      'CRC'		=> SQLValue($sCRC),
 	      'Address'		=> SQLValue($this->AddressString()),
 	      'Domain'		=> SQLValue($sDomain),
 	      'Browser'		=> SQLValue($sBrowser),

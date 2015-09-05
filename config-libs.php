@@ -109,6 +109,8 @@ $om = new clsModule(__FILE__, 'widgets/menu-action.php');
   $om->AddClass('clsActionLink_option');
 $om = new clsModule(__FILE__, 'widgets/menu-helper.php');
   $om->AddClass('clsMenuData_helper');
+  $om->AddClass('clsMenuData_helper_standard');
+  $om->AddClass('clsMenuData_helper_admin');
 $om = new clsModule(__FILE__, 'widgets/navbar.php');
   $om->AddClass('clsNavbar_flat');
   $om->AddClass('clsNavbar_tree');

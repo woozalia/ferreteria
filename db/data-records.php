@@ -409,6 +409,10 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
 	$sKey = (string)$this->KeyValue();
 	return ($sKey=='')?$sNew:$sKey;
     }
+    public function ClearKeyValue() {
+	$sKeyName = $this->KeyName();
+	$this->Row[$sKeyName] = NULL;
+    }
     /*----
       RETURNS: list of key values from the current recordset, formatted for use in an SQL "IN (...)" clause
     */

@@ -273,10 +273,18 @@ abstract class clsTable_keyed_abstract extends clsTable_abstract {
     /*----
       PURPOSE: method for setting a key which uniquely refers to this table
 	Useful for logging, menus, and other text-driven contexts.
+      HISTORY:
+	2015-09-03 Added exception trap for undefined ActionKey.
     */
     public function ActionKey($iName=NULL) {
 	if (!is_null($iName)) {
 	    $this->ActionKey = $iName;
+	}
+	if (empty($this->ActionKey)) {
+	    $sName = $this->Name();
+	    $sClass = get_class($this);
+	    $sMsg = "Internal Error: trying to access ActionKey before it has been set in table '$sName', class '$sClass'.";
+	    throw new exception($sMsg);
 	}
 	return $this->ActionKey;
     }

@@ -10,7 +10,7 @@ class actUserClients extends clsUserClients {
 	  $this->ClassSng(KS_CLASS_ADMIN_USER_CLIENT);
     }
 }
-class acrUserClients extends clsUserClient {
+class acrUserClient extends clsUserClient {
 
     // ++ BOILERPLATE ++ //
 

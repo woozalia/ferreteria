@@ -31,7 +31,7 @@ class acrAdminUserSession extends fcrUserSession {
     // ++ BOILERPLATE ++ //
 
     public function AdminLink($iText=NULL,$iPopup=NULL,array $iarArgs=NULL) {
-	return clsMenuData_helper::_AdminLink($this,$iText,$iPopup,$iarArgs);
+	return clsMenuData_helper_standard::_AdminLink($this,$iText,$iPopup,$iarArgs);
     }
 
     // -- BOILERPLATE -- //

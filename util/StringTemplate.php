@@ -70,10 +70,13 @@ abstract class fcTemplate {
     /*----
       PURPOSE: Same as Render(), but handles recursive replacement -- i.e. a variable's value
 	may contain a reference to another variable.
+      HISTORY:
+	2015-09-03 Defined $smSt. Code could not possibly have worked before this.
     */
     public function RenderRecursive() {
 	$out = $this->Render();
 	$done = FALSE;
+	$smSt = $this->StartMark();
 	do {
 	    $posSt = strpos ( $out, $smSt );	// does output contain more vars?
 	    if ($posSt === FALSE) {
@@ -81,7 +84,7 @@ abstract class fcTemplate {
 	    } else {
 		// spawn another object to handle inner vars
 		$sClass =  __CLASS__;
-		$tpInner = new $sClass($this->StartMark(),$this->FinishMark(),$out);
+		$tpInner = new $sClass($smSt,$this->FinishMark(),$out);
 		$out = $tpInner->RenderRecursive();
 	    }
 	} while (!$done);
@@ -107,6 +110,7 @@ class fcTemplate_array extends fcTemplate {
 	if (array_key_exists($sName,$this->arVals)) {
 	    return $this->arVals[$sName];
 	} else {
+	    echo 'Variables defined:<br>'.clsArray::Render($this->arVals).'<br>';
 	    throw new exception("Attempting to access undefined template variable [$sName].");
 	}
     }

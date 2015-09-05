@@ -89,6 +89,10 @@ class clsRecs_indexed extends clsRecs_keyed_abstract {
     public function KeyString() {
 	return $this->Indexer()->KeyString();
     }
+    // for compatibility with menu-helper.php
+    public function KeyValue() {
+	return $this->KeyString();
+    }
     public function SelfFilter() {
 	return $this->Indexer()->SQL_forWhere();
     }

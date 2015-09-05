@@ -62,9 +62,14 @@ class clsTreeNode {
       RETURNS: Node object, or NULL if not found.
     */
     public function FindNode($sName) {
+	if (!is_string($sName)) {
+	    throw new exception("Internal Error: Searching for node name that is type '".gettype($sName)."' instead of a string.");
+	}
 	if ($sName == $this->Name()) {
 	    return $this;
-	} elseif (isset($this->arSubs[$sName])) {
+	} elseif (!is_array($this->arSubs)) {
+	    return NULL;
+	} elseif (array_key_exists($sName,$this->arSubs)) {
 	    return $this->arSubs[$sName];
 	} elseif (is_array($this->arSubs)) {
 	    foreach ($this->arSubs as $key => $node) {
@@ -75,11 +80,11 @@ class clsTreeNode {
 	    }
 	}
 	return NULL;
-    }
+    } /*
     public function FindNode_debug($sName) {
 	if ($sName == $this->Name()) {
 	    return $this;
-	} elseif (isset($this->arSubs[$sName])) {
+	} elseif (array_key_exists($sName,$this->arSubs)) {
 	    return $this->arSubs[$sName];
 	} elseif (is_array($this->arSubs)) {
 	    foreach ($this->arSubs as $key => $node) {
@@ -90,7 +95,7 @@ class clsTreeNode {
 	    }
 	}
 	return NULL;
-    }
+    } */
     public function HasNodes() {
 	if (isset($this->arSubs)) {
 	    return (count($this->arSubs) > 0);

@@ -14,18 +14,18 @@
   HISTORY:
     2013-08-27 added _AdminLink_array(), _AdminURL(); modified _AdminLink() to use _AdminLink_array()
 */
-class clsMenuData_helper {
+abstract class clsMenuData_helper {
     private $objRecs;
     private $strNewTxt;
     private $strNewKey;
 
-//=====
-// STATIC section
+    // ++ STATIC METHODS ++ //
+
     static public function _AdminLink(clsRecs_keyed_abstract $rcThis,$sText=NULL,$sPopup=NULL,array $arArgs=NULL) {
 	$txtShow = is_null($sText)?($rcThis->KeyString()):$sText;
 	$objSelf = static::_Spawn();			// make an object so we can call dynamic methods
 	$objSelf->Recs($rcThis);			// give the object a pointer to the recordset
-	$arBase = $rcThis->IdentityValues();		// get the recordset's identity array
+	$arBase = $objSelf->IdentityValues();		// get the recordset's identity array
 	$arAll = clsArray::Merge($arBase,$arArgs);	// override anything that needs overriding
 
 	//$out = $objSelf->BuildLink($arAll,$sText,$SPopup);
@@ -80,9 +80,6 @@ class clsMenuData_helper {
 	$ar = self::_PageLink_array($sPage,$id,$iarArgs);
 	return clsURL::FromArray($ar);
     }
-    private static function _ClassName() {
-	return __CLASS__;
-    }
     private static function _Spawn() {
 	$strClass = static::_ClassName();
 	$obj = new $strClass();
@@ -100,8 +97,20 @@ class clsMenuData_helper {
 	$objSelf->Recs($iRecs);
 	return $objSelf->AdminRedirect($iarArgs,$sText);
     }
-//=====
-// DYNAMIC section
+
+    // -- STATIC METHODS -- //
+    // ++ ABSTRACT METHODS ++ //
+
+    protected static function _ClassName() {		// effectively an abstract function, since it can't work here
+	throw new exception('Invoke one of the non-abstract descendant classes instead of '.__CLASS__.'.');
+
+	// descendant classes should just do this:
+	return __CLASS__;
+    }
+    abstract protected function IdentityValues();	// returns an array of values that identify the table and record
+
+    // -- ABSTRACT METHODS -- //
+    // ++ DYNAMIC METHODS ++ //
 
     public function __construct() {
 	$this->strNewTxt = 'new';
@@ -181,6 +190,39 @@ class clsMenuData_helper {
 	return $out;
     }
     /*----
+      HISTORY:
+	2012-12-31 After moving code to Helper, making this dynamic
+	2013-01-04 Do we need both this and the static _AdminLink() method? How are they different?
+	2014-06-10 $arArgs is now IGNORED
+	2015-06-23 some simplifications
+	  $arArgs is NOT ignored; it overrides the record's current values
+	  No longer calling $this->RecURL() (now commented out).
+    */
+    public function AdminRedirect(array $arArgs=NULL,$sText=NULL) {
+	clsHTTP::DisplayOnReturn($sText);
+	$url = $this->AdminURL($arArgs);
+	echo 'REDIRECTING to '.$url.' and saving the following text:<br>'.$sText;
+	clsHTTP::Redirect($url,array(),FALSE,HTTP_REDIRECT_POST);
+	die();	// don't do any more work (including accidentally erasing the cookie)
+    }
+    /*----
+      RETURNS: URL for the current record
+    */
+    protected function AdminURL(array $arArgs=NULL) {
+	//$rc = $this->Recs();
+	$arLink = clsArray::Merge($this->IdentityValues(),$arArgs);
+	$urlAdd = clsURL::FromArray($arLink);
+	//$urlBase = $this->Recs()->Engine()->App()->Page()->BaseURL_rel();
+	//$urlBase = $this->Recs()->Engine()->App()->BaseURL_rel();
+	//return $rc->BaseURL_rel().'/'.$urlAdd;
+	$urlBase = clsApp::Me()->Page()->BaseURL_rel();
+	return $urlBase.'/'.$urlAdd;
+    }
+
+    // -- DYNAMIC METHODS -- //
+    // ++ DEPRECATED METHODS ++ //
+
+    /*----
       ACTION: create a link from the given parameters
 	URL: derived from $arArgs
 	Text: sText if set, otherwise the current ActionID
@@ -257,33 +299,38 @@ class clsMenuData_helper {
 	$url = $this->Recs()->Engine()->App()->Page()->SelfURL_extend($arArgs);
 	return $url;
     } */
-    /*----
-      HISTORY:
-	2012-12-31 After moving code to Helper, making this dynamic
-	2013-01-04 Do we need both this and the static _AdminLink() method? How are they different?
-	2014-06-10 $arArgs is now IGNORED
-	2015-06-23 some simplifications
-	  $arArgs is NOT ignored; it overrides the record's current values
-	  No longer calling $this->RecURL() (now commented out).
-    */
-    public function AdminRedirect(array $arArgs=NULL,$sText=NULL) {
-	clsHTTP::DisplayOnReturn($sText);
-	$url = $this->AdminURL($arArgs);
-	echo 'REDIRECTING to '.$url.' and saving the following text:<br>'.$sText;
-	clsHTTP::Redirect($url,array(),FALSE,HTTP_REDIRECT_POST);
-	die();	// don't do any more work (including accidentally erasing the cookie)
+}
+
+/*%%%%
+  PURPOSE: clsMenuData_helper which defines identity with the keys "page" and "id"
+    representing the table's ActionKey and ID.
+
+    This replicates the functionality of clsDataRecord_admin (menu-data.php) for recordset types
+      that aren't descended from it.
+*/
+class clsMenuData_helper_standard extends clsMenuData_helper {
+    protected static function _ClassName() {
+	return __CLASS__;
     }
-    /*----
-      RETURNS: URL for the current record
-    */
-    protected function AdminURL(array $arArgs=NULL) {
-	$rc = $this->Recs();
-	$arLink = clsArray::Merge($rc->IdentityValues(),$arArgs);
-	$urlAdd = clsURL::FromArray($arLink);
-	//$urlBase = $this->Recs()->Engine()->App()->Page()->BaseURL_rel();
-	//$urlBase = $this->Recs()->Engine()->App()->BaseURL_rel();
-	//return $rc->BaseURL_rel().'/'.$urlAdd;
-	$urlBase = clsApp::Me()->BaseURL_rel();
-	return $urlBase.'/'.$urlAdd;
+    protected function IdentityValues() {
+	$rs = $this->Recs();
+	$ar = array(
+	  'page'	=> $rs->Table()->ActionKey(),
+	  'id'		=> $rs->KeyValue(),
+	  );
+	return $ar;
+    }
+}
+
+/*%%%%
+  PURPOSE: clsMenuData_helper which expects the recordset class to be descended
+    from clsDataRecord_admin (mainly: must have a method "IdentityValues()").
+*/
+class clsMenuData_helper_admin extends clsMenuData_helper {
+    protected static function _ClassName() {
+	return __CLASS__;
+    }
+    protected function IdentityValues() {
+	return $this->Recs()->IdentityValues();
     }
 }

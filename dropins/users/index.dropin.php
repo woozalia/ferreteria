@@ -25,9 +25,9 @@ define('KS_CLASS_ADMIN_USER_PERMISSION',	'acUserPerm');
 define('KS_CLASS_ADMIN_UACCT_X_UGROUP',	'clsUAcct_x_UGroup_admin');
 
 define('KS_CLASS_ADMIN_USER_SESSIONS',		'actAdminUserSessions');
-define('KS_CLASS_ADMIN_USER_SESSION',		'acrAdminUserSessions');
+define('KS_CLASS_ADMIN_USER_SESSION',		'acrAdminUserSession');
 define('KS_CLASS_ADMIN_USER_CLIENTS',		'actUserClients');
-define('KS_CLASS_ADMIN_USER_CLIENT',		'acrUserClients');
+define('KS_CLASS_ADMIN_USER_CLIENT',		'acrUserClient');
 
 // FEATURES
 

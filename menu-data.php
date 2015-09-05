@@ -44,10 +44,10 @@ class clsDataRecord_admin extends clsDataSet {
 	return $this->oLogger;
     }
     public function StartEvent(array $iarArgs) {
-	$this->Log()->StartEvent($iarArgs);
+	return $this->Log()->StartEvent($iarArgs);
     }
     public function FinishEvent(array $iarArgs=NULL) {
-	$this->Log()->FinishEvent($iarArgs);
+	return $this->Log()->FinishEvent($iarArgs);
     }
     public function CreateEvent(array $arArgs) {
 	return $this->Log()->CreateEvent($arArgs);
@@ -67,13 +67,13 @@ class clsDataRecord_admin extends clsDataSet {
 	2013-12-14 Moved from mw/admin.php to vbz-data.php
     */
     public function AdminLink($iText=NULL,$iPopup=NULL,array $iarArgs=NULL) {
-	return clsMenuData_helper::_AdminLink($this,$iText,$iPopup,$iarArgs);
+	return clsMenuData_helper_admin::_AdminLink($this,$iText,$iPopup,$iarArgs);
     }
     public function AdminRedirect(array $iarArgs=NULL,$sText=NULL) {
-	return clsMenuData_helper::_AdminRedirect($this,$iarArgs,$sText);
+	return clsMenuData_helper_admin::_AdminRedirect($this,$iarArgs,$sText);
     }
     public function AdminURL($arArgs=NULL) {
-	return clsMenuData_helper::_AdminURL($this,$arArgs);
+	return clsMenuData_helper_admin::_AdminURL($this,$arArgs);
     }
 
     // -- BOILERPLATE -- //

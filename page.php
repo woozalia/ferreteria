@@ -211,16 +211,17 @@ abstract class clsPageStandalone extends clsPage {
 	This function can be gradually foolproofed as more cases are encountered.
 	See getPathInfo in https://doc.wikimedia.org/mediawiki-core/master/php/WebRequest_8php_source.html
     */
-    static protected function GetPathInfo() {
+    protected function GetPathInfo() {
 	$uriReq = $_SERVER['REQUEST_URI'];
-	if (KWP_PAGE_BASE == '') {
+	$wpBase = $this->BaseURL_rel();
+	if ($wpBase == '') {
 	    $urlPath = $uriReq;
 	} else {
-	    $idxBase = strpos($uriReq,KWP_PAGE_BASE);
+	    $idxBase = strpos($uriReq,$wpBase);
 	    if ($idxBase === FALSE) {
-		throw new exception("Configuration needed: URI [$uriReq] does not include KWP_PAGE_BASE [".KWP_PAGE_BASE.'].');
+		throw new exception("Configuration needed: URI [$uriReq] does not include page base URL [".$wpBase.'].');
 	    }
-	    $urlPath = substr($uriReq,$idxBase+strlen(KWP_PAGE_BASE));
+	    $urlPath = substr($uriReq,$idxBase+strlen($wpBase));
 	}
 	return $urlPath;
     }
@@ -594,13 +595,20 @@ abstract class clsPageLogin extends clsPageBasic {
 	* action links need this in order to tell if they've been activated
     */
     public function PathArg($sName) {
-	if (is_array($this->arPath)) {
-	    if (array_key_exists($sName,$this->arPath)) {
-		$sVal = $this->arPath[$sName];
-		return $sVal;
-	    }
+	if ($this->PathArg_exists($sName)) {
+	    $sVal = $this->arPath[$sName];
+	    return $sVal;
 	}
 	return NULL;
+    }
+    // 2015-09-03 I can't believe this isn't already implemented somewhere...
+    public function PathArg_exists($sName) {
+	if (is_array($this->arPath)) {
+	    if (array_key_exists($sName,$this->arPath)) {
+		return TRUE;
+	    }
+	}
+	return FALSE;
     }
     /*----
       TODO: replace this with clsHTTP::Request()->GetBool()
@@ -1161,15 +1169,16 @@ abstract class clsPageLogin extends clsPageBasic {
 	if (is_null($this->oMNode)) {
 	    // figure out which menu item has been invoked
 	    $this->ParsePath();
-	    $sPage = $this->PathArg('page');
-/*	    if (empty($sPage)) {
-		throw new exception('Page key is not being specified in URL.');
-	    }	*/
-	    if (is_null($this->MenuHome())) {
-		throw new exception('Trying to access menu  when there is no home node.');
+	    if ($this->PathArg_exists('page')) {	// if a page is specified
+		$sPage = $this->PathArg('page');
+		if (is_null($this->MenuHome())) {
+		    throw new exception('Trying to access menu  when there is no home node.');
+		}
+		// get the menu item object
+		$this->oMNode = $this->MenuHome()->FindNode($sPage);
+	    } else {
+		$this->oMNode = NULL;	// maybe we need some way to prevent this being looked up again?
 	    }
-	    // get the menu item object
-	    $this->oMNode = $this->MenuHome()->FindNode_debug($sPage);
 	}
 	return $this->oMNode;
     }
