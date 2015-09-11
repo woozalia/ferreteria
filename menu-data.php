@@ -4,7 +4,35 @@
   HISTORY:
     2014-06-10 Extracting useful non-vbz-specific bits from vbz-data.php
     2015-07-12 resolving conflicts with other edited version
+    2015-09-06 moving methods into traits
+        ftLoggableRecordset
 */
+
+trait ftLoggableRecord {
+    private $oLogger;
+    protected function Log() {
+        static $oLogger = NULL;
+
+	if (is_null($oLogger)) {
+	    $tLog = $this->Engine()->App()->Events();
+	    $oLogger = new clsLogger_DataSet($this,$tLog);
+	}
+	return $oLogger;
+    }
+    public function StartEvent(array $arArgs) {
+	return $this->Log()->StartEvent($arArgs);
+    }
+    public function FinishEvent(array $arArgs=NULL) {
+	return $this->Log()->FinishEvent($arArgs);
+    }
+    public function CreateEvent(array $arArgs) {
+	return $this->Log()->CreateEvent($arArgs);
+    }
+    public function EventListing() {
+	return $this->Log()->EventListing();
+    }
+}
+
 class clsDataTable_Menu extends clsTable {
     /*----
       NOTE: Not sure if this is really necessary, but leaving it for now.

@@ -27,12 +27,12 @@ abstract class clsRecs_abstract {
 //    public function __construct(clsDatabase $iDB=NULL, $iRes=NULL, array $iRow=NULL) {
     public function __construct(clsDatabase $iDB=NULL) {
 	$this->objDB = $iDB;
-	$this->objRes = NULL;
-	$this->Row = NULL;
 	$this->InitVars();
-	$this->arMod = NULL;
     }
     protected function InitVars() {
+	$this->objRes = NULL;
+	$this->Row = NULL;
+	$this->arMod = NULL;
     }
     public function ResultHandler($iRes=NULL) {
 	if (!is_null($iRes)) {

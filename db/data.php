@@ -118,6 +118,8 @@ abstract class clsDatabase_abstract {
 	2010-12-01 Added iID parameter to get singular item
 	2011-02-23 Changed from protected to public, to support class registration
 	2012-01-23 Moved from clsDatabase to (new) clsDatabase_abstract
+	2015-09-07 TODO: This *really* ought to be modified just slightly to keep the table objects in an array.
+	  Do it when everything else is working.
     */
     public function Make($sClass,$id=NULL) {
 	if (!isset($this->$sClass)) {
@@ -127,10 +129,12 @@ abstract class clsDatabase_abstract {
 		throw new exception('Unknown class "'.$sClass.'" requested.');
 	    }
 	}
-	if (!is_null($id)) {
-	    return $this->$sClass->GetItem($id);
-	} else {
+	if (is_null($id)) {
+	    // table-type
 	    return $this->$sClass;
+	} else {
+	    // recordset-type
+	    return $this->$sClass->GetItem($id);
 	}
     }
     abstract public function Exec($iSQL);

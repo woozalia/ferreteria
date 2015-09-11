@@ -3,6 +3,7 @@
   PURPOSE: classes for handling data tables
   HISTORY:
     2013-12-19 split off from data.php
+    2015-09-07 Table classes now have InitVars(). I'm surprised that it didn't already.
 */
 /*%%%%
   NAME: clsTable_abstract
@@ -39,7 +40,13 @@ abstract class clsTable_abstract {
 
     public function __construct(clsDatabase_abstract $iDB) {
 	$this->objDB = $iDB;
-	$this->vSngClass = 'clsRecs_generic';	// default
+	$this->InitVars();
+    }
+    protected function DefaultSingularClass() {
+	return 'clsRecs_generic';
+    }
+    protected function InitVars() {
+	$this->ClassSng($this->DefaultSingularClass());	// default
     }
     public function DB() {	// DEPRECATED - use Engine()
 	return $this->objDB;
@@ -343,9 +350,7 @@ class clsTable_key_single extends clsTable_keyed_abstract {
 
     public function __construct(clsDatabase_abstract $iDB) {
 	parent::__construct($iDB);
-	$this->ClassSng('clsDataSet');
     }
-
     public function KeyName($iName=NULL) {
 	if (!is_null($iName)) {
 	    $this->vKeyName = $iName;
