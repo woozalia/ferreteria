@@ -1,15 +1,16 @@
 <?php
 /*
- PURPOSE: library for extended string classes
- HISTORY:
-  2009-10-23 Added constructor for xtString
-  2009-11-22 xtString.KeepOnly()
-  2010-11-04
-    xtString.SplitFirst(): added isList parameter
-    Moved ParseTextLines() here from SpecialVbzAdmin.php
-  2010-11-07 StrCat()
-  2011-09-09 Tentatively commenting out libmgr.php requirement; it doesn't seem to be used
-  2012-03-04 non-class function Xplode(); moved functions above classes
+  PURPOSE: library for extended string classes
+  HISTORY:
+    2009-10-23 Added constructor for xtString
+    2009-11-22 xtString.KeepOnly()
+    2010-11-04
+      xtString.SplitFirst(): added isList parameter
+      Moved ParseTextLines() here from SpecialVbzAdmin.php
+    2010-11-07 StrCat()
+    2011-09-09 Tentatively commenting out libmgr.php requirement; it doesn't seem to be used
+    2012-03-04 non-class function Xplode(); moved functions above classes
+    2015-09-12 moved xtTime from here to strings.php
 */
 
 //define('KI_BEFORE',-1);
@@ -26,7 +27,11 @@ define('KI_FINAL',-1);
   SECTION: utility functions
 */
 
+// DEPRECATED
 function Xplode($iString) {
+    return clsString::Xplode($iString);
+
+/*
     if (!is_string($iString)) {
 	throw new exception('Xplode() was given a non-string.');
     }
@@ -38,6 +43,7 @@ function Xplode($iString) {
     } else {
 	return NULL;
     }
+    */
 }
 /*
 function nz(&$iVar,$iDefault=NULL) {
@@ -563,61 +569,8 @@ class xtString {
     }
 
     public function Xplode() {
-	return Xplode($this->Value);
-/*
-	$tok = substr ( $this->Value, 0, 1);	// token for splitting
-	if ($tok) {
-		$tks = substr ( $this->Value, 1 );	// tokenized string
-		$list = explode ( $tok, $tks );	// split the string
-		return $list;
-	} else {
-		return NULL;
-	}
-*/
+	return clsString::Xplode($this->Value);
     }
-    /*----
-      This version turns out to be difficult to debug because of the way it uses internal functions.
-	It also isn't working properly in at least some cases (inventory entry page).
-    */
-/*
-    public function ParseTextLines_bad(array $iOpts=NULL) {
-	$this->chsComment = nz($iOpts['comment'],'!;');
-	$this->chsBlanks = nz($iOpts['blanks']," \t");
-	$this->strSep = nz($iOpts['sep'],' ');
-	$this->strDefVal = NzArray($iOpts,'def val');
-	$this->doArrX = (nz($iOpts['line']) == 'arrx');
-	$this->doArr = $this->doArrX || (nz($iOpts['line']) == 'arr');
-
-	$strLineSep = "\n";	// make this an option later
-
-	// check for single line
-	if (strpos($this->Value,$strLineSep) === FALSE) {
-	    return $this->SplitLine($this->Value);
-	} else {
-	    $arLines = preg_split("/$strLineSep/",$this->Value);
-	    if (is_array($arLines)) {
-		$arOut = NULL;
-		foreach ($arLines as $idx => $line) {
-		    $arThis = $this->SplitLine($line);
-		    if (is_null($arThis)) {
-			// nothing to add to arOut
-		    } else {
-			if (is_array($arOut)) {
-			    // see Notes about array_merge() vs. ArrayJoin()
-			    $arOut = array_merge($arOut,$arThis);
-			    //$arOut = ArrayJoin($arOut,$arThis,FALSE,TRUE);	// overwrite:no; append:yes
-			} else {
-			    $arOut = $arThis;
-			}
-		    }
-		}
-		return $arOut;
-	    } else {
-		return NULL;
-	    }
-	}
-    }
-*/
     /*----
       ACTION: Parses a block of text lines into an array, where the
 	key for each element is the text up to the first space
@@ -804,82 +757,3 @@ class xtString {
     }
 }
 
-
-class xtTime {
-    public function __construct($iValue=NULL) {
-	if (is_string($iValue)) {
-	    $this->Parse($iValue);
-	}
-    }
-    public function Parts($iYear=NULL,$iMonth=NULL,$iDay=NULL,$iHour=NULL,$iMin=NULL,$iSec=NULL) {
-	if (!is_null($iYear))	{ $this->intYr = $iYear; }
-	if (!is_null($iMonth))	{ $this->intMo = $iMonth; }
-	if (!is_null($iDay))	{ $this->intDy = $iDay; }
-	if (!is_null($iHour))	{ $this->intHr = $iHour; }
-	if (!is_null($iMin))	{ $this->intMi = $iMin; }
-	if (!is_null($iSec))	{ $this->intSe = $iSec; }
-    }
-    public function PartsArray($iArray=NULL) {
-	if (!is_null($iArray)) {
-	    $intYr = nz($iArray['year']);
-	    $intMo = nz($iArray['month']);
-	    $intDy = nz($iArray['day']);
-	    $intHr = nz($iArray['hour']);
-	    $intMi = nz($iArray['minute']);
-	    $intSe = nz($iArray['second']);
-	    $this->Parts($intYr,$intMo,$intDy,$intHr,$intMi,$intSe);
-	}
-	$arOut = array(
-	  'year'	=> nz($this->intYr),
-	  'month'	=> nz($this->intMo),
-	  'day'		=> nz($this->intDy),
-	  'hour'	=> nz($this->intHr),
-	  'minute'	=> nz($this->intMi),
-	  'second'	=> nz($this->intSe));
-	return $arOut;
-    }
-    public function Year($iYear=NULL) {
-	if (!is_null($iYear)) {
-	    $this->intYr = $iYear;
-	}
-	return $this->intYr;
-    }
-    public function Parse($iString) {		// date and/or time
-	$this->DateParse($iString);
-    }
-    public function DateParse($iString) {
-	$arDate = date_parse($iString);
-	$this->PartsArray($arDate);
-    }
-    public function HasTime() {
-	return !empty($this->intHr);
-    }
-    public function FormatSortable($iSep='-') {
-	$out = $this->intYr.$iSep.sprintf('%02u',$this->intMo).$iSep.sprintf('%02u',$this->intDy);
-	return $out;
-    }
-    public function FormatSQL() {
-	$out = $this->intYr.'/'.$this->intMo.'/'.$this->intDy;
-	if ($this->HasTime()) {
-	    $out .= ' '.$this->intHr.':'.$this->intMi.':'.$this->intSe;
-	}
-	return $out;
-    }
-/*
-    public function DateTimeObj() {
-	$dtOut = new DateTime($this->Format('Y-);
-    }
-*/
-    public function AssumeYear($iMonthsAhead) {
-	if (empty($this->intYr)) {
-	    $intYrCur = date('Y');
-	    $this->intYr = $intYrCur;
-	    if (isset($this->intMo)) {
-		$intMoCur = date('n');
-		if (($this->intMo - $intMoCur) > $iMonthsAhead) {
-		    $this->intYr--;
-		}
-	    }
-	}
-    }
-}
