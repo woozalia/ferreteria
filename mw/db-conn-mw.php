@@ -49,6 +49,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     }
 
     // -- INHERITED -- //
+    // ++ CONVENTIONS ++ //
 
     /*----
       ACTION: Convert title into normalized DB-key format
@@ -69,6 +70,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
 	return $strTitle;
     }
 
+    // -- CONVENTIONS -- //
     // ++ DATA RETRIEVAL ++ //
 
     public function Recordset($sSQL) {

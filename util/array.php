@@ -1,6 +1,8 @@
 <?php
 /*
   FILE: array.php -- class for handling array functions
+  HISTORY:
+    2015-09-13 Removed the [brackets] from the output of clsArray::Render().
 */
 
 class clsArray {
@@ -91,7 +93,7 @@ class clsArray {
 	    }
 	}
 	$out .= self::$sRenderSuffix;
-	return "[$out]";
+	return "$out";
     }
     static protected function RenderLayer(array $ar,$nDepthCur,$nDepthMax) {
 	$nDepthCur++;

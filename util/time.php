@@ -6,6 +6,7 @@
     2012-03-03 DateOnly_string()
     2013-01-13 adding classes with static methods
       These should eventually supercede standalone functions.
+    2015-09-12 moved xtTime here from strings.php
 */
 
 class clsDate {
@@ -146,5 +147,85 @@ function Date_DefaultYear($iDate,$iYear,$iSmallerPfx='<small>',$iSmallerSfx='</s
 	    $out .= $iSmallerSfx;
 	}
 	return $out;
+    }
+}
+
+// TODO: determine which of these functions are *not* duplicates of native PHP functions, and document.
+class xtTime {
+    public function __construct($iValue=NULL) {
+	if (is_string($iValue)) {
+	    $this->Parse($iValue);
+	}
+    }
+    public function Parts($iYear=NULL,$iMonth=NULL,$iDay=NULL,$iHour=NULL,$iMin=NULL,$iSec=NULL) {
+	if (!is_null($iYear))	{ $this->intYr = $iYear; }
+	if (!is_null($iMonth))	{ $this->intMo = $iMonth; }
+	if (!is_null($iDay))	{ $this->intDy = $iDay; }
+	if (!is_null($iHour))	{ $this->intHr = $iHour; }
+	if (!is_null($iMin))	{ $this->intMi = $iMin; }
+	if (!is_null($iSec))	{ $this->intSe = $iSec; }
+    }
+    public function PartsArray($iArray=NULL) {
+	if (!is_null($iArray)) {
+	    $intYr = nz($iArray['year']);
+	    $intMo = nz($iArray['month']);
+	    $intDy = nz($iArray['day']);
+	    $intHr = nz($iArray['hour']);
+	    $intMi = nz($iArray['minute']);
+	    $intSe = nz($iArray['second']);
+	    $this->Parts($intYr,$intMo,$intDy,$intHr,$intMi,$intSe);
+	}
+	$arOut = array(
+	  'year'	=> nz($this->intYr),
+	  'month'	=> nz($this->intMo),
+	  'day'		=> nz($this->intDy),
+	  'hour'	=> nz($this->intHr),
+	  'minute'	=> nz($this->intMi),
+	  'second'	=> nz($this->intSe));
+	return $arOut;
+    }
+    public function Year($iYear=NULL) {
+	if (!is_null($iYear)) {
+	    $this->intYr = $iYear;
+	}
+	return $this->intYr;
+    }
+    public function Parse($iString) {		// date and/or time
+	$this->DateParse($iString);
+    }
+    public function DateParse($iString) {
+	$arDate = date_parse($iString);
+	$this->PartsArray($arDate);
+    }
+    public function HasTime() {
+	return !empty($this->intHr);
+    }
+    public function FormatSortable($iSep='-') {
+	$out = $this->intYr.$iSep.sprintf('%02u',$this->intMo).$iSep.sprintf('%02u',$this->intDy);
+	return $out;
+    }
+    public function FormatSQL() {
+	$out = $this->intYr.'/'.$this->intMo.'/'.$this->intDy;
+	if ($this->HasTime()) {
+	    $out .= ' '.$this->intHr.':'.$this->intMi.':'.$this->intSe;
+	}
+	return $out;
+    }
+/*
+    public function DateTimeObj() {
+	$dtOut = new DateTime($this->Format('Y-);
+    }
+*/
+    public function AssumeYear($iMonthsAhead) {
+	if (empty($this->intYr)) {
+	    $intYrCur = date('Y');
+	    $this->intYr = $intYrCur;
+	    if (isset($this->intMo)) {
+		$intMoCur = date('n');
+		if (($this->intMo - $intMoCur) > $iMonthsAhead) {
+		    $this->intYr--;
+		}
+	    }
+	}
     }
 }

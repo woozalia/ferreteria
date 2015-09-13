@@ -93,6 +93,7 @@ $om = new clsModule(__FILE__, 'util/StringTemplate.php');
   $om->AddClass('clsStringTemplate_array');
 $om = new clsModule(__FILE__, 'util/time.php');
   $om->AddClass('clsDate');
+  $om->AddClass('xtTime');
   $om->AddFunc('Time_DefaultDate');
   $om->AddFunc('Date_DefaultYear');
 $om = new clsModule(__FILE__, 'util/tree.php');
