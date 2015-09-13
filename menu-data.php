@@ -55,12 +55,15 @@ class clsDataTable_Menu extends clsTable {
   PURPOSE: intermediate recordset class that doesn't assume a standalone application implemented with Ferreteria
 */
 class clsDataRecord_admin extends clsDataSet {
+    use ftLinkableRecord;
+    use ftLoggableRecord;
 
     // ++ BOILERPLATE ++ //
       // table classes that don't descend from this class can just copy/paste these methods
 
       // ++ BOILERPLATE: event logging ++ //
 
+      /*
     private $oLogger;
     protected function Log() {
 	if (empty($this->oLogger)) {
@@ -94,6 +97,7 @@ class clsDataRecord_admin extends clsDataSet {
 	2010-10-13 VbzAdmin::VbzAdminStkItems::Listing_forItem() calls it
 	2013-12-14 Moved from mw/admin.php to vbz-data.php
     */
+    /*
     public function AdminLink($iText=NULL,$iPopup=NULL,array $iarArgs=NULL) {
 	return clsMenuData_helper_admin::_AdminLink($this,$iText,$iPopup,$iarArgs);
     }
@@ -103,7 +107,7 @@ class clsDataRecord_admin extends clsDataSet {
     public function AdminURL($arArgs=NULL) {
 	return clsMenuData_helper_admin::_AdminURL($this,$arArgs);
     }
-
+*/
     // -- BOILERPLATE -- //
     // ++ HELPER CALLBACKS ++ //
 
