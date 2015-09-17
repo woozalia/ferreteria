@@ -110,6 +110,7 @@ $om = new clsModule(__FILE__, 'widgets/menu-action.php');
   $om->AddClass('clsActionLink_modeless');
   $om->AddClass('clsActionLink_option');
 $om = new clsModule(__FILE__, 'widgets/object-urls.php');
+  $om->AddClass('ftLinkableRecord');
   $om->AddClass('ftLinkableTable');
 $om = new clsModule(__FILE__, 'widgets/navbar.php');
   $om->AddClass('clsNavbar_flat');
