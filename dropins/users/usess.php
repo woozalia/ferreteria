@@ -5,6 +5,7 @@
     2010-10-17 created
 */
 class actAdminUserSessions extends fctUserSessions {
+    use ftLinkableTable;
 
     // ++ SETUP ++ //
 
@@ -27,14 +28,15 @@ class actAdminUserSessions extends fctUserSessions {
     // -- DROP-IN API -- //
 }
 class acrAdminUserSession extends fcrUserSession {
-
+    use ftLinkableRecord;
+/*
     // ++ BOILERPLATE ++ //
 
     public function AdminLink($iText=NULL,$iPopup=NULL,array $iarArgs=NULL) {
 	return clsMenuData_helper_standard::_AdminLink($this,$iText,$iPopup,$iarArgs);
     }
 
-    // -- BOILERPLATE -- //
+    // -- BOILERPLATE -- // */
     // ++ DROP-IN API ++ //
 
     /*----

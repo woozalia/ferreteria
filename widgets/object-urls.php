@@ -130,24 +130,6 @@ trait ftLinkableRecord {
     }
 
     // -- API -- //
-    // ++ DEFAULT VALUES ++ //
-
-    /* 2015-09-06 need clarity on what these are for
-    protected function Text_toShow($sText) {
-	return is_null($sText)
-	  ?($this->RecordString())
-	  :$sText
-	  ;
-    }
-    protected function RecordString() {
-	$rs = $this->Recs();
-	return $rs->IsNew()
-	  ?$this->NewKey()
-	  :$rs->KeyString()
-	  ;
-    }*/
-
-    // -- DEFAULT VALUES -- //
 
 }
 
@@ -166,14 +148,6 @@ abstract class fcLinkBuilder {
 
     // RETURNS: an array of values that identify the linked object (table or table+record)
     abstract protected function IdentityValues();
-
-    // STATIC: faux-abstract methods
-/*
-    protected static function _ClassName() {
-	throw new exception('Invoke one of the non-abstract descendant classes instead of '.__CLASS__.'.');
-	// descendant classes should just do this:
-	return __CLASS__;
-    } */
 
     // -- ABSTRACT METHODS -- //
     // ++ INTERNAL INFORMATION ++ //
@@ -216,6 +190,7 @@ abstract class fcLinkBuilder {
     */
     public function LinkHTML($sText=NULL,$sPopup=NULL,array $arAdd=NULL,array $arAttr=NULL) {
 	$url = $this->LinkURL($arAdd);
+	$sText = is_null($sText)?($this->Recs()->KeyString()):$sText;
 	$out = clsHTML::BuildLink($url,$sText,$sPopup,$arAttr);
 	return $out;
     }

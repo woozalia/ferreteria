@@ -44,6 +44,7 @@ $om = new clsModule(__FILE__, 'menu-data.php');
   $om->AddClass('clsDataTable_Menu');
   $om->AddClass('clsDataRecord_Menu');
   $om->AddClass('clsDataRecord_admin');
+  $om->AddClass('ftLoggableRecord');
 $om = new clsModule(__FILE__, 'page.php');
   $om->AddClass('clsPage');
   $om->AddClass('clsPageLogin');
