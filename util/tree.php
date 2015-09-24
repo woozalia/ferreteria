@@ -9,6 +9,7 @@
       had to be an internal routine before nodes tracked their own names)
     2012-01-13 commented out __constructor and moved most of the code to Nodes()
     2013-12-14 clsTreeNode::FindNode()
+    2015-09-20 added overwrite checking to NodeAdd()
 */
 class clsTreeNode {
     public $vVal;	// data value
@@ -49,11 +50,18 @@ class clsTreeNode {
     // -- DATA FIELDS -- //
     // ++ PARENT NODE ++ //
 
+    // TODO: deprecate this; use GetParent()/SetParent()
     public function Parent(clsTreeNode $iNode=NULL) {
 	if (!is_null($iNode)) {
-	    $this->objParent = $iNode;
+	    $this->SetParent($iNode);
 	}
+	return $this->GetParent();
+    }
+    public function GetParent() {
 	return $this->objParent;
+    }
+    protected function SetParent(clsTreeNode $iNode) {
+	$this->objParent = $iNode;
     }
     public function HasParent() {
 	return (!is_null($this->objParent));
@@ -88,12 +96,19 @@ class clsTreeNode {
 	$oNode = reset($this->arSubs);	// get the first node
 	return $oNode;			// return it
     }
-    public function Exists($iName) {
+    // TODO: possibly this should be renamed HasNode(), for consistency
+    public function Exists($sName) {
+	if (is_array($this->arSubs)) {
+	    return array_key_exists($sName,$this->arSubs);
+	} else {
+	    return FALSE;
+	}
+    /*
 	if (isset($this->arSubs[$iName])) {
 	    return isset($this->arSubs[$iName]);
 	} else {
 	    return FALSE;
-	}
+	}*/
     }
     public function Loaded($iName=NULL) {
 	if (is_null($iName)) {
@@ -132,20 +147,32 @@ class clsTreeNode {
 	    $iNode->Name($iName);
 	    $this->NodeAdd($iNode);
 	}
-	if (isset($this->arSubs[$iName])) {
+	if ($this->Exists($iName)) {
 	    return $this->arSubs[$iName];
 	} else {
 	    return NULL;
 	}
     }
-    public function NodeAdd(clsTreeNode $iNode) {
-	$strName = $iNode->Name();
-	if (is_null($strName)) {
+    /*----
+      INPUT:
+	$doReplace:
+	  if TRUE, overwrite any existing node that has the same name
+	  if FALSE, ignore the new node and use the existing one
+    */
+    public function NodeAdd(clsTreeNode $iNode,$doReplace=FALSE) {
+	$sName = $iNode->Name();
+	if (is_null($sName)) {
 	    $this->arSubs[] = $iNode;
 	} else {
-	    $this->arSubs[$strName] = $iNode;
+	    if ($this->Exists($sName)) {
+		if ($doReplace) {
+		    $this->arSubs[$sName] = $iNode;
+		}
+	    } else {
+		$this->arSubs[$sName] = $iNode;
+	    }
 	}
-	$iNode->Parent($this);
+	$iNode->SetParent($this);
     }
     public function Nodes(array $iNodes=NULL) {
 	if (is_array($iNodes)) {
