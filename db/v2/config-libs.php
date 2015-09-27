@@ -7,6 +7,9 @@
 
 $fp = dirname( __FILE__ );
 clsModule::BasePath($fp.'/');
+clsLibrary::BasePath($fp.'/');
+
+$oL = new clsLibrary('ferreteria.db.mw','mw/config-libs.php');
 
 $om = new clsModule(__FILE__, 'db.php');
   $om->AddClass('fcDBOFactory');
@@ -15,10 +18,6 @@ $om = new clsModule(__FILE__, 'db-conn.php');
   $om->AddClass('fcDataConn_CliSrv');
 $om = new clsModule(__FILE__, 'db-conn-mysqli.php');
   $om->AddClass('fcDataConn_MySQL');
-//$om = new clsModule(__FILE__, 'db-result.php');
-//  $om->AddClass('fcDataResult');
-//$om = new clsModule(__FILE__, 'db-result-mysqli.php');
-//  $om->AddClass('fcDataResult_MySQL');
 $om = new clsModule(__FILE__, 'db-table.php');
   $om->AddClass('fcDataTable');
 $om = new clsModule(__FILE__, 'db-table-indexed.php');

@@ -10,13 +10,10 @@
 $fp = dirname( __FILE__ );
 clsModule::BasePath($fp.'/');
 
-require_once($fp.'/config-libs-both.php');
-
 $om = new clsModule(__FILE__, 'admin.php');
   $om->AddClass('clsAdminTable');
   $om->AddClass('clsAdminData');
-$om = new clsModule(__FILE__, 'app-mw.php');
-  $om->AddClass('clsApp_MW');
+$om = new clsModule(__FILE__, 'app-mw-data.php');
   $om->AddClass('cDataRecord_MW');
 $om = new clsModule(__FILE__, 'data-mw.php');
   $om->AddClass('clsMWData');

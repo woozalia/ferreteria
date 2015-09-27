@@ -12,16 +12,18 @@ clsModule::BasePath($fp.'/');
 clsLibrary::BasePath($fp.'/');
 
 // database library indexes
-$oL = new clsLibrary('ferreteria.db.1','db/config-libs-v1.php');
-$oL = new clsLibrary('ferreteria.db.2','db/config-libs-v2.php');
-$oL = new clsLibrary('ferreteria.mw.1','mw/config-libs-v1.php');
-$oL = new clsLibrary('ferreteria.mw.2','mw/config-libs-v2.php');
+$oL = new clsLibrary('ferreteria.db.1','db/v1/config-libs.php');
+$oL = new clsLibrary('ferreteria.db.2','db/v2/config-libs.php');
+$oL = new clsLibrary('ferreteria.mw.core','mw/config-libs.php');
+$oL = new clsLibrary('ferreteria.mw.1','db/v1/mw/config-libs.php');	// DEPRECATED; use ferreteria.db.mw
+$oL = new clsLibrary('ferreteria.mw.2','db/v2/mw/config-libs.php');	// DEPRECATED; use ferreteria.db.mw
 $oL = new clsLibrary('ferreteria.forms.2','forms/config-libs.php');
 $oL = new clsLibrary('ferreteria.login','user-access/config-libs.php');
 
 $om = new clsModule(__FILE__, 'app.php');
   $om->AddClass('clsApp');
   $om->AddClass('cAppStandard');
+$om = new clsModule(__FILE__, 'app-user.php');
   $om->AddClass('clsDatabase_UserAuth');
 $om = new clsModule(__FILE__, 'crypt.php');
   $om->AddClass('Cipher');
@@ -40,11 +42,6 @@ $om = new clsModule(__FILE__, 'menu.php');
   $om->AddClass('clsMenuRegistry');
   $om->AddClass('clsMenuItem');
   $om->AddClass('clsMenuLink');
-$om = new clsModule(__FILE__, 'menu-data.php');
-  $om->AddClass('clsDataTable_Menu');
-  $om->AddClass('clsDataRecord_Menu');
-  $om->AddClass('clsDataRecord_admin');
-  $om->AddClass('ftLoggableRecord');
 $om = new clsModule(__FILE__, 'page.php');
   $om->AddClass('clsPage');
   $om->AddClass('clsPageLogin');

@@ -11,8 +11,6 @@
 $fp = dirname( __FILE__ );
 clsModule::BasePath($fp.'/');
 
-require_once($fp.'/config-libs-both.php');
-
 $om = new clsModule(__FILE__, 'db-conn-mw.php');
   $om->AddClass('fcDataConn_MW');
 

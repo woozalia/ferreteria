@@ -8,6 +8,10 @@
 $fp = dirname( __FILE__ );
 clsModule::BasePath($fp.'/');
 
+$oL = new clsLibrary('ferreteria.db.mw','mw/config-libs.php');
+
+// CORE DATABASE CLASSES
+
 $om = new clsModule(__FILE__, 'data.php');
   $om->AddClass('clsDatabase_abstract');
   $om->AddClass('clsDatabase');
@@ -30,3 +34,11 @@ $om = new clsModule(__FILE__, 'data-table.php');
   $om->AddClass('clsTable');
   $om->AddClass('clsTable_keyed_abstract');
   $om->AddClass('clsTable_key_single');
+
+// DEPENDENT CLASSES
+
+$om = new clsModule(__FILE__, 'menu-data.php');
+  $om->AddClass('clsDataTable_Menu');
+  $om->AddClass('clsDataRecord_Menu');
+  $om->AddClass('clsDataRecord_admin');
+  $om->AddClass('ftLoggableRecord');

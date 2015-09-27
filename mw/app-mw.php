@@ -54,13 +54,3 @@ class clsApp_MW extends cAppStandard {
     // -- CEMENTING -- //
 }
 
-class cDataRecord_MW extends clsDataRecord_admin {
-
-    // ++ ACTION ++ //
-
-    public function CreateEvent(array $arArgs) {
-	return NULL;	// stubbed off for now
-    }
-
-    // -- ACTION -- //
-}

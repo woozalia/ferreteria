@@ -3,8 +3,14 @@
   PURPOSE: MediaWiki interface classes -- version-independent files
   HISTORY:
     2015-05-08 created to remove duplication in config-libs-v1 and config-libs-v2
+    2015-09-24 renamed config-libs-both.php -> config-libs.php after moving db-dependent mw libs into separate folders
 */
 
+$fp = dirname( __FILE__ );
+clsModule::BasePath($fp.'/');
+
+$om = new clsModule(__FILE__, 'app-mw.php');
+  $om->AddClass('clsApp_MW');
 $om = new clsModule(__FILE__, 'app-specialpage.php');
   $om->AddClass('SpecialPageApp');
   $om->AddClass('SpecialPage_DataMenu');

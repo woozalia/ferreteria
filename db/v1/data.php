@@ -811,6 +811,7 @@ if (!function_exists('Pluralize')) {
 }
 
 function SQLValue($iVal) {
+    throw new exception('SQLValue() is deprecated. Use... umm, something else.');
     if (is_array($iVal)) {
 	foreach ($iVal as $key => $val) {
 	    $arOut[$key] = SQLValue($val);
