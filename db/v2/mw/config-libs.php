@@ -13,6 +13,9 @@ clsModule::BasePath($fp.'/');
 
 $om = new clsModule(__FILE__, 'db-conn-mw.php');
   $om->AddClass('fcDataConn_MW');
+$om = new clsModule(__FILE__, 'mw-props.php');
+  $om->AddClass('clsContentProps');
+  $om->AddClass('clsPageProps');
 
   if (defined('SMW_SCHEMA_VERSION')) {
     $om = new clsModule(__FILE__, 'smw/SMWv'.SMW_SCHEMA_VERSION.'/db-conn-smw.php');

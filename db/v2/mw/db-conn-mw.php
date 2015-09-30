@@ -96,9 +96,15 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     }
 
     // -- DATA RETRIEVAL -- //
+    // ++ ??? ++ //
+
     protected function PrepareItem(clsRecs_abstract $iItem) {
 	$iItem->objDB = $this;
     }
+
+    // -- ??? -- //
+    // ++ MEDIAWIKI CONTENT ++ //
+
     /*----
       PURPOSE: same as Titles_forTopic_res, but returns an array
     */
@@ -228,6 +234,8 @@ class fcDataConn_MW extends fcDataConn_MySQL {
 	);
 	return $res;
     }
+
+    // -- MEDIAWIKI CONTENT -- //
 }
 
 //class fcDataResult_MW extends fcDataResult {
