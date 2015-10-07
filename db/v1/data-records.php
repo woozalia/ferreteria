@@ -480,7 +480,7 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
 	    throw new exception('Table not set in class '.get_class($this));
 	}
 	$strKeyName = $this->KeyName();
-	$sqlWhere = '`'.$strKeyName.'`='.SQLValue($this->KeyValue());
+	$sqlWhere = '`'.$strKeyName.'`='.$this->Table()->Engine()->SanitizeAndQuote($this->KeyValue());
 	return $sqlWhere;
     }
     /*-----

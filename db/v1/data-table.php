@@ -371,7 +371,7 @@ class clsTable_key_single extends clsTable_keyed_abstract {
 	    $objItem = $this->SpawnItem();
 	    $objItem->KeyValue(NULL);
 	} else {
-	    $sqlFilt = $this->vKeyName.'='.SQLValue($id);
+	    $sqlFilt = $this->vKeyName.'='.$this->Engine()->engine_db_safe_param($id);
 	    $objItem = $this->GetData($sqlFilt);
 	    $objItem->NextRow();
 	}

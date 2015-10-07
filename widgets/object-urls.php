@@ -14,10 +14,30 @@
         * renaming classes
         * adding traits
     2015-09-06 renamed from menu-helper.php to object-urls.php; removing old classes
+    2015-09-20 moved common functions from ftLinkableTable and ftLinkableRecord to ftLinkableObject
 */
 
 trait ftLinkableObject {
-    protected function Test() {
+    /*----
+      USED BY: VbzAdmin::VbzAdminStkItems::Listing_forItem()
+      HISTORY:
+	2010-10-06 Disabled, because it wasn't clear if anyone was using it.
+	  Thought I checked VbzAdmin, WorkFerret, and AudioFerret
+	2010-10-13 VbzAdmin::VbzAdminStkItems::Listing_forItem() calls it
+	2013-12-14 Moved from mw/admin.php to vbz-data.php
+	2015-09-20 combined 4 Self*() functions from  ftLinkableTable and ftLinkableRecord
+    */
+    public function SelfArray(array $arAdd=NULL) {
+        return $this->LinkBuilder()->LinkArray($arAdd);
+    }
+    public function SelfURL($arAdd=NULL) {
+	return $this->LinkBuilder()->LinkURL($arAdd);
+    }
+    public function SelfLink($sText=NULL,$sPopup=NULL,array $arAdd=NULL,array $arAttr=NULL) {
+        return $this->LinkBuilder()->LinkHTML($sText,$sPopup,$arAdd,$arAttr);
+    }
+    public function SelfRedirect(array $arAdd=NULL,$sText=NULL) {
+	return $this->LinkBuilder()->LinkRedirect($arAdd,$sText);
     }
 }
 
@@ -37,6 +57,7 @@ trait ftLinkableTable {
             'page' =>   $this->ActionKey()
             );
     }
+    /*
     public function SelfArray(array $arAdd=NULL) {
         return $this->LinkBuilder()->LinkArray($arAdd);
     }
@@ -48,15 +69,23 @@ trait ftLinkableTable {
     }
     public function SelfRedirect(array $arAdd=NULL,$sText=NULL) {
 	return $this->LinkBuilder()->LinkRedirect($arAdd,$sText);
-    }
+    }*/
 
     // -- API -- //
     // ++ SETUP ++ //
 
+    /* 2015-09-20 this needs to be more general
     protected function InitVars() {
         parent::InitVars();
+        if (!method_exists($this,'KeyName')) {
+	    $sClass = get_class($this);
+	    $sMsg = "The class $sClass may not be compatible with "
+	      .'ftLinkableTable'
+	      .' because "KeyName()" is not defined.';
+	    throw new exception($sMsg);
+        }
         $this->KeyName('ID');	// default key field; can be overridden
-    }
+    } */
     public function ActionKey($sNew=NULL) {
         static $sActionKey = NULL;
 
@@ -73,6 +102,7 @@ trait ftLinkableTable {
     // -- SETUP -- //
 }
 trait ftLinkableRecord {
+    use ftLinkableObject;
 
     // ++ CONFIGURATION ++ //
 
@@ -115,7 +145,7 @@ trait ftLinkableRecord {
 	  Thought I checked VbzAdmin, WorkFerret, and AudioFerret
 	2010-10-13 VbzAdmin::VbzAdminStkItems::Listing_forItem() calls it
 	2013-12-14 Moved from mw/admin.php to vbz-data.php
-    */
+    *//*
     public function SelfArray(array $arAdd=NULL) {
         return $this->LinkBuilder()->LinkArray($arAdd);
     }
@@ -127,7 +157,7 @@ trait ftLinkableRecord {
     }
     public function SelfRedirect(array $arAdd=NULL,$sText=NULL) {
 	return $this->LinkBuilder()->LinkRedirect($arAdd,$sText);
-    }
+    }*/
 
     // -- API -- //
 
@@ -215,7 +245,7 @@ class fcLinkBuilder_table extends fcLinkBuilder {
 
     // ++ SETUP ++ //
 
-    public function __construct(clsTable $tbl) {
+    public function __construct(clsTable_abstract $tbl) {
         $this->tbl = $tbl;
     }
 
@@ -231,7 +261,7 @@ class fcLinkBuilder_table extends fcLinkBuilder {
     // -- STATIC METHODS -- //
     // ++ LOCAL FIELD ACCESS ++ //
 
-    protected function Table(clsTable $tbl=NULL) {
+    protected function Table(clsTable_abstract $tbl=NULL) {
 	if (!is_null($tbl)) {
 	    $this->tbl = $tbl;
 	}

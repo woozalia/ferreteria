@@ -195,7 +195,7 @@ class fcrUserSession extends clsDataSet {
     */
     public function HasUser() {
 	$idUser = $this->UserID();
-	return !is_null($idUser);
+	return !empty($idUser);	// can be 0 or NULL if no user
     }
     /*-----
       RETURNS: TRUE if the stored session credentials match current reality (browser's credentials)
@@ -247,10 +247,11 @@ class fcrUserSession extends clsDataSet {
       ACTION: Create a new session record from the current memory data.
     */
     public function Create() {
+	$db = $this->Table()->Engine();
 	$ar = array(
-	  'ID_Client'	=> SQLValue($this->Make_ClientID()),
-	  'ID_User'	=> SQLValue($this->UserID()),
-	  'Token'	=> SQLValue($this->Token()),
+	  'ID_Client'	=> $db->SanitizeAndQuote($this->Make_ClientID()),
+	  'ID_User'	=> $db->SanitizeAndQuote($this->UserID()),
+	  'Token'	=> $db->SanitizeAndQuote($this->Token()),
 	  'WhenCreated'	=> 'NOW()'
 	  );
 	$idNew = $this->Table()->Insert($ar);

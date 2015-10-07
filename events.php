@@ -82,14 +82,13 @@ class clsSysEvents extends clsSysEvents_abstract {
       NOTE: This is the method which ultimately determines what the list of values is.
       INPUT: Array containing zero or more elements whose keys match the keys of self::arArgFields,
 	which descendant classes must define.
-      FUTURE: This could probably be a static function.
     */
-    static public function CalcSQL(array $iArgs) {
+    public function CalcSQL(array $iArgs) {
 	$arIns = NULL;
 	foreach ($iArgs as $key=>$val) {
 	    if (array_key_exists($key,self::$arArgFields)) {
 		$sqlKey = self::$arArgFields[$key];
-		$sqlVal = SQLValue($val);
+		$sqlVal = $this->Engine()->SanitizeAndQuote($val);
 	    } else {
 		throw new exception('Unrecognized event argument "'.$key.'".');
 	    }
@@ -134,13 +133,26 @@ class clsSysEvents extends clsSysEvents_abstract {
 	      ."\n* Params: $iParams";
 	    $okMail = mail(KS_EMAIL_ADMIN,$txtSubj,$txtBody);
 	}
-
-	$sql = 'INSERT INTO `'.$this->Name().'` (WhenFinished,EvWhere,Params,Descr,Code,WhoAdmin,WhoSystem,WhoNetwork,isError,isSevere)'.
-	  'VALUES(NOW(),"'.$iWhere.'","'.$iParams.'","'.$iDescr.'",'.SQLValue($iCode).','.SQLValue($sUser).
-	  ',NULL,"'.
-	  $_SERVER['REMOTE_ADDR'].'",'.
-	  ($iIsError?'TRUE':'FALSE').','.
-	  ($iIsSevere?'TRUE':'FALSE').');';
+	$db = $this->Engine();
+	$sqlWhere = $db->SanitizeAndQuote($iWhere);
+	$sqlParams = $db->SanitizeAndQuote($iParams);
+	$sqlDescr = $db->SanitizeAndQuote($iDescr);
+	$sqlCode = $db->SanitizeAndQuote($iCode);
+	$sqlUser = $db->SanitizeAndQuote($sUser);
+	$sqlAddr = $db->SanitizeAndQuote($_SERVER['REMOTE_ADDR']);
+	$sql = 'INSERT INTO `'.$this->Name().'` (WhenFinished,EvWhere,Params,Descr,Code,WhoAdmin,WhoSystem,WhoNetwork,isError,isSevere)'
+	  .'VALUES('
+	    .'NOW(),'
+	    .$sqlWhere.','
+	    .$sqlParams.','
+	    .$sqlDescr.','
+	    .$sqlCode.','
+	    .$sqlUser.','
+	    .'NULL,'
+	    .$sqlAddr.','
+	    .($iIsError?'TRUE':'FALSE').','
+	    .($iIsSevere?'TRUE':'FALSE')
+	  .');';
 	$this->Engine()->Exec($sql);
 	if ($iIsSevere) {
 	    throw new exception($txtBody);	// this should send a second, more detailed email
@@ -150,7 +162,7 @@ class clsSysEvents extends clsSysEvents_abstract {
       TODO: fix $this->UserString() to fetch ssh user string when in CLI mode
     */
     public function CreateEvent(array $arArgs) {
-	$arIns = static::CalcSQL($arArgs);
+	$arIns = $this->CalcSQL($arArgs);
 	if (empty($arIns)) {
 	    return NULL;
 	} else {
@@ -162,8 +174,9 @@ class clsSysEvents extends clsSysEvents_abstract {
 		$sUser = '(sys:'.$_SERVER['USER'].')';
 		$sAddr = clsArray::Nz($_SERVER,'SSH_CLIENT','LAN');
 	    }
-	    $arIns['WhoNetwork'] = SQLValue($sAddr);
-	    $arIns['WhoAdmin'] = SQLValue($sUser);
+	    $db = $this->Engine();
+	    $arIns['WhoNetwork'] = $db->SanitizeAndQuote($sAddr);
+	    $arIns['WhoAdmin'] = $db->SanitizeAndQuote($sUser);
 	    $idNew = $this->Insert($arIns);
 	    if ($idNew) {
 		return $this->GetItem($idNew);
@@ -300,9 +313,12 @@ class clsLogger_DataSet extends clsLogger {
 	$arArgs['type'] = $rcData->Table()->ActionKey();
 	$arArgs['id'] = $rcData->KeyValue();
 
-	$this->rcEvent = $this->EventTable()->CreateEvent($arArgs,$rcData->Values(),$arEdits);
+	$tEvents = $this->EventTable();
+	$this->rcEvent = $tEvents->CreateEvent($arArgs,$rcData->Values(),$arEdits);
 	if (!is_object($this->rcEvent)) {
-	    throw new exception('Could not create event object.');
+	    $sTableClass = get_class($tEvents);
+	    $sql = $tEvents->sqlExec;
+	    throw new exception("Class $sTableClass Could not create event object. SQL=[$sql]");
 	}
 	return $this->rcEvent;
     }

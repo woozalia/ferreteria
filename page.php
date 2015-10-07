@@ -217,9 +217,13 @@ abstract class clsPageStandalone extends clsPage {
 	if ($wpBase == '') {
 	    $urlPath = $uriReq;
 	} else {
+	    // remove any trailing slashes from page base URL and request url
+	    $wpBase = clsString::DelTail($wpBase,'/');
+	    $uriReq = clsString::DelTail($uriReq,'/');
 	    $idxBase = strpos($uriReq,$wpBase);
 	    if ($idxBase === FALSE) {
-		throw new exception("Configuration needed: URI [$uriReq] does not include page base URL [".$wpBase.'].');
+                $sMsg = "Configuration needed: URI [$uriReq] does not include page base URL [$wpBase].";
+		throw new exception($sMsg);
 	    }
 	    $urlPath = substr($uriReq,$idxBase+strlen($wpBase));
 	}

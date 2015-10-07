@@ -30,9 +30,6 @@ class clsUserAccts extends clsTable {
     public static function MakeSalt() {
 	return openssl_random_pseudo_bytes(128);
     }
-    protected static function UserName_SQL_filt($iName) {
-	return 'LOWER(UserName)='.SQLValue(strtolower($iName));
-    }
 
     // -- STATIC -- //
     // ++ SETUP ++ //
@@ -85,8 +82,12 @@ class clsUserAccts extends clsTable {
     // -- BASIC ACTIONS -- //
     // ++ BUSINESS LOGIC ++ //
 
+    protected function SQL_forUserName_filter($iName) {
+	return 'LOWER(UserName)='.$this->Engine()->SanitizeAndQuote(strtolower($iName));
+    }
+
     public function FindUser($iName) {
-	$sqlFilt = self::UserName_SQL_filt($iName);
+	$sqlFilt = $this->SQL_forUserName_filter($iName);
 	$rc = $this->GetData($sqlFilt);
 	$nRows = $rc->RowCount();
 	if ($nRows == 0) {
@@ -105,7 +106,7 @@ class clsUserAccts extends clsTable {
       RULES: Usernames are stored with case-sensitivity, but are checked case-insensitively
     */
     public function UserExists($iLogin) {
-	$sqlFilt = self::UserName_SQL_filt($iLogin);
+	$sqlFilt = $this->SQL_forUserName_filter($iLogin);
 	$rc = $this->GetData($sqlFilt);
 	return $rc->HasRows();
     }
@@ -209,6 +210,9 @@ class clsUserAcct extends fcDataRecs {
     }
     protected function UPermRecords() {
 	$idAcct = $this->KeyValue();
+	if (empty($idAcct)) {
+	    throw new exception('Internal error: trying to look up permissions for null account ID.');
+	}
 	$sql =
 	  'SELECT up.*'
 	  .' FROM (('.KS_TABLE_UACCT_X_UGROUP.' AS uxg'

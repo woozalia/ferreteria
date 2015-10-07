@@ -157,6 +157,16 @@ abstract class clsDatabase_abstract {
     public function engine_db_safe_param($val) {
 	return $this->Engine()->db_safe_param($val);
     }
+    public function Sanitize($val) {
+	return $this->engine_db_safe_param($val);
+    }
+    public function SanitizeAndQuote($val) {
+	$sql = $this->Sanitize($val);
+	if (!is_numeric($val)) {
+	    $sql = '"'.$sql.'"';
+	}
+	return $sql;
+    }
 /*
     public function engine_row_rewind() {
 	return $this->objRes->do_rewind();

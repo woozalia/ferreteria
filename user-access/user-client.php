@@ -73,11 +73,12 @@ class clsUserClient extends clsDataSet {
 	    $sDomain = $this->Engine()->SafeParam($this->DomainString());
 	    $sBrowser = $this->Engine()->SafeParam($this->BrowserString());
 	    $sCRC = sprintf('%u',$this->CRC());
+	    $db = $this->Table()->Engine();
 	    $ar = array(
-	      'CRC'		=> SQLValue($sCRC),
-	      'Address'		=> SQLValue($this->AddressString()),
-	      'Domain'		=> SQLValue($sDomain),
-	      'Browser'		=> SQLValue($sBrowser),
+	      'CRC'		=> $db->SanitizeAndQuote($sCRC),
+	      'Address'		=> $db->SanitizeAndQuote($this->AddressString()),
+	      'Domain'		=> $db->SanitizeAndQuote($sDomain),
+	      'Browser'		=> $db->SanitizeAndQuote($sBrowser),
 	      'WhenFirst'	=> 'NOW()'
 	      );
 	    $idNew = $this->Table()->Insert($ar);

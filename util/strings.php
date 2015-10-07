@@ -141,7 +141,8 @@ class clsString {
     /*-----
       FUNCTION: nzAppend -- NZ Append
       PURPOSE: Like nzAdd(), but appends strings instead of adding numbers
-    */
+      DEPRECATED: this really isn't necessary. Just set $ioVal to NULL, then append.
+    */ /*
     static public function nzAppend(&$ioVal,$iTxt=NULL) {
 	if (empty($ioVal)) {
 	    $ioVal = $iTxt;
@@ -149,7 +150,7 @@ class clsString {
 	    $ioVal .= $iTxt;
 	}
 	return $ioVal;
-    }
+    } */
 
     // ++ GENERAL SPLITTING ++ //
 
