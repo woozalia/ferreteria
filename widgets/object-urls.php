@@ -57,19 +57,6 @@ trait ftLinkableTable {
             'page' =>   $this->ActionKey()
             );
     }
-    /*
-    public function SelfArray(array $arAdd=NULL) {
-        return $this->LinkBuilder()->LinkArray($arAdd);
-    }
-    public function SelfURL($arAdd=NULL) {
-	return $this->LinkBuilder()->LinkURL($arAdd);
-    }
-    public function SelfLink($sText=NULL,$sPopup=NULL,array $arAdd=NULL,array $arAttr=NULL) {
-        return $this->LinkBuilder()->LinkHTML($sText,$sPopup,$arAdd,$arAttr);
-    }
-    public function SelfRedirect(array $arAdd=NULL,$sText=NULL) {
-	return $this->LinkBuilder()->LinkRedirect($arAdd,$sText);
-    }*/
 
     // -- API -- //
     // ++ SETUP ++ //

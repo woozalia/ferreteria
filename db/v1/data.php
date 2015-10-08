@@ -466,7 +466,7 @@ class clsDataEngine_MySQL extends clsDataEngine_CliSrv {
 	if (is_resource($this->objConn)) {
 	    $out = mysql_real_escape_string($iVal,$this->objConn);
 	} else {
-	    throw new exception(get_class($this).'.SafeParam("'.$iString.'") has no connection.');
+	    throw new exception(get_class($this).'.SafeParam("'.$iVal.'") has no connection.');
 	}
 	return $out;
     }

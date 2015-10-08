@@ -7,11 +7,21 @@
 */
 
 class clsApp_MW extends cAppStandard {
+
     public function Session() {
 	throw new exception('Who is calling this?');
     }
     public function User() {
 	throw new exception('Who is calling this?');
+    }
+    public function Data(clsDatabase_abstract $iObj=NULL) {
+	if (is_null($iObj)) {
+	    $db = parent::Data();
+	    if (is_null($db)) {
+		parent::Data(new clsMWData(wfGetDB(DB_SLAVE)));
+	    }
+	}
+	return parent::Data($iObj);
     }
 
     // ++ APP FRAMEWORK ++ //

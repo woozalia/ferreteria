@@ -38,7 +38,14 @@ class clsMWData extends clsDatabase_abstract {
 	$strTitle = str_replace('_',' ',$iTitle);				// convert spaces to underscores
 	return $strTitle;
     }
-
+    /*----
+      NOTE: This function is currently a security risk, because the MW API doesn't seem
+	to allow any way of accessing the native sanitize functions (e.g. mysqlRealEscapeString()).
+    */
+    public function Sanitize($val) {
+	return $val;	// KLUGE!!!
+    }
+    // this should probably be DEPRECATED -- use Sanitize() instead
     public function SafeParam($iVal) {
 	return mysql_escape_string($iVal);	// this is engine-specific
     }

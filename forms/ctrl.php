@@ -297,6 +297,8 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
     }
 
     /*----
+      PURPOSE: When field is not being edited, we want to display the value staticly -- which also lets us
+	show something more than plaintext, e.g. a link to view more information about the currently-chosen value.
       NOTE: There's got to be a way of doing this that doesn't require iterating through all records.
     */
     protected function RenderValue() {

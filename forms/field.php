@@ -154,7 +154,10 @@ class fcFormField_Text extends fcFormField {
 	if (is_null($sVal) || ($sVal == '')) {
 	    return $this->SQL_forBlank();
 	} else {
-	    return SQLValue($sVal);
+	    //return SQLValue($sVal);
+	    $app = clsApp::Me();
+	    $db = $app->Data();
+	    return $db->SanitizeAndQuote($sVal);
 	}
     }
 

@@ -34,12 +34,14 @@ trait ftLoggableRecord {
 }
 
 class clsDataTable_Menu extends clsTable {
+    use ftLinkableTable;
     /*----
       NOTE: Not sure if this is really necessary, but leaving it for now.
 	It may be helpful during development. Perhaps the base method should
 	be modified. (It includes everything except the default to the
 	singular class-name.)
     */
+    /* 2015-10-06 with the addition of ftLinkableTable, this is now redundant.
     public function ActionKey($iVal=NULL) {
 	if (!is_null($iVal)) {
 	    $this->ActionKey = $iVal;
@@ -49,7 +51,7 @@ class clsDataTable_Menu extends clsTable {
 	} else {
 	    return $this->ClassSng();
 	}
-    }
+    } */
 }
 /*%%%%
   PURPOSE: intermediate recordset class that doesn't assume a standalone application implemented with Ferreteria
@@ -58,58 +60,7 @@ class clsDataRecord_admin extends clsDataSet {
     use ftLinkableRecord;
     use ftLoggableRecord;
 
-    // ++ BOILERPLATE ++ //
-      // table classes that don't descend from this class can just copy/paste these methods
-
-      // ++ BOILERPLATE: event logging ++ //
-
-      /*
-    private $oLogger;
-    protected function Log() {
-	if (empty($this->oLogger)) {
-	    $tLog = $this->Engine()->App()->Events();
-	    // alternative way to create Events object:
-	    //$tLog = VCM_Syslog::SpawnTable($this->Engine());
-	    $this->oLogger = new clsLogger_DataSet($this,$tLog);
-	}
-	return $this->oLogger;
-    }
-    public function StartEvent(array $iarArgs) {
-	return $this->Log()->StartEvent($iarArgs);
-    }
-    public function FinishEvent(array $iarArgs=NULL) {
-	return $this->Log()->FinishEvent($iarArgs);
-    }
-    public function CreateEvent(array $arArgs) {
-	return $this->Log()->CreateEvent($arArgs);
-    }
-    public function EventListing() {
-	return $this->Log()->EventListing();
-    }
-
-      // ++ BOILERPLATE: self-linkage ++ //
-
-    /*----
-      USED BY: VbzAdmin::VbzAdminStkItems::Listing_forItem()
-      HISTORY:
-	2010-10-06 Disabled, because it wasn't clear if anyone was using it.
-	  Thought I checked VbzAdmin, WorkFerret, and AudioFerret
-	2010-10-13 VbzAdmin::VbzAdminStkItems::Listing_forItem() calls it
-	2013-12-14 Moved from mw/admin.php to vbz-data.php
-    */
-    /*
-    public function AdminLink($iText=NULL,$iPopup=NULL,array $iarArgs=NULL) {
-	return clsMenuData_helper_admin::_AdminLink($this,$iText,$iPopup,$iarArgs);
-    }
-    public function AdminRedirect(array $iarArgs=NULL,$sText=NULL) {
-	return clsMenuData_helper_admin::_AdminRedirect($this,$iarArgs,$sText);
-    }
-    public function AdminURL($arArgs=NULL) {
-	return clsMenuData_helper_admin::_AdminURL($this,$arArgs);
-    }
-*/
-    // -- BOILERPLATE -- //
-    // ++ HELPER CALLBACKS ++ //
+    // ++ TRAIT CALLBACKS ++ //
 
     public function IdentityValues() {
 	$ar = array(
@@ -122,7 +73,7 @@ class clsDataRecord_admin extends clsDataSet {
 	return $this->Engine()->App()->Page()->BaseURL_rel();
     }
 
-    // -- HELPER CALLBACKS -- //
+    // -- TRAIT CALLBACKS -- //
     // ++ ADMIN UI ++ //
 
     public function AdminRows(array $arFields) {

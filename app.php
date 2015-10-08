@@ -33,7 +33,7 @@ abstract class clsApp {
     abstract public function Session();
     abstract public function Skin();
     abstract public function Page(clsPage $iObj=NULL);
-    abstract public function Data(clsDatabase $iObj=NULL);
+    abstract public function Data(clsDatabase_abstract $iObj=NULL);
     abstract public function User();
     //abstract public function BaseURL_abs();
     //abstract public function BaseURL_rel();
@@ -89,7 +89,7 @@ abstract class cAppStandard extends clsApp {
 	}
 	return $this->oSkin;
     }
-    public function Data(clsDatabase $iObj=NULL) {
+    public function Data(clsDatabase_abstract $iObj=NULL) {
 	if (!is_null($iObj)) {
 	    $this->oData = $iObj;
 	}
