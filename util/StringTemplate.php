@@ -129,10 +129,26 @@ abstract class clsStringTemplate {
     protected $strStMark;
     protected $strFiMark;
 
-    function __construct($iStartMark, $iFinishMark) {
+    // ++ SETUP ++ //
+    
+    public function __construct($iStartMark, $iFinishMark) {
 	    $this->strStMark = $iStartMark;
 	    $this->strFiMark = $iFinishMark;
     }
+    public function StartMark($sMark=NULL) {
+	if (!is_null($sMark)) {
+	    $this->strStMark = $sMark;
+	}
+	return $this->strStMark;
+    }
+    public function FinishMark($sMark=NULL) {
+	if (!is_null($sMark)) {
+	    $this->strFiMark = $sMark;
+	}
+	return $this->strFiMark;
+    }
+    
+    // -- SETUP -- //
     abstract protected function GetValue($iName);
     function Replace($iValue=NULL) {
 	global $wxgDebug;
@@ -147,6 +163,9 @@ abstract class clsStringTemplate {
 	$intStarts = 0;
 	do {
 	    $isFound = false;
+	    if (empty($this->strStMark)) {
+		throw new exception('Template error: starting mark not defined.');
+	    }
 	    $posSt = strpos ( $out, $this->strStMark );
 	    if ($posSt !== FALSE) {
 		$intStarts++;
@@ -194,8 +213,12 @@ class clsStringTemplate_array extends clsStringTemplate {
 	    $this->strFiMark = $arIn[1];
 	    $this->Value = $arIn[2];
 	}
-	protected function GetValue($iName) {
-	    return $this->List[$iName];
+	protected function GetValue($sName) {
+	    if (array_key_exists($sName,$this->List)) {
+		return $this->List[$sName];
+	    } else {
+		throw new exception("Template requires [$sName], but it is not defined in the array.");
+	    }
 	}
 }
 /*

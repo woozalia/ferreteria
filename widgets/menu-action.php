@@ -126,6 +126,16 @@ abstract class clsActionLink_base extends clsActionWidget {
 	    $this->arData[$key] = NzArray($this->arData,$key,$val);
 	}
     }
+    // SET/RETURNS array of additional values to be included in the generated link URL
+    private $arExtra;
+    public function Values_extra(array $arValues=NULL) {
+	if (!is_null($arValues)) {
+	    $this->arExtra = $arValues;
+	}
+	if (empty($this->arExtra)) {
+	    $this->arExtra = NULL;
+	}
+    }
     public function Values(array $iValues=NULL) {
 	if (!is_null($iValues)) {
 	    $this->arData = $iValues;
@@ -191,7 +201,7 @@ abstract class clsActionLink_base extends clsActionWidget {
 	    $ar[$lk] = !$this->Selected();
 	}
 
-	return $ar;
+	return clsArray::Merge($ar,$this->Values_extra());
     }
 
     // -- CALCULATIONS -- //

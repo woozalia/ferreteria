@@ -699,14 +699,6 @@ abstract class clsPageLogin extends clsPageBasic {
       ACTION: Renders a header with action widgets
     */
     public function ActionHeader($sTitle,array $arWidgets=NULL,$cssClass='section-header-sub') {
-/*	$htWidgets = NULL;
-	if (is_array($arWidgets)) {
-	    $arMenu = array_reverse($arWidgets);	// right-alignment reverses things
-	    foreach ($arMenu as $oLink) {
-		$oLink->Page($this);
-		$htWidgets .= "\n".$oLink->Render();
-	    }
-	} */
 	return $this->SectionHeader($sTitle,$arWidgets,$cssClass);
     }
     /*----

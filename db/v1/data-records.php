@@ -306,10 +306,15 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
     }
     protected function Save() {
 	$arSave = $this->UpdateArray();
-	if ($this->IsNew()) {
-	    $out = $this->Table()->Insert($arSave);
+	if (is_array($arSave)) {
+	    if ($this->IsNew()) {
+		$out = $this->Table()->Insert($arSave);
+	    } else {
+		$out = $this->Update($arSave);
+	    }
 	} else {
-	    $out = $this->Update($arSave);
+	    // nothing to do
+	    $out = NULL;
 	}
 	return $out;
     }
