@@ -218,8 +218,8 @@ abstract class clsPageStandalone extends clsPage {
 	    $urlPath = $uriReq;
 	} else {
 	    // remove any trailing slashes from page base URL and request url
-	    $wpBase = clsString::DelTail($wpBase,'/');
-	    $uriReq = clsString::DelTail($uriReq,'/');
+	    $wpBase = fcString::DelTail($wpBase,'/');
+	    $uriReq = fcString::DelTail($uriReq,'/');
 	    $idxBase = strpos($uriReq,$wpBase);
 	    if ($idxBase === FALSE) {
                 $sMsg = "Configuration needed: URI [$uriReq] does not include page base URL [$wpBase].";
@@ -1167,6 +1167,10 @@ abstract class clsPageLogin extends clsPageBasic {
 	    $this->ParsePath();
 	    if ($this->PathArg_exists('page')) {	// if a page is specified
 		$sPage = $this->PathArg('page');
+		if (is_array($sPage)) {
+		    // TODO: silently log an error (may be a bad link): 'page' being set multiple times
+		    $sPage = array_pop($sPage);	// get one element and use that
+		}
 		if (is_null($this->MenuHome())) {
 		    throw new exception('Trying to access menu  when there is no home node.');
 		}

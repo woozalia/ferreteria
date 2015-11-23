@@ -42,13 +42,15 @@ class clsObjectCache {
 class clsTableCache extends clsTable {
     private $arCache;
 
-    public function GetItem($iID=NULL,$iClass=NULL) {
-	if (!isset($this->arCache[$iID])) {
-	    $objItem = $this->GetData($this->vKeyName.'='.SQLValue($iID),$iClass);
-	    $objItem->NextRow();
-	    $this->arCache[$iID] = $objItem->RowCopy();
+    public function GetItem($id=NULL,$sClass=NULL) {
+	if (!clsArray::Exists($this->arCache,$id)) {
+	    $sKeyName = $this->vKeyName;
+	    $sqlVal = $this->Engine()->SanitizeAndQuote($id);
+	    $rc = $this->GetData("$sKeyName=$sqlVal",$sClass);
+	    $rc->NextRow();
+	    $this->arCache[$id] = $rc->RowCopy();
 	}
-	return $this->arCache[$iID];
+	return $this->arCache[$id];
     }
 }
 /*====

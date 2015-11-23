@@ -14,18 +14,37 @@ class clsArray {
 
     // ++ CALCULATIONS ++ //
 
+    static public function Exists(array $ar=NULL,$key) {
+	if (is_array($ar)) {
+	    return array_key_exists($key,$ar);
+	} else {
+	    return FALSE;
+	}
+    }
     static public function Nz(array $ar=NULL,$key,$default=NULL) {
 	$out = NULL;
+	if (self::Exists($ar,$key)) {
+	    $out = $ar[$key];
+	} else {
+	    $out = $default;
+	}
+	/*
 	if (is_array($ar)) {
 	    if (array_key_exists($key,$ar)) {
 		$out = $ar[$key];
 	    } else {
 		$out = $default;
 	    }
-	}
+	}*/
 	return $out;
     }
     static public function NzSum(array &$ar=NULL,$key,$nVal) {
+	if (self::Exists($ar,$key)) {
+	    $ar[$key] += $nVal;
+	} else {
+	    $ar[$key] = $nVal;
+	}
+	/*
 	$isNew = TRUE;
 	if (is_array($ar)) {
 	    if (array_key_exists($key,$ar)) {
@@ -35,7 +54,7 @@ class clsArray {
 	}
 	if ($isNew) {
 	    $ar[$key] = $nVal;
-	}
+	}*/
 	return $ar;
     }
     /*----

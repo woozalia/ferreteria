@@ -59,13 +59,13 @@ abstract class clsActionWidget {
 abstract class clsActionLink_base extends clsActionWidget {
     protected $arData;	// key:value pairs to always include in link
     private $sDesc;	// descriptive text
-    private $doRel;	// TRUE = link's URL is added to Page's
+    private $doAbs;	// TRUE = link's URL is added to Page's
 
     // ++ SETUP ++ //
 
     public function __construct(array $iarData) {
 	$this->arData = $iarData;
-	$this->doRel = self::UseRelativeURL_default();
+	$this->UseAbsoluteURL(self::UseAbsoluteURL_default());
 	parent::__construct();
     }
 
@@ -83,20 +83,20 @@ abstract class clsActionLink_base extends clsActionWidget {
     abstract protected function LinkKey();
     abstract protected function HasGroup();
     /*----
-      ACTION: Sets the default UseRelativeURL value for new objects
+      ACTION: Sets the default UseAbsoluteURL value for new objects
     */
-    static private $doRelDefault = FALSE;
-    static public function UseRelativeURL_default($doRel=NULL) {
-	if (!is_null($doRel)) {
-	    self::$doRelDefault = $doRel;
+    static private $doAbsDefault = FALSE;
+    static public function UseAbsoluteURL_default($doAbs=NULL) {
+	if (!is_null($doAbs)) {
+	    self::$doAbsDefault = $doAbs;
 	}
-	return self::$doRelDefault;
+	return self::$doAbsDefault;
     }
-    public function UseRelativeURL($doRel=NULL) {
-	if (!is_null($doRel)) {
-	    $this->doRel = $doRel;
+    public function UseAbsoluteURL($doAbs=NULL) {
+	if (!is_null($doAbs)) {
+	    $this->doAbs = $doAbs;
 	}
-	return $this->doRel;
+	return $this->doAbs;
     }
     protected function Description($sText=NULL) {
 	if (!is_null($sText)) {
@@ -111,7 +111,7 @@ abstract class clsActionLink_base extends clsActionWidget {
     */
     public function SelfURL() {
 	$ar = $this->Values_forLink();
-	return $this->Page()->SelfURL($ar,$this->UseRelativeURL());
+	return $this->Page()->SelfURL($ar,!$this->UseAbsoluteURL());
     }
 
     // -- STATUS/OPTIONS -- //
@@ -121,9 +121,9 @@ abstract class clsActionLink_base extends clsActionWidget {
       ACTION: sets a bunch of values to be used as defaults
 	if there is not already a value for each key.
     */
-    public function Values_default(array $iarValues) {
-	foreach ($iarValues as $key => $val) {
-	    $this->arData[$key] = NzArray($this->arData,$key,$val);
+    public function Values_default(array $arValues) {
+	foreach ($arValues as $key => $val) {
+	    $this->arData[$key] = clsArray::Nz($this->arData,$key,$val);
 	}
     }
     // SET/RETURNS array of additional values to be included in the generated link URL

@@ -44,16 +44,17 @@ class clsIndexer_Table_single_key extends clsIndexer_Table {
 	}
 	return $this->vKeyName;
     }
-    public function GetItem($iID=NULL,$iClass=NULL) {
-	if (is_null($iID)) {
-	    $objItem = $this->SpawnItem($iClass);
-	    $objItem->KeyValue(NULL);
+    public function GetItem($id=NULL,$sClass=NULL) {
+	if (is_null($id)) {
+	    $rcItem = $this->SpawnItem($sClass);
+	    $rcItem->KeyValue(NULL);
 	} else {
-	    assert('!is_array($iID); /* TABLE='.$this->TableObj()->Name().' */');
-	    $objItem = $this->TableObj()->GetData($this->vKeyName.'='.SQLValue($iID),$iClass);
-	    $objItem->NextRow();
+	    $tbl = $this->TableObj();
+	    $db = $tbl->Engine();
+	    $rcItem = $tbl->GetData($this->vKeyName.'='.$db->SanitizeAndQuote($id),$sClass);
+	    $rcItem->NextRow();
 	}
-	return $objItem;
+	return $rcItem;
     }
 }
 
@@ -246,7 +247,8 @@ class clsIndexer_Recs_single_key extends clsIndexer_Recs {
     }
 
     public function SQL_forWhere() {
-	$sql = $this->KeyName().'='.SQLValue($this->KeyValue());
+	$db = $this->TableObj()->Engine();
+	$sql = $this->KeyName().'='.$db->SanitizeAndQuote($this->KeyValue());
 	return $sql;
     }
 }
@@ -257,7 +259,7 @@ class clsIndexer_Recs_multi_key extends clsIndexer_Recs {
     */
     public function KeyArray() {
 	$arKeys = $this->TblIdxObj()->KeyNames();
-	$arRow = $this->DataObj()->Row;
+	$arRow = $this->DataObj()->Values();
 	foreach ($arKeys as $key) {
 	    if (array_key_exists($key,$arRow)) {
 		$arOut[$key] = $arRow[$key];

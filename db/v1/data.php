@@ -161,9 +161,13 @@ abstract class clsDatabase_abstract {
 	return $this->engine_db_safe_param($val);
     }
     public function SanitizeAndQuote($val) {
-	$sql = $this->Sanitize($val);
-	if (!is_numeric($val)) {
-	    $sql = '"'.$sql.'"';
+	if (is_null($val)) {
+	    $sql = 'NULL';
+	} else {
+	    $sql = $this->Sanitize($val);
+	    if (!is_numeric($val)) {
+		$sql = '"'.$sql.'"';
+	    }
 	}
 	return $sql;
     }

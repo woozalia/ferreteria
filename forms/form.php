@@ -86,15 +86,20 @@ abstract class fcForm {
 	}
 	return $arOut;
     }*/
-    protected function FieldArray_changed() {
+    protected function FieldArray_toWrite() {
 	$ar = $this->FieldArray();
 	$arOut = NULL;
 	foreach ($ar as $key => $oField) {
-	    if ($oField->IsChanged()) {
+	    if ($oField->ShouldWrite()) {
 		$arOut[$key] = $oField->ValueNative();
 	    }
 	}
 	return $arOut;
+    }
+    // DEBUGGING
+    public function DumpChanged($txt) {
+	$ar = $this->FieldArray_changed();
+	echo "CHANGED FIELDS ($txt):".clsArray::Render($ar);
     }
 
     // -- FIELDS -- //
@@ -132,32 +137,12 @@ abstract class fcForm {
     public function RecordValue($sField,$val=NULL) {
 	return $this->FieldObject($sField)->ValueNative($val);
     }
-    /* 2015-06-13 old version
-    public function RecordValue($sField,$val=NULL) {
-	if (!is_null($val)) {
-	    $this->SetRecordValue($sField,$val);
-	}
-	if (is_array($this->arRec)) {
-	    if (array_key_exists($sField,$this->arRec)) {
-		return $this->arRec[$sField];
-	    } else {
-		echo 'FIELDS:'.clsArray::Render($this->arRec);
-		throw new exception('Attempting to read unknown field "'.$sField.'".');
-	    }
-	} else {
-	    throw new exception('Attempting to retrieve record field "'.$sField.'", but record is empty.');
-	}
-    } */
     /*----
       PURPOSE: allows explicitly setting NULL values.
     */
     public function SetRecordValue($sField,$val) {
         $this->FieldObject($sField)->SetValueNative($val);
     }
-    /* 2015-06-13 old version
-    public function SetRecordValue($sField,$val) {
-	$this->arRec[$sField] = $val;
-    } */
     /*----
       PURPOSE: set or retrieve all values in record (native format)
       DEPRECATED
@@ -211,6 +196,14 @@ abstract class fcForm {
     /*----
       USAGE: called during save process to convert all input to native format
 	before adding in overrides.
+      NOTE that in this case "display" format is actually the format received via
+	HTTP (POST/GET) rather than how the data is actually displayed.
+	
+	We might later want to rename these routines from "Display*" to "Form*" or
+	  something similar. Renaming only the input converters (to something like
+	  "Post*") would just be confusing, though, since some of the methods
+	  can be used to read *or* write, which doesn't work when the name for reading
+	  is different from the name for writing.
     */
     protected function DisplayToNative_array(array $arDsp) {
 	$arFlds = $this->FieldArray();
@@ -235,26 +228,25 @@ abstract class fcForm {
       INPUT: array of field names and SQL values
 	iVals[name] = raw SQL
 	if a value is set to NULL, then a new row *must* set that value to non-null before it will be added.
+      OUTPUT: Currently nothing. Used to return an array of new values to use -- if this
+	is still needed, then document why.
+      HISTORY:
+	2015-10-20 rewritten to use new default-value storage mechanism (in objects)
+	  Removed "=NULL" default.
+	  ...and then determined that the caller was probably going about this wrong,
+	    so restored the exception throw.
     */
-    public function NewValues(array $arVals=NULL) {
-        throw new exception('If anyone is calling this, it needs to be rewritten slightly.');
-
-	if (!is_null($arVals)) {
-	    $this->arNewVals = $arVals;
+    public function NewValues(array $arVals) {
+        throw new exception('If anyone is calling this, they should probably be setting defaults via each Field object.');
+	foreach ($arVals as $key => $val) {
+	    $this->FieldObject($key)->SetDefaultNative($val);
 	}
-	if (!is_array($this->arNewVals)) {
-	    // need to be able to pass return value to array functions
-	    //   so make sure it's an array even if empty.
-	    $this->arNewVals = array();
-	}
-	return $this->arNewVals;
     }
     /*----
       RULE: Call this to initialize the form to default new values
 	UNLESS field has been explicitly edited.
 	Also ensures that every Control has a value (default is NULL).
-      TODO: Look at this process later to see if it makes sense.
-	Why do we clear values? There *was* a good reason...
+      USAGE: call to initialize values for a NEW record
     */
     public function ClearValues() {
 	$arCtrls = $this->ControlArray();
@@ -325,15 +317,16 @@ abstract class fcForm_keyed extends fcForm {
         if (array_key_exists($sName,$_POST)) {
             $arPost = $_POST[$sName];
             $arFlds = $this->FieldArray();
-            foreach ($arPost as $sKey => $arDsp) {
+            foreach ($arPost as $sKey => $arPostRec) {
                 $this->Set_KeyString_toSave($sKey);
-                $arNtv = $this->DisplayToNative_array($arDsp);
-                //echo __FILE__.' line '.__LINE__."<br>\n";
-                $arSet = $this->FieldArray_changed();
-                //echo 'CHANGED:'.clsArray::Render($arSet);
-                //echo 'RECEIVED:'.clsArray::Render($arNtv);
+                $arNtv = $this->DisplayToNative_array($arPostRec);
+            //echo __FILE__.' line '.__LINE__."<br>\n";
+                $arSet = $this->FieldArray_toWrite();
+	    //echo 'CHANGED:'.clsArray::Render($arSet);
+            //echo 'RECEIVED:'.clsArray::Render($arNtv);
                 $arAll = clsArray::Merge($arNtv,$arSet);
-                //echo 'UPDATE:'.clsArray::Render($arAll);
+            //echo 'UPDATE:'.clsArray::Render($arAll);
+            //die();
                 $this->SaveRecord($arAll);
                 // clear this record's values in case there's another record
                 $this->ClearValues();

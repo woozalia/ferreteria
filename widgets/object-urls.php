@@ -37,7 +37,7 @@ trait ftLinkableObject {
         return $this->LinkBuilder()->LinkHTML($sText,$sPopup,$arAdd,$arAttr);
     }
     public function SelfRedirect(array $arAdd=NULL,$sText=NULL) {
-	return $this->LinkBuilder()->LinkRedirect($arAdd,$sText);
+	return $this->LinkBuilder()->LinkRedirect($sText,$arAdd);
     }
 }
 
@@ -165,6 +165,7 @@ abstract class fcLinkBuilder {
 
     // RETURNS: an array of values that identify the linked object (table or table+record)
     abstract protected function IdentityValues();
+    abstract protected function KeyString();
 
     // -- ABSTRACT METHODS -- //
     // ++ INTERNAL INFORMATION ++ //
@@ -207,7 +208,7 @@ abstract class fcLinkBuilder {
     */
     public function LinkHTML($sText=NULL,$sPopup=NULL,array $arAdd=NULL,array $arAttr=NULL) {
 	$url = $this->LinkURL($arAdd);
-	$sText = is_null($sText)?($this->Recs()->KeyString()):$sText;
+	$sText = is_null($sText)?($this->KeyString()):$sText;
 	$out = clsHTML::BuildLink($url,$sText,$sPopup,$arAttr);
 	return $out;
     }
@@ -261,6 +262,9 @@ class fcLinkBuilder_table extends fcLinkBuilder {
     protected function IdentityValues() {
 	return $this->Table()->SelfLink_idArray();
     }
+    protected function KeyString() {
+	return $this->Table()->ActionKey();	// not sure if this is the most useful response
+    }
 
     // -- CEMENTING -- //
 }
@@ -300,6 +304,9 @@ class fcLinkBuilder_records extends fcLinkBuilder {
 
     protected function IdentityValues() {
 	return $this->Recs()->SelfLink_idArray();
+    }
+    protected function KeyString() {
+	return $this->Recs()->KeyString();
     }
 
     // -- CEMENTING -- //

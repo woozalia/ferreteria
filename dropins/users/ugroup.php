@@ -5,6 +5,8 @@
     2013-12-19 started
 */
 class acUserGroups extends clsUserGroups {
+    use ftLinkableTable;
+
     private $arData;
 
     public function __construct($iDB) {
@@ -80,12 +82,12 @@ class acUserGroup extends clsUserGroup {
     // -- DROP-IN API -- //
     // ++ RENDER UI COMPONENTS ++ //
 
-    protected function AdminRows_start() {
+    protected function AdminRows_start(array $arOptions = NULL) {
 	return "\n<table class=listing>";
     }
-    protected function AdminField($sField) {
+    protected function AdminField($sField,array $arOptions = NULL) {
 	if ($sField == 'ID') {
-	    $val = $this->AdminLink();
+	    $val = $this->SelfLink();
 	} else {
 	    $val = $this->Value($sField);
 	}
@@ -121,7 +123,7 @@ class acUserGroup extends clsUserGroup {
 	    if (!is_null($out)) {
 		$out .= $sSep;
 	    }
-	    $ht = $this->AdminLink($this->Name(),$this->Descr());
+	    $ht = $this->SelfLink($this->Name(),$this->Descr());
 	    if ($this->KeyValue() == ID_GROUP_USERS) {
 		$ht = "($ht)";
 	    }
@@ -182,7 +184,7 @@ class acUserGroup extends clsUserGroup {
 	The checkbox will be named $sName[ID].
     */
     protected function AdminLine_edit($sName=NULL,$bSel=NULL) {
-	$htID = $this->AdminLink();
+	$htID = $this->SelfLink();
 	if (!is_null($sName)) {
 	    $id = $this->KeyValue();
 	    $htID .= clsHTML::CheckBox($sName,$bSel,$id);

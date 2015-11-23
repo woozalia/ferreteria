@@ -16,7 +16,7 @@ define('KS_EVENT_ARG_DESCR_START'	,'descr');
 define('KS_EVENT_ARG_DESCR_FINISH'	,'descrfin');
 define('KS_EVENT_ARG_NOTES'		,'notes');
 define('KS_EVENT_ARG_MOD_TYPE'		,'type');
-define('KS_EVENT_ARG_MOD_INDEX'	,'id');
+define('KS_EVENT_ARG_MOD_INDEX'		,'id');
 define('KS_EVENT_ARG_WHERE'		,'where');
 define('KS_EVENT_ARG_CODE'		,'code');
 define('KS_EVENT_ARG_PARAMS'		,'params');
@@ -241,17 +241,6 @@ class clsSysEvents extends clsSysEvents_abstract {
 	$rc = $this->DataSet($sql);
 	return $rc;
     }
-    /*
-    public function EventListing($sTableKey=NULL,$idTableRow=NULL,$iDebug=FALSE) {
-	$rsEv = $this->EventData($sTableKey,$idTableRow,$iDebug);
-	echo 'SQL2: '.$rsEv->sqlMake;
-	if ($rsEv->HasRows()) {
-	    $out = $rsEv->AdminRows();
-	} else {
-	    $out = 'No events found here.';
-	}
-	return $out;
-    }*/
 }
 class clsSysEvent extends clsDataSet {
     public function Finish(array $iArgs=NULL) {
@@ -274,6 +263,98 @@ abstract class clsLogger {
     abstract public function FinishEvent(array $iarArgs=NULL);
     abstract public function EventListing();
 }
+abstract class clsLogger_data extends clsLogger {
+
+    /*----
+      HISTORY:
+	2015-11-10 switched from public to protected
+    */
+    private $tEv;  
+    protected function EventTable($tbl=NULL) {
+	if (!is_null($tbl)) {
+	    $this->tEv = $tbl;
+	}
+	return $this->tEv;
+    }
+    private $rcEvent;
+    protected function EventRecord() {
+	return $this->rcEvent;
+    }
+    /*----
+      INPUT:
+	$arArgs = Array containing any of several possible elements as defined by clsSysEvents
+	$arEdits (optional) = changes being made to the data record's values
+      TODO: Either deprecate this method, or deprecate CreateEvent().
+    */
+    public function StartEvent(array $iarArgs, array $iEdits=NULL) {
+	return $this->CreateEvent($iarArgs,$iEdits);
+    }
+    /*----
+      HISTORY:
+	2014-02-18 changed first line of code
+	  from $this->DataRecord()...
+	  to $this->EventTable()...
+	  The first version would have caused an infinite loop if the params had matched.
+	2014-07-01 Now using (event)->Finish().
+    */
+    public function FinishEvent(array $iarArgs=NULL) {
+	if (!is_object($this->EventRecord())) {
+	    throw new exception('FinishEvent() called, but event was not Started.');
+	}
+	return $this->EventRecord()->Finish($iarArgs);
+    }
+    abstract protected function EventData();
+    public function EventListing($arActs=NULL) {
+	$rs = $this->EventData();
+	return 
+	  clsApp::Me()->Page()->ActionHeader('System Events',$arActs)
+	  .$rs->AdminRows(TRUE);
+    }
+}
+
+class clsLogger_Table extends clsLogger_data {
+
+    public function __construct(clsTable $tDt, clsSysEvents_abstract $tEv) {
+	$this->DataTable($tDt);		// recordset being logged
+	$this->EventTable($tEv);	// event table
+    }
+    private $tbl;
+    protected function DataTable($tbl=NULL) {
+	if (!is_null($tbl)) {
+	    $this->tbl = $tbl;
+	}
+	return $this->tbl;
+    }
+    /*----
+      INPUT:
+	$arArgs = Array containing any of several possible elements as defined by clsSysEvents
+	$arEdits (optional) = changes being made to the data record's values
+    */
+    public function CreateEvent(array $arArgs,$arEdits=NULL) {
+	$tblData = $this->DataTable();
+	// add data record's identity info
+	$arArgs['type'] = $rcData->ActionKey();
+
+	$tEvents = $this->EventTable();
+	$this->rcEvent = $tEvents->CreateEvent($arArgs,NULL,$arEdits);
+	if (!is_object($this->rcEvent)) {
+	    $sEventClass = get_class($tEvents);
+	    $sql = $tEvents->sqlExec;
+	    $sTblClass = get_class($tblData);
+	    $sMsg = "Class $sEventClass Could not create event object for a $sTblClass table. SQL=[$sql]";
+	    throw new exception($sMsg);
+	}
+	return $this->rcEvent;
+    }
+    protected function EventData($iDebug=FALSE) {
+	throw new exception('Not fully implemented; see code comments.');
+	/*
+	  After getting this far with implementing this class, I realized that
+	    my usage case was wrong and should have been based in a recordset.
+	*/
+    }
+}
+
 /*%%%%
   PURPOSE: This is a helper class for clsDataSet and clsSysEvents.
     It is initialized with a DataSet object, and provides event logging.
@@ -287,20 +368,19 @@ abstract class clsLogger {
       This caused a problem: clsLogger_DataSet::StartEvent() must be compatible with clsLogger::StartEvent(),
       so I made iEdits an optional parameter. THIS IS A KLUGE.
 */
-class clsLogger_DataSet extends clsLogger {
-    private $rs;
-    private $tEv;
+class clsLogger_DataSet extends clsLogger_data {
     protected $rcEvent;
 
     public function __construct(clsRecs_key_single $rsD, clsSysEvents_abstract $tEv) {
-	$this->rsD = $rsD;	// recordset being logged
-	$this->tEv = $tEv;	// event table
+	$this->DataRecord($rsD);	// recordset being logged
+	$this->EventTable($tEv);	// event table
     }
-    public function EventTable() {
-	return $this->tEv;
-    }
-    public function DataRecord() {
-	return $this->rsD;
+    private $rs;
+    public function DataRecord($rs=NULL) {
+	if (!is_null($rs)) {
+	    $this->rs = $rs;
+	}
+	return $this->rs;
     }
     /*----
       INPUT:
@@ -316,70 +396,27 @@ class clsLogger_DataSet extends clsLogger {
 	$tEvents = $this->EventTable();
 	$this->rcEvent = $tEvents->CreateEvent($arArgs,$rcData->Values(),$arEdits);
 	if (!is_object($this->rcEvent)) {
-	    $sTableClass = get_class($tEvents);
+	    $sEventClass = get_class($tEvents);
 	    $sql = $tEvents->sqlExec;
-	    throw new exception("Class $sTableClass Could not create event object. SQL=[$sql]");
+	    $sRecordClass = get_Class($rcData);
+	    $sMsg = "Class $sEventClass Could not create event object for a $sRecordClass recordset. SQL=[$sql]";
+	    throw new exception($sMsg);
 	}
 	return $this->rcEvent;
-    }
-    /*----
-      INPUT:
-	$arArgs = Array containing any of several possible elements as defined by clsSysEvents
-	$arEdits (optional) = changes being made to the data record's values
-    */
-    public function StartEvent(array $iarArgs, array $iEdits=NULL) {
-/*
-	$arArgs = $iarArgs;
-	$rc = $this->DataRecord();
-
-	$arArgs['type'] = $rc->Table()->ActionKey();
-	$arArgs['id'] = $rc->KeyValue();
-
-	$this->idEvent = $this->EventTable()->StartEvent($arArgs,$rc->Values(),$iEdits);
-	return $this->idEvent;
-*/
-	return $this->CreateEvent($iarArgs,$iEdits);
-    }
-    /*----
-      HISTORY:
-	2014-02-18 changed first line of code
-	  from $this->DataRecord()...
-	  to $this->EventTable()...
-	  The first version would have caused an infinite loop if the params had matched.
-	2014-07-01 Now using (event)->Finish().
-    */
-    public function FinishEvent(array $iarArgs=NULL) {
-/*
-	$this->EventTable()->FinishEvent($this->idEvent,$iarArgs);
-	unset($this->idEvent);
-*/
-	if (!is_object($this->rcEvent)) {
-	    throw new exception('FinishEvent() called, but event was not Started.');
-	}
-	return $this->rcEvent->Finish($iarArgs);
     }
     /*----
       RETURNS: dataset consisting of events for the record pointed to by $this->DataRecord()
       CALLED BY:
 	$this->EventListing()
+      HISTORY:
+	2015-11-10 switched from public to protected
     */
-    public function EventData($iDebug=FALSE) {
+    protected function EventData($iDebug=FALSE) {
 	$rsD = $this->DataRecord();
 	$sTableKey = $rsD->Table()->ActionKey();
 	$idTableRow = $rsD->KeyValue();
 	$rs = $this->EventTable()->EventData($sTableKey,$idTableRow,$iDebug);
 	return $rs;
-/*
-	$sql = '(ModType="'.$rsD->Table()->ActionKey().'") AND (ModIndex='.$rsD->KeyValue().')';
-	if (!$iDebug) {
-	    $sql .= ' AND (NOT isDebug)';
-	}
-	return $this->EventTable()->GetData($sql,NULL,'WhenStarted DESC');
-*/
-    }
-    public function EventListing() {
-	$rs = $this->EventData();
-	return $rs->AdminRows(TRUE);
     }
 }
 
@@ -434,6 +471,7 @@ class clsFxEvents_Flds extends clsTable_key_single {
 	  $this->Name('event_log_fields');
     }
     public function LogEdits($idEvent, array $iOldVals, array $iNewVals) {
+	throw new exception('LogEdits() needs rewriting -- SQLValue() is deprecated.');
 	foreach ($iNewVals as $key => $val) {
 	    $arIns = array(
 	      'ID_Event'	=> $idEvent,

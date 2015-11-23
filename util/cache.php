@@ -1132,45 +1132,37 @@ class clsCacheEvents extends clsMgrTable_single_key {
 	  $this->ClassSng('clsCacheEvent');
     }
     public function Start($iProc) {
-	global $vgUserName;
 
 	if (is_numeric($iProc)) {
 
-/*
-	    $sqlCaller = $this->objDB->SafeParam($iCaller);
-	    $sqlUser = SQLValue($vgUsername);
-	    $sql = 'INSERT INTO `'.$this->Name().'` (WhenStarted,ID_Query,Caller,Username,Machine)'
-	      .' VALUES (NOW(),'.$iQuery.',"'.$sqlCaller.'",'.$sqlUser.',"'.$_ENV['REMOTE_ADDR'].'");';
-	    $this->objDB->Exec($sql);
-*/
-
-	    $strAddr = NzArray($_SERVER,'REMOTE_ADDR','N/A');	// N/A = probably commandline
+	    $sAddr = clsArray::Nz($_SERVER,'REMOTE_ADDR','N/A');	// N/A = probably commandline
+	    $db = $this->Engine();
+	    
+	    $sUser = clsApp::Me()->User()->UserName();
 
 	    $arEv = array(
 	      'WhenStarted'	=> 'NOW()',
 	      'ID_Proc'		=> $iProc,
 	      'Caller'		=> 'NULL',
-	      'WhoAdmin'	=> SQLValue($vgUserName),
+	      'WhoAdmin'	=> $db->SanitizeAndQuote($sUser),
 	      'WhoSystem'	=> 'NULL',
-	      'WhoNetwork'	=> SQLValue($strAddr)
+	      'WhoNetwork'	=> $db->SanitizeAndQuote($sAddr)
 	      );
 	    $ok = $this->Insert($arEv);
 	    if (!$ok) {
 		global $sql;
-		echo 'SQL error recording event: '.$this->objDB->getError();
+		echo 'SQL error recording event: '.$db->getError();
 		echo '<br> - SQL:'.$sql;
 	    }
 
-	    $idLog = $this->objDB->NewID();
-	    $objEntry = $this->GetItem($idLog);
-	    assert('is_object($objEntry)');
-	    CallStep('Created objEntry as class '.get_class($objEntry));
-	    $objEntry->Mgr($this->objMgr);
+	    $idLog = $db->NewID();
+	    $rcEntry = $this->GetItem($idLog);
+	    $rcEntry->Mgr($this->objMgr);
 	} else {
 	    LogError(__METHOD__.': no Proc given');
-	    $objEntry = NULL;
+	    $rcEntry = NULL;
 	}
-	return $objEntry;
+	return $rcEntry;
     }
 }
 class clsCacheEvent extends clsMgrData_single_key {

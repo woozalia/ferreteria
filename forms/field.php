@@ -13,18 +13,15 @@
 */
 
 class fcFormField {
-    private $sName;
-    private $vValue;
-    private $vDefault;
-    private $sqlForBlank;
 
     // ++ SETUP ++ //
 
     public function __construct(fcForm $oForm, $sName) {
 	$this->NameString($sName);	// set name before connecting to form
 	$this->FormObject($oForm);	// connect to form
-	$this->sqlForBlank = 'NULL';	// default SQL value
+	$this->SQL_forBlank('NULL');	// default SQL value
 	$this->vDefault = NULL;		// default native value
+	$this->OkToWrite(TRUE);		// default: writeable field
     }
 
     // -- SETUP -- //
@@ -40,6 +37,7 @@ class fcFormField {
     /*----
       PUBLIC because each Control (at least) needs to know what its Field is named.
     */
+    private $sName;
     public function NameString($sName=NULL) {
 	if (!is_null($sName)) {
 	    $this->sName = $sName;
@@ -50,26 +48,50 @@ class fcFormField {
     // -- CONFIGURATION -- //
     // ++ OPTIONS ++ //
 
+    private $sqlForBlank;
     public function SQL_forBlank($sql=NULL) {
         if (!is_null($sql)) {
             $this->sqlForBlank = $sql;
         }
         return $this->sqlForBlank;
     }
+    
+    private $okToWrite;	// enable modifying stored field
+    public function OkToWrite($bOk=NULL) {
+	if (!is_null($bOk)) {
+	    $this->okToWrite = $bOk;
+	}
+	return $this->okToWrite;
+    }
 
     // -- OPTIONS -- //
-    // ++ DATA ACCESS ++ //
-
+    // ++ MEMBER CALCULATIONS ++ //
+    
     /*----
       RETURNS: TRUE iff the value has been explicitly set
       NOTE: We may eventually need to have a flag for this; for now, we just look
 	at whether the value is NULL or not.
       USAGE: for when code needs to explicitly set certain values to be saved. The Form object
 	will allow explicitly-set values to override $_POSTed values.
+	Form->ClearValues() also only clears fields that haven't been Changed.
     */
     public function IsChanged() {
-	return !is_null($this->vValue);
+	return !is_null($this->ValueNative());
     }
+    /*----
+      RETURNS: TRUE iff the value should be written to the database
+    */
+    public function ShouldWrite() {
+	return $this->IsChanged() && $this->OkToWrite();
+    }
+    
+    // -- MEMBER CALCULATIONS -- //
+    // ++ VALUE ACCESS ++ //
+
+    /*++++
+      GROUP: get/set current value
+    */
+    private $vValue;
     /*----
       ACTION: set and/or return the value of the field.
       VERSION: generic - stores/returns value directly
@@ -79,7 +101,6 @@ class fcFormField {
 	2015-06-14 changed the way Form values are stored
     */
     public function ValueNative($val=NULL) {
-//	return $this->FormObject()->RecordValue($this->NameString(),$val);
 	if (!is_null($val)) {
 	    $this->vValue = $val;
 	}
@@ -91,19 +112,28 @@ class fcFormField {
     public function SetValueNative($val) {
 	$this->vValue = $val;
     }
-    /*----
-      PURPOSE: set the default value (value to use for new records)
+
+    /*++++
+      GROUP: get/set/use default value (value to use for new records)
     */
+    private $vDefault;
     public function SetDefaultNative($val) {
         $this->vDefault = $val;
+    }
+    protected function GetDefaultNative() {
+	return $this->vDefault;
     }
     /*----
       PURPOSE: set the current value to the default value
       USAGE: when initializing a field for editing a new record
     */
     public function UseDefault() {
-        $this->SetValueNative($this->vDefault);
+        $this->SetValueNative($this->GetDefaultNative());
     }
+    
+    /*++++
+      GROUP: value access in other formats
+    */
     /*----
       ACTION: returns and/or sets the displayable representation of the field's value
       HISTORY:
@@ -117,7 +147,8 @@ class fcFormField {
 	return $this->Convert_NativeToDisplay($this->ValueNative());
     }
     /*----
-    ACTION: returns and/or sets the SQL representation of the field's value
+      ACTION: returns and/or sets the SQL representation of the field's value
+      USED BY: fcForm_DB::SaveRecord() => fcForm_DB::RecordValues_asSQL_get()
       HISTORY:
 	2015-03-30 adapted from Forms v1
     */
@@ -128,21 +159,38 @@ class fcFormField {
 	return $this->Convert_NativeToSQL($this->ValueNative());
     }
     /*----
-      PURPOSE: allows explicitly setting NULL values.
+      PURPOSE: allows explicitly setting NULL values, converting from string-based timestamps
+	to internal format, etc.
+      NOTE: The input here is not, strictly speaking, SQL; it's just whatever format the database
+	returns its data types in. This set of methods should probably be renamed to something
+	like SetValueDB.
     */
     public function SetValueSQL($sqlVal) {
-	$this->SetValueNative($this->Convert_SQLToNative($sqlVal));
+	$this->SetValueNative($this->Convert_dbToNative($sqlVal));
     }
 
-    // -- DATA ACCESS -- //
+    // -- VALUE ACCESS -- //
     // ++ FORMAT CONVERSION ++ //
 
     // These have to be PUBLIC so FORM can convert arrays without changing values.
 
     public function Convert_DisplayToNative($sVal) { return $sVal; }
     public function Convert_NativeToDisplay($sVal) { return htmlspecialchars($sVal); }
-    public function Convert_SQLToNative($sqlVal) { return $sqlVal; }
-    //protected function Convert_NativeToSQL($sVal) { return is_null($sVal)?'NULL':$sVal; }
+    public function Convert_dbToNative($sqlVal) { return $sqlVal; }
+    protected function Convert_NativeToSQL($sVal) {
+	if (is_null($sVal)) {
+	    return 'NULL';
+	} else {
+	    return $this->CookRawSQL($sVal);
+	}
+    }
+    /*----
+      ACTION: Takes data in a format suitable for SQL and sanitizes/quotes it for use in
+	actual SQL statements.
+    */
+    protected function CookRawSQL($sql) {
+	return $this->FormObject()->CookRawValue($sql);
+    }
 
     // -- FORMAT CONVERSION -- //
 }
@@ -166,7 +214,6 @@ class fcFormField_Text extends fcFormField {
 
 class fcFormField_Num extends fcFormField {
     protected function Convert_ShowToNative($sVal) {
-	//if (($sVal == '') || is_null($sVal)) {
 	if (is_numeric($sVal)) {
 	    return (float)$sVal;
 	} else {
@@ -222,7 +269,7 @@ class fcFormField_Time extends fcFormField {
 	    return '??"'.$dtVal.'"';
 	}
     }
-    public function Convert_SQLToNative($sqlVal) {
+    public function Convert_dbToNative($sqlVal) {
 	$dt = strtotime($sqlVal);
 	if ($dt === FALSE) {
 	    // strtotime() returns FALSE if it can't parse the string
@@ -233,9 +280,9 @@ class fcFormField_Time extends fcFormField {
     }
     public function Convert_NativeToSQL($dtVal) {
 	if (is_numeric($dtVal)) {
-	    return '"'.date('Y-m-d H:i:s',$dtVal).'"';
+	    $r = '"'.date('Y-m-d H:i:s',$dtVal).'"';
 	} elseif (empty($dtVal)) {
-	    return 'NULL';
+	    $r = 'NULL';
 	} else {
 	    $sMsg = 'Trying to use "'
 	      .$dtVal
@@ -244,6 +291,7 @@ class fcFormField_Time extends fcFormField {
 	      .'".';
 	    throw new exception($sMsg);
 	}
+	return $r;
     }
 
     // -- FORMAT CONVERSION -- //
@@ -251,16 +299,16 @@ class fcFormField_Time extends fcFormField {
 
 class fcFormField_Bit extends fcFormField {
     public function Convert_DisplayToNative($sVal) {
-	// TODO: not sure how this shows up...
-	return $sVal;
+	return ($sVal=='on');
     }
     public function Convert_NativeToDisplay($bVal) {
 	return $bVal?'YES':'no';
     }
-    public function Convert_SQLToNative($sqlVal) {
+    public function Convert_dbToNative($sqlVal) {
 	return (ord($sqlVal) != 0);
     }
     public function Convert_NativeToSQL($bVal) {
-	 return $bVal?chr(1):chr(0);
+	$r = $bVal?"b'1'":"b'0'";
+	return $r;
     }
 }

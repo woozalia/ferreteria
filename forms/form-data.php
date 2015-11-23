@@ -11,6 +11,22 @@
 class fcForm_DB extends fcForm_keyed {
     private $oRecs;
 
+    // ++ DEBUGGING ++ //
+
+    static private $sDebugText=NULL;
+    static protected function DebugAdd($txt) {
+	self::$sDebugText .= $txt;
+    }
+    static protected function DebugLine($txt) {
+	self::DebugAdd("\n$txt<br>");
+    }
+    static public function DebugClear() {
+	self::$sDebugText = NULL;
+    }
+    static public function DebugText() {
+	return self::$sDebugText;
+    }
+    
     // ++ SETUP ++ //
 
     public function __construct($sName,clsRecs_abstract $oRecs) {
@@ -19,6 +35,18 @@ class fcForm_DB extends fcForm_keyed {
     }
 
     // -- SETUP -- //
+    // ++ SERVICES ++ //
+
+    /*----
+      ACTION: Takes data in a format suitable for data storage and sanitizes/quotes it for use in
+	actual storage commands (typically SQL).
+    */
+    public function CookRawValue($val) {
+	$db = $this->RecordsObject()->Table()->Engine();
+	return $db->SanitizeAndQuote($val);
+    }
+    
+    // -- SERVICES -- //
     // ++ CONFIGURATION ++ //
 
     protected function RecordsObject(clsRecs_abstract $oRecs=NULL) {
@@ -81,8 +109,9 @@ class fcForm_DB extends fcForm_keyed {
     protected function RecordValues_asSQL_get() {
 	$arF = $this->FieldArray();
 	foreach ($arF as $key => $oField) {
-	    //echo "FIELD [$key] XLATES [".$oField->ValueNative().'] AS ['.$oField->ValueSQL().']<br>';
-	    $arO[$key] = $oField->ValueSQL();
+	    if ($oField->ShouldWrite()) {
+		$arO[$key] = $oField->ValueSQL();
+	    }
 	}
 	return $arO;
     }
@@ -103,16 +132,21 @@ class fcForm_DB extends fcForm_keyed {
 	$arUpd: array of additional values to save, in native format
     */
     public function SaveRecord(array $arUpd) {
-	$tbl = $this->RecordsObject()->Table();
+      //echo __FILE__.' line '.__LINE__.'<br>';
+	self::DebugAdd('arUpd before:'.clsArray::Render($arUpd));
 	$this->RecordValues_asNative_set($arUpd);
 	$this->ProcessRecord_beforeSave();
 	$arUpd = $this->RecordValues_asSQL_get();
+	self::DebugAdd('arUpd after:'.clsArray::Render($arUpd));
+      //die();
+	$tbl = $this->RecordsObject()->Table();
 	$idUpd = $this->Get_KeyString_toSave();
 	if ($idUpd == KS_NEW_REC) {
 	    $tbl->Insert($arUpd);
 	} else {
 	    $tbl->Update_Keyed($arUpd,$idUpd);
 	}
+	self::DebugLine('SQL: '.$tbl->sqlExec);
     }
     /*----
       ACTION: copy Field values to Recordset

@@ -260,38 +260,41 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
         if (is_null($rs)) {
             return $this->NoObjectString();
         }
-	if ($rs->hasRows()) {
-	    $out = "\n".'<select name="'
-              .$this->NameSpec()
-              .'">';
+	if (method_exists($rs,'ListItem_Text')) {
+	    if ($rs->hasRows()) {
+		$out = "\n".'<select name="'
+		  .$this->NameSpec()
+		  .'">';
 
-	    if ($this->HasExtraChoices()) {
-		$arRows = $this->ExtraRows_array();
-		foreach ($arRows as $oRow) {
-		    $out .= $oRow->RenderHTML(FALSE);	// never selected by default
+		if ($this->HasExtraChoices()) {
+		    $arRows = $this->ExtraRows_array();
+		    foreach ($arRows as $oRow) {
+			$out .= $oRow->RenderHTML(FALSE);	// never selected by default
+		    }
 		}
-	    }
-            $vDeflt = $this->FieldObject()->ValueNative();
+		$vDeflt = $this->FieldObject()->ValueNative();
+		/*
+		while ($rs->NextRow()) {
+		    $id = $rs->KeyValue();
+		    $oRow = new fcDropChoice($id,$rs->ListItem_Text());
+		    $out .= $oRow->RenderHTML($id == $vDeflt);
+		}
+		*/
 
-            /*
-	    while ($rs->NextRow()) {
-		$id = $rs->KeyValue();
-		$oRow = new fcDropChoice($id,$rs->ListItem_Text());
-		$out .= $oRow->RenderHTML($id == $vDeflt);
-	    }
-	    */
+		$arRecs = $this->Rows();
+		foreach ($arRecs as $id => $arRow) {
+		    $rs->Values($arRow);
+		    $oRow = new fcDropChoice($id,$rs->ListItem_Text());
+		    $out .= $oRow->RenderHTML($id == $vDeflt);
+		}
 
-	    $arRecs = $this->Rows();
-	    foreach ($arRecs as $id => $arRow) {
-		$rs->Values($arRow);
-		$oRow = new fcDropChoice($id,$rs->ListItem_Text());
-		$out .= $oRow->RenderHTML($id == $vDeflt);
+		$out .= "\n</select>\n";
+		return $out;
+	    } else {
+		return $this->NoDataString();
 	    }
-
-	    $out .= "\n</select>\n";
-	    return $out;
 	} else {
-	    return $this->NoDataString();
+	    throw new exception(get_class($rs).'::ListItem_Text() needs to be defined.');
 	}
 	return $out;
     }
@@ -313,8 +316,12 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 		$out = "<i>?$vCurr?</i>";
             } else {
 		$rs = $this->Records();	// get a copy of the recordset object
-		$rs->Values($arRec);	// give it the row we want to display
-		$out = $rs->ListItem_Link();
+		if (method_exists($rs,'ListItem_Link')) {
+		    $rs->Values($arRec);	// give it the row we want to display
+		    $out = $rs->ListItem_Link();
+		} else {
+		    throw new exception(get_class($rs).'::ListItem_Link() needs to be defined.');
+		}
 	    }
 	}
 

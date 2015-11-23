@@ -26,6 +26,27 @@ class clsDate {
 	}
 	return $out;
     }
+    // TODO: explain what this function does, and maybe come up with a better name
+    static public function DefaultYear($iDate,$iYear,$iSmallerPfx='<small>',$iSmallerSfx='</small>') {
+	if (empty($iDate)) {
+	    return NULL;
+	} else {
+	    $dtIn = strtotime($iDate);
+	    $yrIn = date('Y',$dtIn);
+	    $doYr = ($yrIn != $iYear);
+	    $out = '';
+	    if ($doYr) {
+		$out .= $iSmallerPfx;
+	    }
+	    $ftIn = date('m/d',$dtIn);
+	    $out .= $ftIn;
+	    if ($doYr) {
+		$out .= '<br>'.$yrIn;
+		$out .= $iSmallerSfx;
+	    }
+	    return $out;
+	}
+    }
 }
 
 class clsTime {
@@ -130,6 +151,7 @@ function Date_DefaultTime($iStamp) {
   USED BY: Special:VbzAdmin
 */
 function Date_DefaultYear($iDate,$iYear,$iSmallerPfx='<small>',$iSmallerSfx='</small>') {
+    throw new exception('Date_DefaultYear() has been replaced by clsDate::DefaultYear()');
     if (empty($iDate)) {
 	return NULL;
     } else {
