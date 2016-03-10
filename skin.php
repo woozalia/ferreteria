@@ -37,7 +37,7 @@ abstract class clsSkin {
 	foreach ($this->arPOrder as $sName) {
 	    $sText = $this->arPieces[$sName];
 	    echo "\n<br>===PIECE: [$sName]===<br>\n"
-	      .htmlspecialchars($sText)."\n"
+	      .fcString::EncodeForHTML($sText)."\n"
 	      ."\n<br>===END $sName===<br>";
 	}
     }
@@ -97,7 +97,7 @@ abstract class clsSkin_standard extends clsSkin_basic {
     }
     public function Content($sName,$sText) {
 	$ht = "\n<!-- BEGIN CONTENT - $sName -->$sText\n<!-- END CONTENT - $sName -->";
-	$this->arPieces['content'] = NzArray($this->arPieces,'content').$ht;
+	$this->arPieces['content'] = clsArray::Nz($this->arPieces,'content').$ht;
     }
 
     // -- ACTION -- //
@@ -126,7 +126,15 @@ abstract class clsSkin_standard extends clsSkin_basic {
 
     protected function PageHeader() {
 	$sTitle = $this->BrowserTitle();
-	$out = KHT_PAGE_DOCTYPE."<html>\n<head>\n<title>$sTitle</title>";
+	$sDocType = KHT_PAGE_DOCTYPE;
+	$sCharSet = KS_CHARACTER_ENCODING;
+	$out = <<<__END__
+$sDocType
+<html>
+<head>
+  <title>$sTitle</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=$sCharSet">
+__END__;
 
 	if (is_null($this->Sheet())) {
 	    throw new exception('Style sheet not set for this page class.');
@@ -134,10 +142,11 @@ abstract class clsSkin_standard extends clsSkin_basic {
 	$arVars = array('sheet' => $this->Sheet());
 	$objStrTplt = new clsStringTemplate_array(NULL,NULL,$arVars);
 	$objStrTplt->MarkedValue(KHT_PAGE_STYLE);
-	$out .= "\n".$objStrTplt->Replace();
 	$strContent = KS_SITE_NAME_META.': '.$this->PageTitle();
-	$out .= "\n<meta name=description content=\"$strContent\">";
-	$out .= "\n</head>\n".KHT_PAGE_BODY_TAG;
+	$out .= "\n".$objStrTplt->Replace()
+	  ."\n  <meta name=description content=\"$strContent\" />"
+	  ."\n  <meta charset=\"utf-8\" />"
+	  ."\n</head>\n".KHT_PAGE_BODY_TAG;
 
 	return $out;
     }

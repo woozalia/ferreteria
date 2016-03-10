@@ -235,7 +235,7 @@ class clsNavLink extends clsNavText {
 	    $out = parent::Render();	// active links show as plain text
 	} else {
 	    $sPopup = $this->Popup();
-	    $htPopup = is_null($sPopup)?'':(' title="'.htmlspecialchars($sPopup).'"');
+	    $htPopup = is_null($sPopup)?'':(' title="'.fcString::EncodeForHTML($sPopup).'"');
 	    $out = '<a href="'.$url.'"'.$htPopup.'>'.parent::Render().'</a>';
 	}
 	return $out;

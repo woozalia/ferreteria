@@ -6,32 +6,20 @@
   DEPENDS: ctrl.php, form.php, ferreteria db
   HISTORY:
     2015-03-30 starting from scratch
+    2016-02-23 Combining constructor parameters - get $sName from $rs->Table()->ActionKey().
+      Descendants can override this by calling $this->NameString() directly.
+      Possibly fcForm_DB should be renamed fcForm_Records or similar... later.
 */
 
 class fcForm_DB extends fcForm_keyed {
-    private $oRecs;
-
-    // ++ DEBUGGING ++ //
-
-    static private $sDebugText=NULL;
-    static protected function DebugAdd($txt) {
-	self::$sDebugText .= $txt;
-    }
-    static protected function DebugLine($txt) {
-	self::DebugAdd("\n$txt<br>");
-    }
-    static public function DebugClear() {
-	self::$sDebugText = NULL;
-    }
-    static public function DebugText() {
-	return self::$sDebugText;
-    }
     
     // ++ SETUP ++ //
 
-    public function __construct($sName,clsRecs_abstract $oRecs) {
-	parent::__construct($sName);
-	$this->RecordsObject($oRecs);
+    public function __construct(clsRecs_abstract $rs) {
+	$this->InitVars();
+	$sName = $rs->Table()->ActionKey();
+	$this->NameString($sName);
+	$this->RecordsObject($rs);
     }
 
     // -- SETUP -- //
@@ -49,22 +37,13 @@ class fcForm_DB extends fcForm_keyed {
     // -- SERVICES -- //
     // ++ CONFIGURATION ++ //
 
-    protected function RecordsObject(clsRecs_abstract $oRecs=NULL) {
-	if (!is_null($oRecs)) {
-	    $this->oRecs = $oRecs;
+    private $rs;
+    protected function RecordsObject(clsRecs_abstract $rs=NULL) {
+	if (!is_null($rs)) {
+	    $this->rs = $rs;
 	}
-	return $this->oRecs;
+	return $this->rs;
     }
-/*    public function KeyString($sKey=NULL) {
-	if (!is_null($sKey)) {
-	    $sKeyName = $this->RecordsObject()->Table()->KeyName();
-	}
-	$sKey = $this->RecordsObject()->KeyString();
-	return $sKey;
-    }
-    public function HasKey() {
-	return method_exists($this->RecordsObject(),'KeyString');
-    }*/
 
     // -- CONFIGURATION -- //
     // ++ DATA STORAGE ++ //
@@ -102,7 +81,7 @@ class fcForm_DB extends fcForm_keyed {
 	    if (array_key_exists($key,$arFlds)) {
 		// ignore data fields for which there is no Field object
 		$oField = $arFlds[$key];
-		$oField->SetValueSQL($val);
+		$oField->StorageObject()->SetValue($val);
 	    }
 	}
     }
@@ -110,7 +89,7 @@ class fcForm_DB extends fcForm_keyed {
 	$arF = $this->FieldArray();
 	foreach ($arF as $key => $oField) {
 	    if ($oField->ShouldWrite()) {
-		$arO[$key] = $oField->ValueSQL();
+		$arO[$key] = $oField->StorageObject()->GetValue();
 	    }
 	}
 	return $arO;
@@ -121,9 +100,13 @@ class fcForm_DB extends fcForm_keyed {
     */
     public function LoadRecord() {
 	$rc = $this->RecordsObject();
+	if ($rc->IsNew()) {
+	    throw new exception('Internal error: trying to load nonexistent record ID='.$rc->KeyString());
+	}
 	$ar = $rc->Values();
 	$this->RecordValues_asSQL_set($ar);
-	$this->Set_KeyString_loaded($rc->KeyValue());
+	$idRec = $rc->IsNew()?KS_NEW_REC:$rc->KeyValue();
+	$this->Set_KeyString_loaded($idRec);
     }
     /*----
       RULE: Call this to store data after changing
@@ -132,21 +115,35 @@ class fcForm_DB extends fcForm_keyed {
 	$arUpd: array of additional values to save, in native format
     */
     public function SaveRecord(array $arUpd) {
-      //echo __FILE__.' line '.__LINE__.'<br>';
-	self::DebugAdd('arUpd before:'.clsArray::Render($arUpd));
+	$rc = $this->RecordsObject();
+	$sqlIDFilt = $rc->SelfFilter();
+	$arUpd = $this->ProcessIncomingRecord($arUpd);
 	$this->RecordValues_asNative_set($arUpd);
-	$this->ProcessRecord_beforeSave();
 	$arUpd = $this->RecordValues_asSQL_get();
-	self::DebugAdd('arUpd after:'.clsArray::Render($arUpd));
-      //die();
 	$tbl = $this->RecordsObject()->Table();
 	$idUpd = $this->Get_KeyString_toSave();
 	if ($idUpd == KS_NEW_REC) {
-	    $tbl->Insert($arUpd);
+	    $id = $tbl->Insert($arUpd);
 	} else {
-	    $tbl->Update_Keyed($arUpd,$idUpd);
+	    //$tbl->Update_Keyed($arUpd,$idUpd);
+	    /*
+	    if ($idUpd = $this->RecordsObject()->KeyString()) {
+		$rc = $this->RecordsObject();
+	    } else {
+		$rc = $tbl->GetItem($idUpd);	// not tested; using $sqlIDFilt might work better
+	    }//*/
+	    $rc->Update($arUpd,$sqlIDFilt);
+	    echo '<b>CLASS</b>: '.get_class($rc).'<br>';
+	    echo "<b>ID FILT</b>: $sqlIDFilt<br>";
+	    echo '<b>SQL FOR UPDATE</b>: '.$rc->SQL_forUpdate($arUpd,$sqlIDFilt).'<br>';
+	    echo '<b>FINAL SQL</b>: '.$rc->sqlExec.'<br>';
+	    $id = $idUpd;
 	}
-	self::DebugLine('SQL: '.$tbl->sqlExec);
+	$sErr = $tbl->Engine()->getError();
+	if (!empty($sErr)) {
+	    $this->AddMessage('<b>Error</b>: '.$sErr);
+	}
+	return $id;
     }
     /*----
       ACTION: copy Field values to Recordset
@@ -156,9 +153,13 @@ class fcForm_DB extends fcForm_keyed {
 	$ar = $this->RecordValues_asNative_get();
 	$this->RecordsObject()->Values($ar);
     }
-    // PURPOSE: in case any further data massaging is needed
-    protected function ProcessRecord_beforeSave() {
-	// by default, do nothing
+    /*----
+      PURPOSE: in case any data massaging is needed before saving values
+	Descendants can override this to calculate values to save.
+	Array is incoming form data for a single record in native format,
+    */
+    protected function ProcessIncomingRecord(array $ar) {
+	return $ar;	// by default, do nothing
     }
 
     // -- DATA STORAGE -- //

@@ -177,15 +177,22 @@ class xtTime {
     public function __construct($iValue=NULL) {
 	if (is_string($iValue)) {
 	    $this->Parse($iValue);
+	} else {
+	    $this->Parts();	// set all to NULL;
 	}
     }
+    /*----
+      HISTORY:
+	2016-01-12 This used to only set fields when the input wasn't NULL, but I decided to always
+	  set them because (duh) you can test for NULL if you want to know whether a field was NULL.
+    */
     public function Parts($iYear=NULL,$iMonth=NULL,$iDay=NULL,$iHour=NULL,$iMin=NULL,$iSec=NULL) {
-	if (!is_null($iYear))	{ $this->intYr = $iYear; }
-	if (!is_null($iMonth))	{ $this->intMo = $iMonth; }
-	if (!is_null($iDay))	{ $this->intDy = $iDay; }
-	if (!is_null($iHour))	{ $this->intHr = $iHour; }
-	if (!is_null($iMin))	{ $this->intMi = $iMin; }
-	if (!is_null($iSec))	{ $this->intSe = $iSec; }
+	$this->intYr = $iYear;
+	$this->intMo = $iMonth;
+	$this->intDy = $iDay;
+	$this->intHr = $iHour;
+	$this->intMi = $iMin;
+	$this->intSe = $iSec;
     }
     public function PartsArray($iArray=NULL) {
 	if (!is_null($iArray)) {
@@ -210,7 +217,11 @@ class xtTime {
 	if (!is_null($iYear)) {
 	    $this->intYr = $iYear;
 	}
-	return $this->intYr;
+	if (isset($this->intYr) || is_null($this->intYr)) {
+	    return $this->intYr;
+	} else {
+	    throw new exception('Trying to retrieve intYr before it has been set.');
+	}
     }
     public function Parse($iString) {		// date and/or time
 	$this->DateParse($iString);

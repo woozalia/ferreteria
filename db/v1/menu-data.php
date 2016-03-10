@@ -13,6 +13,7 @@
 */
 trait ftLoggableObject {
     //private $oLogger;
+    private $rcLastEvent;
     public function StartEvent(array $arArgs) {
 	return $this->Log()->StartEvent($arArgs);
     }
@@ -20,10 +21,18 @@ trait ftLoggableObject {
 	return $this->Log()->FinishEvent($arArgs);
     }
     public function CreateEvent(array $arArgs) {
-	return $this->Log()->CreateEvent($arArgs);
+	$rcEv = $this->Log()->CreateEvent($arArgs);
+	$this->SetEvent($rcEv);	// is this a kluge?
+	return $rcEv;
     }
     public function EventListing() {
 	return $this->Log()->EventListing();
+    }
+    protected function SetEvent(clsSysEvent $rcEvent) {
+	$this->rcLastEvent = $rcEvent;
+    }
+    protected function GetEvent() {
+	return $this->rcLastEvent;
     }
 }
 trait ftLoggableRecord {

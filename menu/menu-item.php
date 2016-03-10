@@ -1,9 +1,10 @@
 <?php
 /*
   PURPOSE: classes for creating menus
+  USED BY: Dropins
   RULES: each menu link must have name that is unique across all menu links
     This may cause naming conflicts later if dropins are developed by 3rd parties,
-      but we'll deal with it then.
+      but we'll deal with that when we get to it.
 
     SECURITY:
       1. If a node is given an access requirement ($sPerm) when it is created,
@@ -22,9 +23,37 @@
     2013-12-12 rewriting to use single path-segment for each menu item
       added clsMenuNode
     2014-01-26 rewriting so menu items handle the recursion, with callbacks to the Painter
+    2016-01-01 Node-descendants are now initialized with the Root node, which has a pointer
+      to the MenuManager, eliminating the need to pass the MenuPainter repeatedly.
 */
+
 abstract class clsMenuNode extends clsTreeNode {
-    abstract public function RenderContent(clsMenuPainter $oPainter);
+
+    // ++ SETUP ++ //
+
+    public function __construct(fcMenuMgr $o) {
+	$this->ManagerObject($o);
+    }
+    private $oMgr;
+    public function ManagerObject(fcMenuMgr $o=NULL) {
+	if (!is_null($o)) {
+	    $this->oMgr = $o;
+	}
+	return $this->oMgr;
+    }
+    protected function PainterObject() {
+	return $this->ManagerObject()->Painter();
+    }
+    protected function MapperObject() {
+	return $this->ManagerObject()->Mapper();
+    }
+    
+    // -- SETUP -- //
+    // ++ ACTIONS ++ //
+    
+    abstract public function RenderContent();
+    
+    // -- ACTIONS -- //
 }
 abstract class clsMenuItem extends clsMenuNode {
     private $sText;	// text to show for item
@@ -38,13 +67,14 @@ abstract class clsMenuItem extends clsMenuNode {
     // ++ SETUP ++ //
 
     public function __construct(
-      clsMenuNode $oRoot=NULL,	// parent node (if any)
+      clsMenuNode $oRoot,	// must have a parent node
       $sName,
       $sText,
       $sTitle,
       $sDescr=NULL,
       $sPerm=NULL
       ) {
+	parent::__construct($oRoot->ManagerObject());
 	$this->Name($sName);
 	$this->sText = $sText;
 	$this->sTitle = $sTitle;
@@ -126,10 +156,13 @@ abstract class clsMenuItem extends clsMenuNode {
 	    }
 	}
     }
-    public function Selected($isSel=NULL) {
-	if (!is_null($isSel)) {
-	    $this->isSel = $isSel;
-	}
+    /*----
+      USAGE: Caller determines which menu node is active, then calls this with TRUE for that node.
+    */
+    public function SetSelected($isSel) {
+	$this->isSel = $isSel;
+    }
+    public function GetSelected() {
 	return $this->isSel;
     }
     /*----
@@ -146,30 +179,31 @@ abstract class clsMenuItem extends clsMenuNode {
     // -- ACCESS -- //
     // ++ RENDERING ++ //
 
-    public function Render(clsMenuPainter $oPainter,$sBef,$sAft) {
+    public function Render($sBef,$sAft) {
 	if ($this->IsAuth()) {
-	    $out = $sBef.$this->RenderContent($oPainter).$sAft;
+	    $out = $sBef.($this->RenderContent()).$sAft;
 	    if ($this->HasNodes()) {
-		$out .= $oPainter->RenderIndent();
-		$out .= $this->RenderSubs($oPainter);
-		$out .= $oPainter->RenderOutdent();
+		$oPaint = $this->PainterObject();
+		$out .= $oPaint->RenderIndent();
+		$out .= $this->RenderSubs();
+		$out .= $oPaint->RenderOutdent();
 	    }
 	} else {
 	    $out = NULL;
 	}
 	return $out;
     }
-    public function RenderSubs(clsMenuPainter $oPainter) {
+    public function RenderSubs() {
 	$out = NULL;
 	$arNodes = $this->Nodes();
+	$oPaint = $this->PainterObject();
 	foreach ($arNodes as $sName => $oSub) {
-	    $htLine = $oPainter->RenderNode($oSub);
+	    $htLine = $oPaint->RenderNode($oSub);
 	    $out .= $htLine;
 	}
 	return $out;
     }
-    public function RenderContent(clsMenuPainter $oPainter) {
-	//$sName = $this->Name();	// this doesn't do anything
+    public function RenderContent() {
 	$sText = $this->Text();
 	$isSel = $this->Selected();
 	$htDescr = $this->RenderTitleAttr();
@@ -185,7 +219,7 @@ abstract class clsMenuItem extends clsMenuNode {
 	if (is_null($sDescr)) {
 	    $htDescr = NULL;
 	} else {
-	    $htDescr = ' title="'.htmlspecialchars($sDescr).'"';
+	    $htDescr = ' title="'.fcString::EncodeForHTML($sDescr).'"';
 	}
 	return $htDescr;
     }
@@ -195,6 +229,7 @@ abstract class clsMenuItem extends clsMenuNode {
 
 class clsMenuLink extends clsMenuItem {
     private $url;	// specified URL for this link, if any
+    private $isAbs;	// URL is absolute?
 
     // ++ SETUP ++ //
 
@@ -202,6 +237,7 @@ class clsMenuLink extends clsMenuItem {
 	$this->sCtrler = NULL;
 	$this->url = NULL;
 	$this->isSel = NULL;
+	$this->isAbs = NULL;
     }
 
     // -- SETUP -- //
@@ -210,9 +246,10 @@ class clsMenuLink extends clsMenuItem {
     /*----
       RETURNS: URL fragment to be added to base URL
     */
-    public function URL($url=NULL) {
+    public function URL($url=NULL, $doRepl=FALSE) {
 	if (!is_null($url)) {
 	    $this->url = $url;
+	    $this->isAbs = $doRepl;
 	}
 	if (is_null($this->url)) {
 	    return $this->Name();
@@ -220,17 +257,24 @@ class clsMenuLink extends clsMenuItem {
 	    return $this->url;
 	}
     }
+    protected function URL_toUse() {
+	if ($this->isAbs) {
+	    return $this->URL();
+	} else {
+	    return $this->PainterObject()->MenuItem_BuildURL($this->URL());
+	}
+    }
 
     // -- FIELD ACCESS -- //
     // ++ RENDERING ++ //
 
-    public function RenderContent(clsMenuPainter $oPainter) {
+    public function RenderContent() {
 	//$sName = $this->Name();	// this doesn't do anything
 	$sText = $this->Text();
-	$htText = htmlspecialchars($sText);
+	$htText = fcString::EncodeForHTML($sText);
 	$sDescr = $this->Descr();
-	$urlNode = $oPainter->MenuItem_BuildURL($this->URL());
-	$isSel = $this->Selected();
+	$urlNode = $this->URL_toUse($this->PainterObject());
+	$isSel = $this->GetSelected();
 	$cssClass = $isSel?'node-active':'node-passive';
 	$arAttr = array('class'=>$cssClass);
 
@@ -242,18 +286,21 @@ class clsMenuLink extends clsMenuItem {
     // -- RENDERING -- //
 }
 class clsMenuFolder extends clsMenuItem {
-    public function RenderContent(clsMenuPainter $oPainter) {
+    public function RenderContent() {
 	return $this->Text();
     }
 }
 class clsMenuHidden extends clsMenuFolder {
     public function __construct(
-      clsMenuNode $oRoot=NULL,	// parent node (if any)
+      clsMenuNode $oRoot,	// must have a parent node
+      // 2016-01-01 do we really need all these parameters?
       $sName,
       $sTitle,
       $sDescr=NULL,
       $sPerm=NULL
       ) {
+	$oMgr = $oRoot->ManagerObject();
+	$this->ManagerObject($oMgr);
 	$this->Name($sName);
 	if (!is_null($oRoot)) {
 	    $oRoot->NodeAdd($this);
@@ -263,161 +310,12 @@ class clsMenuHidden extends clsMenuFolder {
 	$this->InitLinks($oRoot,$sPerm);
 	$this->Init();
     }
-/*
-    public function IsLink() {
-	return FALSE;
-    }
-*/
-    public function Render(clsMenuPainter $oPainter,$sBef,$sAft) {
+    public function Render($sBef,$sAft) {
 	return NULL;
     }
-/*
-    public function RenderContent(clsMenuPainter $oPainter) {
-	return NULL;
-    }
-    */
 }
-
-abstract class clsMenuPainter {
-    private $urlBase;
-    private $oRoot;
-    private $sSep;
-    protected $urlPfx,$urlSfx;
-
-    public function __construct($sSep) {
-	$this->urlBase = NULL;
-	$this->sSep = $sSep;
-	$this->urlPfx = NULL;
-	$this->urlSfx = NULL;
+class clsMenuRoot extends clsMenuHidden {
+    public function __construct(fcMenuMgr $o) {
+	$this->ManagerObject($o);
     }
-    public function DecorateURL($urlPfx,$urlSfx) {
-	$this->urlPfx = $urlPfx;
-	$this->urlSfx = $urlSfx;
-    }
-    public function BaseURL($url=NULL) {
-	if (!is_null($url)) {
-	    $this->urlBase = $url;
-	}
-	return $this->urlBase;
-    }
-    protected function Sep() {
-	return $this->sSep;
-    }
-    /*----
-      USAGE: This will probably mainly be an internal call, since
-	the Page object now just keeps track of the registry rather than
-	the menu-root.
-    */
-    public function RootNode(clsMenuItem $oNode=NULL) {
-	if (!is_null($oNode)) {
-	    $this->oRoot = $oNode;
-	}
-	return $this->oRoot;
-    }
-    /*----
-      NOTE: For now, we're just snagging the root node from here,
-	since we don't actually need the Registry. That could
-	change later, however.
-    */
-    public function Home(clsMenuItem $oNode=NULL) {
-	$this->RootNode($oNode);
-    }
-    public function Render(clsMenuItem $oNode=NULL) {
-	if (is_null($oNode)) {
-	    $oNode = $this->RootNode();
-	}
-	// render the current node
-	$out = $this->RenderNode($oNode);
-	return $out;
-    }
-/*
-    public function RenderSubnodes(clsMenuItem $oNode=NULL) {
-	if (is_null($oNode)) {
-	    $oNode = $this->RootNode();
-	}
-	$this->nDepth++;
-	$out = NULL;
-	$arNodes = $oNode->Nodes();
-	foreach ($arNodes as $sName => $oSub) {
-	    $out .= $this->Render($oSub);
-	}
-	$this->nDepth--;
-	return $out;
-    }
-    */
-
-    // ++ clsMenuItem CALLBACKS ++ //
-
-    abstract public function RenderNode(clsMenuItem $oNode);
-    abstract public function RenderIndent();
-    abstract public function RenderOutdent();
-    abstract public function MenuItem_BuildURL($urlItem);
-
-    // -- clsMenuItem CALLBACKS -- //
 }
-
-/*%%%%
-  PURPOSE: Renders the menu as an unordered list using <ul> and <li> tags
-*/
-class clsMenuPainter_UL extends clsMenuPainter {
-
-    // ++ clsMenuItem CALLBACKS ++ //
-
-    public function RenderNode(clsMenuItem $oNode) {
-	$out = $oNode->Render($this,'<li>','</li>');
-	return $out;
-    }
-    public function RenderIndent() {
-	return "\n<ul class=painted-menu>";
-    }
-    public function RenderOutdent() {
-	return "\n</ul>";
-    }
-    public function MenuItem_BuildURL($urlItem) {
-	if (is_null($urlItem)) {
-	    $out = NULL;
-	} else {
-	    $out = $this->urlPfx.$urlItem.$this->urlSfx;
-	}
-	return $out;
-    }
-
-    // -- clsMenuItem CALLBACKS -- //
-    // ++ DEBUGGING ++ //
-/*
-    public function RenderStats(clsMenuItem $oNode) {
-	$urlPBase = $this->BaseUrl();
-
-	$urlNPath = $oNode->PathStr($this->Sep());
-	$sArgsDump = print_r($oNode->Args(),TRUE);
-	$ht = <<<__END__
-<ul>
-  <li>PAINTER:</li>
-  <ul>
-    <li>Base: <b>$urlPBase</b></li>
-  </ul>
-  <li>NODE:</li>
-  <ul>
-    <li>Path: <b>$urlNPath</b></li>
-    <li>Args:<pre>$sArgsDump</pre></li>
-  </ul>
-</ul>
-__END__;
-	return $ht;
-    }
-*/
-
-    // -- DEBUGGING -- //
-}
-
-/*
-This might be useful later if we want a more general painter:
-    private $sPreItem,$sPostItem,$sIndent,$sOutdent;
-
-    public function Decorate($sPreItem,$sPostItem,$sIndent,$sOutdent) {
-	$this->sPreItem = $sPreItem;
-	$this->sPostItem = $sPostItem;
-	$this->sIndent = $sIndent;
-	$this->sOutdent = $sOutdent;
-    }
-*/

@@ -1,6 +1,13 @@
 <?php
 /*
   PURPOSE: for handling action-links on section bars
+  NOTE: I tried going the route of descending these from menu-item classes, but they really don't
+    quite work the same way. These select themselves (based on looking at the Page's internal state),
+    while menu-item classes must be selected by an external object (this being more efficient when
+    only one item may be selected at a time).
+    
+    There's probably some way to do a Grand Unified Smart-Link System, but it apparently requires more
+	brain cycles than I currently have available.
   HISTORY:
     2013-12-06 adapting from mw/lib/menu.php
 */
@@ -158,8 +165,8 @@ abstract class clsActionLink_base extends clsActionWidget {
     public function Render() {
 
 	$ftURL = $this->SelfURL();
-	$htPopup = htmlspecialchars($this->Description());
-	$htDispl = htmlspecialchars($this->DisplayText());
+	$htPopup = fcString::EncodeForHTML($this->Description());
+	$htDispl = fcString::EncodeForHTML($this->DisplayText());
 
 	$isActive = $this->Selected();
 	$cssClass = $isActive?'menu-link-active':'menu-link-inactive';

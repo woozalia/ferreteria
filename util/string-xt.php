@@ -40,7 +40,9 @@ class xtString {
       ACTION: Remove any characters in $iChars from the end of the string; stop when a non-$iChars character is found
     */
     static public function _DelTail($s,$iChars=NULL) {
-	throw new exception('Call fcString::DelTail() instead of xtString::_DelTail().');
+	throw new exception('Call xtString->DelTail() or fcString::DelTail() instead of xtString::_DelTail().');
+	
+	// OLD CODE
 	if (is_null($iChars)) {
 	    $out = rtrim($s);
 	} else {
@@ -95,7 +97,7 @@ class xtString {
 	if ($this->DoKeep) {
 	    $this->Value = $out;
 	}*/
-	$out = self::_DelTail($this->Value,$iChars);
+	$out = fcString::DelTail($this->Value,$iChars);
 	return $out;
     }
     /*-----
@@ -177,7 +179,7 @@ class xtString {
 	throw new exception('xtString::_ReplaceSequence() has been moved to xtString_static::ReplaceSequence()');
     }
     public function ReplaceSequence($iChars, $iRepl, $iMax=0) {
-	return xtString_static::ReplaceSequence($this->Value,$iChars,$iRepl,$iMax);
+	return fcString::ReplaceSequence($this->Value,$iChars,$iRepl,$iMax);
 /*
 	$in = $this->Value;
 	$out = '';

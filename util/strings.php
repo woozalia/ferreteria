@@ -88,6 +88,7 @@ function nzStr(&$iVar,$iDefault='') {
   ACTION: Concatenates two strings. If both are non-empty, separate them with iSep.
 */
 function StrCat($iLeft,$iRight,$iSep) {
+    throw new exception('Call fcString::StrCat() instead.');
     if (empty($iLeft) || empty($iRight)) {
 	return $iLeft.$iRight;
     } else {
@@ -106,7 +107,6 @@ function ParseTextLines($iText,$iComment='!;',$iBlanks=" \t") {
     if (is_array($arLines)) {
 	$xts = new xtString();
 	$arOut = NULL;
-	//$doDeptOnly = $this->AffectsCatNum();
 	foreach ($arLines as $idx => $line) {
 	    $xts->Value = $line;
 	    $arSplit = $xts->SplitFirst($iComment);	// split at first comment character
@@ -272,8 +272,22 @@ class fcString {
     // -- SPECIFIC SPLITS -- //
     // ++ CONCATENATION ++ //
   
-// apparently we don't have PHP 5.6 yet?
-//    static public function Concat($sSep,...$sStrings) {
+    /*----
+      ACTION: Concatenates two strings. If both are non-empty, separate them with iSep.
+    */
+    static public function StrCat($iLeft,$iRight,$iSep) {
+	if (empty($iLeft) || empty($iRight)) {
+	    return $iLeft.$iRight;
+	} else {
+	    return $iLeft.$iSep.$iRight;
+	}
+    }
+    /*----
+      NOTES:
+	* Elements that are blank ("") are treated the same as NULL -- no separator is added.
+	* Apparently we don't have PHP 5.6 yet? Otherwise we could use a variable number of parameters:
+	  static public function Concat($sSep,...$sStrings)
+    */
     static public function ConcatArray($sSep,array $sStrings) {
 	$out = NULL;
 	foreach ($sStrings as $sString) {
@@ -282,41 +296,75 @@ class fcString {
 		    $out .= $sSep;
 		}
 	    }
-	    $out .= $sString;
+	    if (!empty($sString)) {
+		if (!is_string($sString)) {
+		    throw new exception('Array element is not string.');
+		}
+		$out .= $sString;
+	    }
 	}
 	return $out;
+    }
+    /*----
+      ACTION: if $sTest is not NULL, returns $sToUse; otherwise returns $sIfNull.
+    */
+    static public function IfPresent($sTest,$sToUse,$sIfNull=NULL) {
+	if (is_null($sTest)) {
+	    return $sIfNull;
+	} else {
+	    return $sToUse;
+	}
+    }
+    /*----
+      ACTION: if $sValue is not NULL, returns $sPfx.$sValue.$sSfx; otherwise returns NULL.
+	I ended up not actually using this, but I'm pretty sure there are some situations
+	where it will come in handy -- so keeping it.
+    */
+    static public function MarkIfPresent($sPfx,$sValue,$sSfx=NULL) {
+	if (is_null($sValue)) {
+	    return NULL;
+	} else {
+	    return $sPfx.$sValue.$sSfx;
+	}
     }
     
     // -- CONCATENATION -- //
     // ++ REPLACEMENT ++ //
-    
-    /*=====
+
+    // NOTE: A good default for KS_CHARACTER_ENCODING seems to be 'ISO-8859-15'.
+    static public function EncodeForHTML($sVal) {
+	return htmlspecialchars($sVal,ENT_QUOTES,KS_CHARACTER_ENCODING);
+    }
+    /*----
       ACTION: Replace any
 	{{character sequences where all characters are found in $iChars}
 	that are longer than $iMax}
 	with the string $iRepl
+      HISTORY:
+	2016-01-19 This must have been broken until just now, because the code consistently expected
+	  $sVal to be named $in.
     */
-    static public function ReplaceSequence($iVal, $iChars, $iRepl, $iMax=0) {
+    static public function ReplaceSequence($sVal, $sChars, $sRepl, $nMax=0) {
 	$out = '';
-	$lenIn = strlen($in);
+	$lenIn = strlen($sVal);
 	$rpos = 0;
 
 	while ($rpos < $lenIn) {
-	    $fnd = strspn($in,$iChars,$rpos);
+	    $fnd = strspn($sVal,$sChars,$rpos);
 	    if ($fnd > 0) {
 	    // found a sequence; does it exceed $iMin?
-		if ($fnd > $iMax) {
+		if ($fnd > $nMax) {
 		    // yes - replace it
-		    $out .= $iRepl;
+		    $out .= $sRepl;
 		} else {
 		    // no - keep it
-		    $out .= substr($in,$rpos,$fnd);
+		    $out .= substr($sVal,$rpos,$fnd);
 		}
 		$rpos += $fnd;	// advance the read pointer
 	    } else {
 		// matching sequence not found at current position, so gobble up non-matching chars until the next one
-		$fnd = strcspn($in,$iChars,$rpos);
-		$add = substr($in,$rpos,$fnd);
+		$fnd = strcspn($sVal,$sChars,$rpos);
+		$add = substr($sVal,$rpos,$fnd);
 		$out .= $add;
 		$rpos += $fnd;	// advance the read pointer
 	    }
@@ -327,11 +375,18 @@ class fcString {
     // -- REPLACEMENT -- //
     // ++ NATURAL LANGUAGE ++ //
 
-    static function Pluralize($iQty,$iSingular='',$iPlural='s') {
+    static public function Pluralize($iQty,$iSingular='',$iPlural='s') {
 	if ($iQty == 1) {
 	    return $iSingular;
 	} else {
 	    return $iPlural;
+	}
+    }
+    static public function NoYes($iBool,$iNo='no',$iYes='yes') {
+	if ($iBool) {
+	    return $iYes;
+	} else {
+	    return $iNo;
 	}
     }
 

@@ -13,20 +13,6 @@ class clsDropInManager {
     private static $arMods = array();	// modules scanned
     private static $arFeat = array();	// features loaded
 
-    // ++ SETUP ++ //
-/*
-    public function __construct() {
-	self::Me($this);
-    }
-    static private $me = NULL;
-    static public function Me(clsApp $oApp=NULL) {
-	if (is_null(self::$me)) {
-	    self::$me = $oApp;
-	}
-	return self::$me;
-    }
-*/
-    // -- SETUP -- //
     // ++ BASIC OPERATIONS ++ //
 
     static protected function ItemClass() {
@@ -45,13 +31,23 @@ class clsDropInManager {
 	    throw new exception('Dropins folder "'.$fsFolder.'" does not exist.');
 	}
 	$poDir = dir($fsFolder);
+	$ar = NULL;
 	while (FALSE !== ($fnFile = $poDir->read())) {
 	    if (($fnFile!='.') && ($fnFile!='..')) {
 		$fs = $fsFolder.'/'.$fnFile;
 		if (is_dir($fs)) {
-		    self::CheckFolder($fs);
+		    // save in an array so we can sort before loading
+		    $ar[$fnFile] = $fs;
+		    //self::CheckFolder($fs);
 		}
 	    }
+	}
+	if (is_null($ar)) {
+	    throw new exception("No Dropins were found in '$fsFolder'. Something didn't install right.");
+	}
+	ksort($ar);
+	foreach ($ar as $fn => $fs) {
+	    self::CheckFolder($fs);
 	}
     }
     static protected function CheckFolder($fsFolder) {
@@ -63,6 +59,10 @@ class clsDropInManager {
 	}
     }
     static protected function ProcessIndex($fsIndex) {
+	// set up environment
+	$oRoot = self::$oMenu;
+	//$oPaint = $oRoot->PainterObject();
+
 	require($fsIndex);	// load the module index
 	$od = self::SpawnItem($arDropin);	// create object for specs
 	$om = $od->MenuObj();
@@ -89,11 +89,15 @@ class clsDropInManager {
 	}
 	return $isOk;
     }
+    static public function AreModulesLoaded() {
+	return count(self::$arMods) > 0;
+    }
     static public function ModuleLoaded($sName) {
 	return self::IsReady($sName);
     }
     static public function FeatureLoaded($sName) {
-	return (in_array($sName,self::$arFeat));
+	$ok = in_array($sName,self::$arFeat);
+	return $ok;
     }
 
     // -- BASIC OPERATIONS -- //

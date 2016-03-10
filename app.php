@@ -41,39 +41,60 @@ abstract class clsApp {
 abstract class cAppStandard extends clsApp {
     private $oPage;
     private $oSkin;
-    private $oData;
-    private $rcSess;
-    private $rcUser;
 
     // ++ MAIN ++ //
 
     public function Go() {
-	$oData = $this->Data();
-	$oData->Open();
-	if ($oData->isOk()) {
+	$db = $this->Data();
+	$db->Open();
+	if ($db->isOk()) {
 	    $this->Page()->DoPage();
-	    $oData->Shut();
+	    $db->Shut();
 	} else {
 	    throw new exception('Could not open the database.');
 	}
     }
 
     // -- MAIN -- //
+    // ++ MISC. ++ //
+    
+    private $fltStart;
+    public function SetStartTime() {
+	$this->fltStart = microtime(true);
+    }
+    /*----
+      RETURNS: how long since StartTime() was called, in microseconds
+    */
+    protected function ExecTime() {
+	return microtime(true) - $this->fltStart;
+    }
+    
+    // -- MISC. -- //
     // ++ CLASS NAMES ++ //
 
     protected function SessionsClass() {
 	return KS_CLASS_USER_SESSIONS;
     }
+    protected function UsersClass() {
+	return 'clsUserAccts';
+    }
+    protected function EventsClass() {
+	return 'clsSysEvents';
+    }
 
     // -- CLASS NAMES -- //
-    // ++ DATA TABLE ACCESS ++ //
+    // ++ TABLES ++ //
 
     protected function SessionTable() {
 	return $this->Data()->Make($this->SessionsClass());
     }
+    public function Users($id=NULL) {
+	$o = $this->Data()->Make($this->UsersClass(),$id);
+	return $o;
+    }
 
-    // -- DATA TABLE ACCESS -- //
-    // ++ FRAMEWORK OBJECTS ++ //
+    // -- TABLES -- //
+    // ++ RECORDS/OBJECTS ++ //
 
     public function Page(clsPage $obj=NULL) {
 	if (!is_null($obj)) {
@@ -89,22 +110,28 @@ abstract class cAppStandard extends clsApp {
 	}
 	return $this->oSkin;
     }
+    private $oData;
     public function Data(clsDatabase_abstract $iObj=NULL) {
 	if (!is_null($iObj)) {
 	    $this->oData = $iObj;
 	}
 	return $this->oData;
     }
+    private $rcSess;
     public function Session() {
 	if (empty($this->rcSess)) {
-	    $tSess = $this->Data()->Sessions();
+	    $tSess = $this->SessionTable();
 	    $this->rcSess = $tSess->GetCurrent();
+	}
+	if (!$this->rcSess->HasRows()) {
+	    throw new exception('Internal error: Loaded Session recordset has no rows.');
 	}
 	return $this->rcSess;
     }
-    public function Users($id=NULL) {
-	return $this->Make($this->UsersClass(),$id);
+    public function UncacheSession() {
+	$this->rcSess = NULL;
     }
+    private $rcUser;
     public function User() {
 	if (empty($this->rcUser)) {
 	    $this->rcUser = $this->Session()->UserRecord();
@@ -134,20 +161,8 @@ abstract class cAppStandard extends clsApp {
 	return $this->Data()->Make($this->EventsClass(),$id);
     }
 
-    // -- FRAMEWORK OBJECTS -- //
-    // ++ FRAMEWORK CLASSES ++ //
-
-    /*----
-      USAGE: Override this if a different (descendant) User class is needed.
-    */
-    public function UsersClass() {
-	return 'clsUserAccts';
-    }
-    public function EventsClass() {
-	return 'clsSysEvents';
-    }
-
-    // -- FRAMEWORK CLASSES -- //
+    // -- RECORDS/OBJECTS -- //
+    // ++ EMAIL ++ //
 
     protected function EmailAddr_FROM($sTag) {
 	$ar = array('tag'=>$sTag);
@@ -170,5 +185,8 @@ abstract class cAppStandard extends clsApp {
 	$ok = mail($sAddrToFull,$sSubj,$sMsg,$sHdr);
 	return $ok;
     }
+    
+    // -- EMAIL -- //
+
 }
 

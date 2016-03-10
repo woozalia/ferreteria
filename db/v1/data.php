@@ -1,7 +1,7 @@
 <?php
 /* ===========================
  *** DATA UTILITY CLASSES ***
-  AUTHOR: Woozle (Nick) Staddon
+  AUTHOR: Woozle Staddon
   HISTORY:
     2007-05-20 (wzl) These classes have been designed to be db-engine agnostic, but I wasn't able
 	  to test against anything other than MySQL nor was I able to implement the usage of
@@ -53,6 +53,7 @@
   FUTURE:
     API FIXES:
       GetData() should not have an $iClass parameter, or it should be the last parameter.
+	Deprecting this and replacing it with GetRecords() (or should that be GetRows()?).
 */
 // Select which DB library to use --
 //	exactly one of the following must be true:
@@ -77,7 +78,6 @@ abstract class clsDatabase_abstract {
     protected $objEng;	// engine object
     protected $objRes;	// result object
     protected $cntOpen;
-
 
     public function InitBase() {
 	$this->cntOpen = 0;
@@ -114,27 +114,39 @@ abstract class clsDatabase_abstract {
 
     /*-----
       PURPOSE: generic table-creation function
+      NOTE: It is possible to abuse this service by requesting a non-Table-type object.
+	The requested class's ancestry is not checked.
       HISTORY:
 	2010-12-01 Added iID parameter to get singular item
 	2011-02-23 Changed from protected to public, to support class registration
 	2012-01-23 Moved from clsDatabase to (new) clsDatabase_abstract
 	2015-09-07 TODO: This *really* ought to be modified just slightly to keep the table objects in an array.
 	  Do it when everything else is working.
+	2016-03-07 Did that.
     */
+    private $arTables;
     public function Make($sClass,$id=NULL) {
-	if (!isset($this->$sClass)) {
+	if (empty($this->arTables)) { $this->arTables = array(); }
+	if (array_key_exists($sClass,$this->arTables)) {
+	    // a Table of that class has already been created
+	    $t = $this->arTables[$sClass];
+	} else {
+	    // that class of Table has not yet been created
 	    if (class_exists($sClass)) {
-		$this->$sClass = new $sClass($this);
+		// create & cache it
+		$t = new $sClass($this);
+		$this->arTables[$sClass] = $t;
 	    } else {
+		// no code found for that class
 		throw new exception('Unknown class "'.$sClass.'" requested.');
 	    }
 	}
 	if (is_null($id)) {
 	    // table-type
-	    return $this->$sClass;
+	    return $t;
 	} else {
 	    // recordset-type
-	    return $this->$sClass->GetItem($id);
+	    return $t->GetItem($id);
 	}
     }
     abstract public function Exec($iSQL);
@@ -622,6 +634,8 @@ class clsDatabase extends clsDatabase_abstract {
     /*----
       HISTORY:
 	2011-03-04 added DELETE to list of write commands; rewrote to be more robust
+	2016-01-23 This should probably just be removed. I think it was an aid for the SQL Scripting classes,
+	  which didn't really work out.
     */
     protected function OkToExecSQL($iSQL) {
 	if ($this->doAllowWrite) {
@@ -714,100 +728,22 @@ class clsDatabase extends clsDatabase_abstract {
 	if (!is_null($iSQL)) {
 	    if (is_object($rc)) {
 		$rc->Query($iSQL);
+		if (!is_object($rc->ResultHandler())) {
+		    throw new exception('Ferreteria error: ResultHandler() has mysteriously become unset.');
+		}
 	    }
 	}
 	return $rc;
     }
 }
 
-// HELPER CLASSES
-
-class clsSQLFilt {
-    private $arFilt;
-    private $strConj;
-    private $sVerb;	// NOT YET IMPLEMENTED
-    private $sSort;
-    private $nMax;
-
-    public function __construct($iConj) {
-	$this->strConj = $iConj;
-	$this->arFilt = NULL;
-	$this->sVerb = NULL;
-	$this->sSort = NULL;
-	$this->nMax = NULL;
-    }
-    public function Verb($sVerb) {	// NOT YET IMPLEMENTED
-	$this->sVerb = $sVerb;
-    }
-    public function Order($sSort=NULL) {
-	if (!empty($sSort)) {
-	    $this->sSort = $sSort;
-	}
-	return $this->sSort;
-    }
-    protected function HasOrder() {
-	return (!is_null($this->sSort));
-    }
-    protected function RenderOrder() {
-	if ($this->HasOrder()) {
-	    return ' ORDER BY '.$this->Order();
-	} else {
-	    return NULL;
-	}
-    }
-    public function Limit($nMax=NULL) {
-	if (!empty($nMax)) {
-	    $this->nMax = $nMax;
-	}
-	return $this->nMax;
-    }
-    protected function HasLimit() {
-	return (!is_null($this->nMax));
-    }
-    protected function RenderLimit() {
-	if ($this->HasLimit()) {
-	    return ' LIMIT '.$this->Limit();
-	} else {
-	    return NULL;
-	}
-    }
-    /*-----
-      ACTION: Add a condition
-    */
-    public function AddCond($iSQL) {
-	$this->arFilt[] = $iSQL;
-    }
-    public function RenderFilter($sqlPrefix=NULL) {
-	$out = NULL;
-	if (is_array($this->arFilt)) {
-	    foreach ($this->arFilt as $sql) {
-		if ($out != '') {
-		    $out .= ' '.$this->strConj.' ';
-		}
-		$out .= '('.$sql.')';
-	    }
-	}
-	if (is_null($out)) {
-	    return '';
-	} else {
-	    return $sqlPrefix.$out;
-	}
-    }
-    // TODO: render the selection part as well
-    public function RenderQuery() {
-	$sql = $this->RenderFilter('WHERE ')
-	  .$this->RenderOrder()
-	  .$this->RenderLimit()
-	  ;
-	return $sql;
-    }
-}
 /* ========================
  *** UTILITY FUNCTIONS ***
 */
 /*----
   PURPOSE: This gets around PHP's apparent lack of built-in object type-conversion.
   ACTION: Copies all public fields from iSrce to iDest
+  DEPRECATED - probably not even used any longer
 */
 function CopyObj(object $iSrce, object $iDest) {
     foreach($iSrce as $key => $val) {
@@ -816,6 +752,7 @@ function CopyObj(object $iSrce, object $iDest) {
 }
 if (!function_exists('Pluralize')) {
     function Pluralize($iQty,$iSingular='',$iPlural='s') {
+	throw new exception('Use fcString::Pluralize() instead.');
 	  if ($iQty == 1) {
 		  return $iSingular;
 	  } else {
@@ -825,7 +762,7 @@ if (!function_exists('Pluralize')) {
 }
 
 function SQLValue($iVal) {
-    throw new exception('SQLValue() is deprecated. Use... umm, something else.');
+    throw new exception('SQLValue() is deprecated. Use Engine()->SanitizeAndQuote().');
     if (is_array($iVal)) {
 	foreach ($iVal as $key => $val) {
 	    $arOut[$key] = SQLValue($val);
@@ -857,13 +794,14 @@ function SQL_for_filter(array $iVals) {
 throw new exception('How did we get here?');
     return $sql;
 }
+/* 2016-01-23 use fcString::NoYes() instead.
 function NoYes($iBool,$iNo='no',$iYes='yes') {
     if ($iBool) {
 	return $iYes;
     } else {
 	return $iNo;
     }
-}
+}*/
 
 function nz(&$iVal,$default=NULL) {
     return empty($iVal)?$default:$iVal;
@@ -900,6 +838,7 @@ function nzApp(&$ioVal,$iTxt=NULL) {
     2012-03-11 iKey can now be an array, for multidimensional iArr
 */
 function nzArray(array $iArr=NULL,$iKey,$iDefault=NULL) {
+    throw new exception('nzArray() is deprecated; call clsArray::Nz() instead.');
     $out = $iDefault;
     if (is_array($iArr)) {
 	if (is_array($iKey)) {
@@ -964,6 +903,7 @@ function nzArray_debug(array $iArr=NULL,$iKey,$iDefault=NULL) {
     2012-03-05 added iReplace, iAppend
 */
 function ArrayJoin(array $arStart=NULL, array $arAdd=NULL, $iReplace, $iAppend) {
+    throw new exception('Who calls this? ArrayJoin() should be a method of clsArray.');
     if (is_null($arStart)) {
 	$arOut = $arAdd;
     } elseif (is_null($arAdd)) {
@@ -1014,150 +954,5 @@ function FirstNonEmpty(array $iList) {
 	}
     }
 }
-/*----
-  ACTION: Takes a two-dimensional array and returns it flipped diagonally,
-    i.e. each element out[x][y] is element in[y][x].
-  EXAMPLE:
-    INPUT      OUTPUT
-    +---+---+  +---+---+---+
-    | A | 1 |  | A | B | C |
-    +---+---+  +---+---+---+
-    | B | 2 |  | 1 | 2 | 3 |
-    +---+---+  +---+---+---+
-    | C | 3 |
-    +---+---+
-*/
-function ArrayPivot($iArray) {
-    foreach ($iArray as $row => $col) {
-	if (is_array($col)) {
-	    foreach ($col as $key => $val) {
-		$arOut[$key][$row] = $val;
-	    }
-	}
-    }
-    return $arOut;
-}
-/*----
-  ACTION: convert an array to SQL for filtering
-  INPUT: iarFilt = array of filter terms; key is ignored
-*/
-function Array_toFilter($iarFilt) {
-    $out = NULL;
-    if (is_array($iarFilt)) {
-	foreach ($iarFilt as $key => $cond) {
-	    if (!is_null($out)) {
-		$out .= ' AND ';
-	    }
-	    $out .= '('.$cond.')';
-	}
-    }
-    return $out;
-}
-/* ========================
- *** DEBUGGING FUNCTIONS ***
-*/
 
-// these could later be expanded to create a call-path for errors, etc.
 
-function CallEnter($iObj,$iLine,$iName) {
-  global $intCallDepth, $debug;
-  if (KDO_DEBUG_STACK) {
-    $strDescr =  ' line '.$iLine.' ('.get_class($iObj).')'.$iName;
-    _debugLine('enter','&gt;',$strDescr);
-    $intCallDepth++;
-    _debugDump();
-  }
-}
-function CallExit($iName) {
-  global $intCallDepth, $debug;
-  if (KDO_DEBUG_STACK) {
-    $intCallDepth--;
-    _debugLine('exit','&lt;',$iName);
-    _debugDump();
-  }
-}
-function CallStep($iDescr) {
-  global $intCallDepth, $debug;
-  if (KDO_DEBUG_STACK) {
-    _debugLine('step',':',$iDescr);
-    _debugDump();
-  }
-}
-function LogError($iDescr) {
-  global $intCallDepth, $debug;
-
-  if (KDO_DEBUG_STACK) {
-    _debugLine('error',':',$iDescr);
-    _debugDump();
-  }
-}
-function _debugLine($iType,$iSfx,$iText) {
-    global $intCallDepth, $debug;
-
-    if (KDO_DEBUG_HTML) {
-      $debug .= '<span class="debug-'.$iType.'"><b>'.str_repeat('&mdash;',$intCallDepth).$iSfx.'</b> '.$iText.'</span><br>';
-    } else {
-      $debug .= str_repeat('*',$intCallDepth).'++ '.$iText."\n";
-    }
-}
-function _debugDump() {
-    global $debug;
-
-    if (KDO_DEBUG_IMMED) {
-	DoDebugStyle();
-	echo $debug;
-	$debug = '';
-    }
-}
-function DumpArray($iArr) {
-  global $intCallDepth, $debug;
-
-  if (KDO_DEBUG) {
-    while (list($key, $val) = each($iArr)) {
-      if (KS_DEBUG_HTML) {
-        $debug .= '<br><span class="debug-dump"><b>'.str_repeat('-- ',$intCallDepth+1).'</b>';
-        $debug .= " $key => $val";
-        $debug .= '</span>';
-      } else {
-        $debug .= "/ $key => $val /";
-      }
-      if (KDO_DEBUG_IMMED) {
-        DoDebugStyle();
-        echo $debug;
-        $debug = '';
-      }
-    }
-  }
-}
-function DumpValue($iName,$iVal) {
-  global $intCallDepth, $debug;
-
-  if (KDO_DEBUG) {
-    if (KS_DEBUG_HTML) {
-      $debug .= '<br><span class="debug-dump"><b>'.str_repeat('-- ',$intCallDepth+1);
-      $debug .= " $iName</b>: [$iVal]";
-      $debug .= '</span>';
-    } else {
-      $debug .= "/ $iName => $iVal /";
-    }
-    if (KDO_DEBUG_IMMED) {
-      DoDebugStyle();
-      echo $debug;
-      $debug = '';
-    }
-  }
-}
-function DoDebugStyle() {
-  static $isStyleDone = false;
-
-  if (!$isStyleDone) {
-    echo '<style type="text/css"><!--';
-    if (KDO_DEBUG_DARK) {
-      echo '.debug-enter { background: #666600; }';	// dark highlight
-    } else {
-      echo '.debug-enter { background: #ffff00; }';	// regular yellow highlight
-    }
-    echo '--></style>';
-    $isStyleDone = true;
-  }
-}

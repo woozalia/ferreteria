@@ -4,18 +4,23 @@
     At this point, this is mainly for formatting purposes.
   HISTORY:
     2013-12-17 Created for DataCurr()
+    2016-01-18 Same() method added
+    2016-02-01 Renaming clsMoney -> fcMoney, with clsMoney as a deprecated alias
 */
 
-class clsMoney {
-/*
-    function FormatMoney($iAmount,$iPrefix='',$iPlus='') {
-	if ($iAmount < 0) {
-	    $str = '-'.$iPrefix.sprintf( '%0.2f',-$iAmount);
-	} else {
-	    $str = $iPlus.$iPrefix.sprintf( '%0.2f',$iAmount);
-	}
-	return $str;
-    }*/
+class fcMoney {
+    static private $nDigits = 2;	// TODO: make this an overrideable option
+
+    static public function Same($nAmt1, $nAmt2) {
+	// until PHP 5.6 is more ubiquitous, we have to fake powers of ten:
+	//$fRez = 10 ** (self::$nDigits);
+	$fRez = '1' . str_repeat('0',self::$nDigits);
+	
+	$ni1 = (int)($nAmt1 * $fRez);
+	$ni2 = (int)($nAmt2 * $fRez);
+	
+	return $ni1 == $ni2;
+    }
     static public function BasicFormat($nAmt,$sPfx='$',$sPlus='') {
 	throw new exception('BasicFormat() is deprecated; call Format_withSymbol() or Format_number().');
 	if (is_null($nAmt)) {
@@ -63,3 +68,4 @@ class clsMoney {
     }
 
 }
+class clsMoney extends fcMoney {}	// deprecated

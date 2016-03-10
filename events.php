@@ -227,18 +227,27 @@ class clsSysEvents extends clsSysEvents_abstract {
     */
     public function EventData($sTableKey=NULL,$idTableRow=NULL,$iDebug=FALSE) {
 	$rs = $this;
-	$oSQL = new clsSQLFilt('AND');
+	
+	
+	//$oSQL = new clsSQLFilt('AND');
+	$arFilt = NULL;
 	if (!is_null($sTableKey)) {
-	    $oSQL->AddCond('ModType="'.$sTableKey.'"');
+	    //$oSQL->AddCond('ModType="'.$sTableKey.'"');
+	    $arFilt[] = 'ModType="'.$sTableKey.'"';
 	}
 	if (!is_null($idTableRow)) {
-	    $oSQL->AddCond('ModIndex='.$idTableRow);
+	    //$oSQL->AddCond('ModIndex='.$idTableRow);
+	    $arFilt[] = 'ModIndex='.$idTableRow;
 	}
 	if (!$iDebug) {
-	    $oSQL->AddCond('NOT isDebug');
+	    //$oSQL->AddCond('NOT isDebug');
+	    $arFilt[] = 'NOT isDebug';
 	}
-	$sql = $oSQL->RenderFilter('WHERE ').' ORDER BY WhenStarted DESC, ID DESC';
-	$rc = $this->DataSet($sql);
+	$of = new fcSQLt_Filt('AND',$arFilt);
+	//$sql = $oSQL->RenderFilter('WHERE ').' ORDER BY WhenStarted DESC, ID DESC';
+	$sql = $of->RenderValue();	// don't include the 'WHERE'
+	
+	$rc = $this->GetRecords($sql);
 	return $rc;
     }
 }
@@ -333,7 +342,8 @@ class clsLogger_Table extends clsLogger_data {
     public function CreateEvent(array $arArgs,$arEdits=NULL) {
 	$tblData = $this->DataTable();
 	// add data record's identity info
-	$arArgs['type'] = $rcData->ActionKey();
+	$arArgs['type'] = $tblData->ActionKey();		// TODO: this will crash - $rcData not defined
+	// shouldn't it just be $tblData->ActionKey()?
 
 	$tEvents = $this->EventTable();
 	$this->rcEvent = $tEvents->CreateEvent($arArgs,NULL,$arEdits);
@@ -347,11 +357,8 @@ class clsLogger_Table extends clsLogger_data {
 	return $this->rcEvent;
     }
     protected function EventData($iDebug=FALSE) {
-	throw new exception('Not fully implemented; see code comments.');
-	/*
-	  After getting this far with implementing this class, I realized that
-	    my usage case was wrong and should have been based in a recordset.
-	*/
+	$rs = $this->EventTable()->EventData($this->DataTable()->ActionKey(),NULL,$iDebug);
+	return $rs;
     }
 }
 
@@ -390,8 +397,8 @@ class clsLogger_DataSet extends clsLogger_data {
     public function CreateEvent(array $arArgs,$arEdits=NULL) {
 	$rcData = $this->DataRecord();
 	// add data record's identity info
-	$arArgs['type'] = $rcData->Table()->ActionKey();
-	$arArgs['id'] = $rcData->KeyValue();
+	$arArgs[KS_EVENT_ARG_MOD_TYPE] = $rcData->Table()->ActionKey();	// type
+	$arArgs[KS_EVENT_ARG_MOD_INDEX] = $rcData->KeyValue();	// id
 
 	$tEvents = $this->EventTable();
 	$this->rcEvent = $tEvents->CreateEvent($arArgs,$rcData->Values(),$arEdits);

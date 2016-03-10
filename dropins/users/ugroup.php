@@ -191,8 +191,8 @@ class acUserGroup extends clsUserGroup {
 	}
 	$out = $this->AdminLine_core($htID);
 
-	$htName = htmlspecialchars($this->ValueNz('Name'));
-	$htDescr = htmlspecialchars($this->ValueNz('Descr'));
+	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));
+	$htDescr = fcString::EncodeForHTML($this->ValueNz('Descr'));
 	$htWhen = $this->ValueNz('WhenCreated');
 
 	$out = <<<__END__
@@ -207,8 +207,8 @@ __END__;
 	return $out;
     }
     protected function AdminLine_core($htID) {
-	$htName = htmlspecialchars($this->ValueNz('Name'));
-	$htDescr = htmlspecialchars($this->ValueNz('Descr'));
+	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));
+	$htDescr = fcString::EncodeForHTML($this->ValueNz('Descr'));
 	$htWhen = $this->ValueNz('WhenCreated');
 
 	$out = <<<__END__
@@ -261,12 +261,12 @@ __END__;
 	$oTplt = $this->PageTemplate();
 	$arCtrls = $frmEdit->RenderControls($doEdit);
 	  // custom vars
-	  $arCtrls['ID'] = $this->AdminLink();
+	  $arCtrls['ID'] = $this->SelfLink();
 	  if ($this->IsNew()) {
 	      $arCtrls['ID'] = 'n/a';
 	      $arCtrls['WhenCreated'] = '<i>not yet</i>';
 	  } else {
-	      $arCtrls['ID'] = $this->AdminLink();
+	      $arCtrls['ID'] = $this->SelfLink();
 	  }
 
 	// render the form
@@ -299,26 +299,22 @@ __END__;
     private $frmPage;
     protected function PageForm() {
 	if (empty($this->frmPage)) {
-	    $oForm = new fcForm_DB($this->Table()->ActionKey(),$this);
+	    $oForm = new fcForm_DB($this);
 
 	      $oField = new fcFormField_Num($oForm,'ID');
-		$oCtrl = new fcFormControl_HTML_Hidden($oForm,$oField,array());
+		$oCtrl = new fcFormControl_HTML_Hidden($oField,array());
 		  $oCtrl->Editable(FALSE);
 
 	      $oField = new fcFormField_Text($oForm,'Name');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>20));
+		$oCtrl = new fcFormControl_HTML($oField,array('size'=>20));
 
 	      $oField = new fcFormField_Text($oForm,'Descr');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>60));
+		$oCtrl = new fcFormControl_HTML($oField,array('size'=>60));
 
 	      $oField = new fcFormField_Time($oForm,'WhenCreated');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>10));
+		$oField->SetDefault(time());
+		$oCtrl = new fcFormControl_HTML_Timestamp($oField,array('size'=>10));
 		  $oCtrl->Editable(FALSE);
-
-	    $oForm->NewValue('WhenCreated',time());
-
-//	    $frmPage->AddField(new clsFieldTime('WhenCreated'),	new clsCtrlHTML_ReadOnly());
-//	    $frmPage->NewVals(array('WhenCreated'=>'NOW()'));
 
 	    $this->frmPage = $oForm;
 	}

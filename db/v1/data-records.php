@@ -98,6 +98,9 @@ abstract class clsRecs_abstract {
 	    return $this->Row;
 	}
     }
+    public function IsNew() {
+	return is_null($this->Values());
+    }
     /*----
       ACTION: only sets the given values in the current row;
 	does not clear any missing values.
@@ -159,6 +162,35 @@ abstract class clsRecs_abstract {
 	} else {
 	    return $iDefault;
 	}
+    }
+    /*----
+      RETURNS: For each record, the value of the given field is
+	appended to the output string. The values are separated by commas.
+	The resulting string is suitable for use as the target of an "IN" clause.
+      ASSUMES: The values do not need to be sanitized or quoted. (If this is
+	needed, write a separate method called SQL_ValueList_safe() with a $doQuote
+	parameter.
+    */
+    public function ColumnValues_SQL($sField) {
+	$out = NULL;
+	if ($this->HasRows()) {
+	    while ($this->NextRow()) {
+		$s = $this->Value($sField);
+		$out .= $s.',';
+	    }
+	    $out = trim($out,','); // remove trailing comma
+	}
+	return $out;
+    }
+    public function ColumnValues_array($sField) {
+	$ar = NULL;
+	if ($this->HasRows()) {
+	    while ($this->NextRow()) {
+		$v = $this->Value($sField);
+		$ar[] = $v;
+	    }
+	}
+	return $ar;
     }
     /*----
       HISTORY:
@@ -240,7 +272,13 @@ abstract class clsRecs_abstract {
 	return $this->objRes->is_filled();
     }
     public function RowCount() {
-	return $this->objRes->get_count();
+	if (is_object($this->ResultHandler())) {
+	    return $this->ResultHandler()->get_count();
+	} else {
+	    // 2016-01-20 Let's just assume that if ResultHandler() is not set, then there wasn't a successful query.
+	    // TODO: maybe set an internal status code/message in order to make it easier to figure out what happened.
+	    return 0;
+	}
     }
     public function RewindRows() {
 	if ($this->hasRows()) {
@@ -369,6 +407,8 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
     /*----
       HISTORY:
 	2010-11-01 iID=NULL now means object does not have data from an existing record
+	2016-03-03 Rather than checking the keys specifically, let's just see if Values()
+	  is NULL (not an array) -- which can be done in a base class.
     */
     public function IsNew() {
 	return is_null($this->KeyValue());
@@ -420,6 +460,8 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
     }
     /*----
       RETURNS: list of key values from the current recordset, formatted for use in an SQL "IN (...)" clause
+      SEE ALSO: ColumnValues_SQL()
+      TODO: This method could probably use that one.
     */
     public function KeyListSQL() {
 	$sql = NULL;
@@ -436,6 +478,7 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
     /*----
       RETURNS: array of recordsets:
 	array[ID] = Values()
+      SEE ALSO: ColumnValues_array() (related but not identical)
     */
     public function asKeyedArray() {
 	$ar = array();
@@ -515,7 +558,7 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
 	2013-07-17 splitting into SQL_forUpdate and SQL_forUpdateMe
     */
     public function SQL_forUpdate(array $iSet,$iWhere) {
-	return $this->Table->SQL_forUpdate($iSet,$iWhere);
+	return $this->Table()->SQL_forUpdate($iSet,$iWhere);
     }
     /*----
       HISTORY:

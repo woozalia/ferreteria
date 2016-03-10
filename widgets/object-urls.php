@@ -1,7 +1,24 @@
 <?php
 /*
-  PURPOSE: helper class for menu system
-    manages action URLs
+  PURPOSE: helper class for menu system - manages action URLs
+    Provides a set of four functions which are wrappers to a LinkBuilder object:
+      * SelfArray(array $arAdd=NULL)
+	* returns an array of the currently-defined values to link, based on host object's type and internal state
+	* calls LinkBuilder()->LinkArray($arAdd)
+      * SelfURL(array $arAdd=NULL)
+	* builds a URL from the array returned by SelfArray()
+	* calls LinkBuilder()->LinkURL($arAdd)
+      * SelfLink($sText=NULL,$sPopup=NULL,array $arAdd=NULL,array $arAttr=NULL)
+	* builds a link from SelfURL()'s URL, with text and attributes defined by the additional arguments
+	* calls LinkBuilder()->LinkHTML($sText,$sPopup,$arAdd,$arAttr)
+      * SelfRedirect(array $arAdd=NULL,$sText=NULL)
+	* redirects to the URL returned by SelfURL()
+	* calls LinkBuilder()->LinkRedirect($sText,$arAdd)
+      In each case, $arAdd is an optional array of additional values to include.
+    The host class defines what class the LinkBuilder is. The LinkBuilder-descended class
+      implements the code which calculates the basic array of values (SelfArray).
+    The host class also decides what text is displayed for a link at call-time.
+    
   HISTORY:
     2013-12-04 adapted from MediaWiki classes for standalone menu system
     2015-05-08 MW data record classes have no App() method, so resorting to static call in _AdminURL() and BuildLink();
@@ -30,7 +47,7 @@ trait ftLinkableObject {
     public function SelfArray(array $arAdd=NULL) {
         return $this->LinkBuilder()->LinkArray($arAdd);
     }
-    public function SelfURL($arAdd=NULL) {
+    public function SelfURL(array $arAdd=NULL) {
 	return $this->LinkBuilder()->LinkURL($arAdd);
     }
     public function SelfLink($sText=NULL,$sPopup=NULL,array $arAdd=NULL,array $arAttr=NULL) {
@@ -119,48 +136,15 @@ trait ftLinkableRecord {
 	* If set to an empty string, no link will be generated
     */
     public function SelfLink_NewKey() {
-	return 'new';
+	return KS_NEW_REC;
     }
 
     // -- CONFIGURATION -- //
-    // ++ API ++ //
-
-    /*----
-      USED BY: VbzAdmin::VbzAdminStkItems::Listing_forItem()
-      HISTORY:
-	2010-10-06 Disabled, because it wasn't clear if anyone was using it.
-	  Thought I checked VbzAdmin, WorkFerret, and AudioFerret
-	2010-10-13 VbzAdmin::VbzAdminStkItems::Listing_forItem() calls it
-	2013-12-14 Moved from mw/admin.php to vbz-data.php
-    *//*
-    public function SelfArray(array $arAdd=NULL) {
-        return $this->LinkBuilder()->LinkArray($arAdd);
-    }
-    public function SelfURL($arAdd=NULL) {
-	return $this->LinkBuilder()->LinkURL($arAdd);
-    }
-    public function SelfLink($sText=NULL,$sPopup=NULL,array $arAdd=NULL,array $arAttr=NULL) {
-	return $this->LinkBuilder()->LinkHTML($sText,$sPopup,$arAdd,$arAttr);
-    }
-    public function SelfRedirect(array $arAdd=NULL,$sText=NULL) {
-	return $this->LinkBuilder()->LinkRedirect($arAdd,$sText);
-    }*/
-
-    // -- API -- //
 
 }
 
 abstract class fcLinkBuilder {
 
-    // ++ STATIC METHODS ++ //
-/*
-    private static function _Spawn() {
-	$strClass = static::_ClassName();
-	$obj = new $strClass();
-	return $obj;
-    }
-*/
-    // -- STATIC METHODS -- //
     // ++ ABSTRACT METHODS ++ //
 
     // RETURNS: an array of values that identify the linked object (table or table+record)
@@ -191,12 +175,17 @@ abstract class fcLinkBuilder {
       RETURNS: URL for link
       INPUT:
 	$arAdd: same as LinkArray()
+      NOTE: (2015-11-30) I've removed the '/' that was being added between $urlBase and $urlAdd
+	because it was causing unnecessary duplicattion ('//' in generated URLs) and this does not
+	seem to be causing any problems -- but it might in the future. If it does, then there
+	needs to be documentation explaining whether BaseURLs should have terminating slashes or not.
+	Or something like that.
     */
     public function LinkURL(array $arAdd=NULL) {
 	$arLink = $this->LinkArray($arAdd);
 	$urlAdd = clsURL::FromArray($arLink);
 	$urlBase = $this->BaseURL_rel();
-	return $urlBase.'/'.$urlAdd;
+	return $urlBase.$urlAdd;
     }
     /*----
       RETURNS: complete tag for link

@@ -27,11 +27,6 @@ define('KSF_USER_CTRL_SET_PASS2'	,'upass2');
 abstract class clsPage {
     private $oDoc;
 
-    // ++ SETUP ++ //
-
-    public function __construct() {}
-
-    // -- SETUP -- //
     // ++ INFORMATION ++ //
 
     // 2015-07-23 if requiring these at this level causes problems, they can be temporarily commented until we can straighten things out.
@@ -41,17 +36,6 @@ abstract class clsPage {
     // -- INFORMATION -- //
     // ++ APP FRAMEWORK ++ //
 
-/* 2015-08-20 old version
-    private $oApp;
-    public function App(clsApp $iObj=NULL) {
-	if (!is_null($iObj)) {
-	    $this->oApp = $iObj;
-	} elseif(is_null($this->oApp)) {
-	    $this->oApp = clsApp::Me();
-	}
-	return $this->oApp;
-    }
-*/
     public function App(clsApp $iObj=NULL) {
 	return clsApp::Me();
     }
@@ -74,9 +58,10 @@ abstract class clsPage {
       ACTION: Redirects the page to the given URL, while preserving the optional Message in a cookie.
     */
     public function Redirect($url,$sMsg=NULL) {
-	if (!is_null($sMsg)) {
+/*	if (!is_null($sMsg)) {
 	    setcookie(KS_MESSAGE_COOKIE,$sMsg,0,'/');
-	}
+	} */
+	clsHTTP::DisplayOnReturn($sMsg);
 	clsHTTP::Redirect($url);
     }
     public function RedirectHome($sMsg=NULL) {
@@ -91,20 +76,6 @@ abstract class clsPage {
     */
     public function Reload() {
 	clsHTTP::Redirect($this->SelfURL());
-    }
-    /*----
-      ACTION: Look for Message information in the cookie.
-	Remove it from cookie if found.
-      RETURNS: message string if found, NULL if not found.
-    */
-    static protected function GetRedirectMessage() {
-	if (array_key_exists(KS_MESSAGE_COOKIE,$_COOKIE)) {
-	    $sMsg = $_COOKIE[KS_MESSAGE_COOKIE];
-	    setcookie(KS_MESSAGE_COOKIE,NULL);	// delete the cookie
-	    return $sMsg;
-	} else {
-	    return NULL;
-	}
     }
 
     // -- UTILITIES -- //
@@ -124,9 +95,11 @@ abstract class clsPageStandalone extends clsPage {
     */
     public function DoPage() {
 	try {
+	    $this->SaveStartTime();
 	    $this->ParseInput();
 	    $this->HandleInput();
 	    $this->PreSkinBuild();
+	    $this->ShowExecTime();
 	    $this->Skin()->Build();	// tell the skin to fill in its pieces
 	    $this->PostSkinBuild();
 	    $this->Skin()->DoPage();
@@ -137,7 +110,7 @@ abstract class clsPageStandalone extends clsPage {
 
     // -- EXECUTION -- //
     // ++ PAGE GENERATION ++ //
-
+    
     /*-----
       ACTION: Grab any expected input and interpret it
     */
@@ -169,13 +142,13 @@ abstract class clsPageStandalone extends clsPage {
 
     /*----
       ACTION: Redirects the page to the given URL, while preserving the optional Message in a cookie.
-    */
+    */ /* 2016-01-18 This seems to be already defined by the root parent
     public function Redirect($url,$sMsg=NULL) {
 	if (!is_null($sMsg)) {
 	    setcookie(KS_MESSAGE_COOKIE,$sMsg,0,'/');
 	}
 	clsHTTP::Redirect($url);
-    }
+    } */
     public function RedirectHome($sMsg=NULL) {
 	$this->Redirect($this->BaseURL_rel(),$sMsg);
     }
@@ -193,7 +166,7 @@ abstract class clsPageStandalone extends clsPage {
       ACTION: Look for Message information in the cookie.
 	Remove it from cookie if found.
       RETURNS: message string if found, NULL if not found.
-    */
+    */ /* 2016-01-18 DUPLICATED
     static protected function GetRedirectMessage() {
 	if (array_key_exists(KS_MESSAGE_COOKIE,$_COOKIE)) {
 	    $sMsg = $_COOKIE[KS_MESSAGE_COOKIE];
@@ -202,7 +175,7 @@ abstract class clsPageStandalone extends clsPage {
 	} else {
 	    return NULL;
 	}
-    }
+    } */
     /*----
       RETURNS: The rest of the URI after KWP_PAGE_BASE
       REQUIRES: KWP_PAGE_BASE must be set to the base URL for the expected request (e.g. '/cat/')
@@ -231,6 +204,19 @@ abstract class clsPageStandalone extends clsPage {
     }
 
     // -- UTILITIES -- //
+    // ++ METRICS ++ //
+    
+    private $nStartTime;
+    protected function SaveStartTime() {
+	$this->nStartTime = microtime(TRUE);
+    }
+    protected function GetExecTime() {
+	return microtime(TRUE) - $this->nStartTime;
+    }
+    protected function ShowExecTime() {
+	$this->Skin()->AddFooterStat('exec time',$this->GetExecTime());
+    }
+    
 }
 
 /*%%%%
@@ -239,271 +225,10 @@ abstract class clsPageStandalone extends clsPage {
     - calling Skin to render results (this should
       probably be eliminated, and have the App just
       call Skin->DoPage() directly)
+    - path and URL parsing services
 */
 abstract class clsPageBasic extends clsPageStandalone {
 
-    // ++ EXCEPTION HANDLING ++ //
-
-    /*----
-      HISTORY:
-	2011-03-31 added Page and Cookie to list of reported variables
-    */
-    protected function DoEmailException(exception $e) {
-	$sMsgErr = $e->getMessage();
-
-	$arErr = array(
-	  'descr'	=> $e->getMessage(),
-	  'stack'	=> $e->getTraceAsString(),
-	  'guest.addr'	=> $_SERVER['REMOTE_ADDR'],
-	  'guest.agent'	=> $_SERVER['HTTP_USER_AGENT'],
-	  'guest.ref'	=> NzArray($_SERVER,'HTTP_REFERER'),
-	  'guest.page'	=> $_SERVER['REQUEST_URI'],
-	  'guest.ckie'	=> NzArray($_SERVER,'HTTP_COOKIE'),
-	  );
-
-	$out = $this->Exception_Message_toEmail($arErr);	// generate the message to email
-	$sSubj = $this->Exception_Subject_toEmail($arErr);
-
-//	$ok = mail(KS_TEXT_EMAIL_ADDR_ERROR,$subj,$out);	// email the message
-	$this->App()->DoEmail_Auto(
-	  KS_TEXT_EMAIL_ADDR_ERROR,
-	  KS_TEXT_EMAIL_NAME_ERROR,
-	  $sSubj,$sMsgErr);
-
-	echo $this->Exception_Message_toShow($sMsgErr);		// display something for the guest
-
-	throw $e;
-
-	// FUTURE: log the error and whether the email was successful
-    }
-    protected function Exception_Subject_toEmail(array $arErr) {
-	return 'error in '.KS_SITE_SHORT.' from IP '.$arErr['guest.addr'];
-    }
-    protected function Exception_Message_toEmail(array $arErr) {
-	$guest_ip = $arErr['guest.addr'];
-	$guest_br = $arErr['guest.agent'];
-	$guest_pg = $arErr['guest.page'];
-	$guest_rf = $arErr['guest.ref'];
-	$guest_ck = $arErr['guest.ckie'];
-
-	$out = 'Description: '.$arErr['descr'];
-	$out .= "\nStack trace:\n".$arErr['stack'];
-	$out .= <<<__END__
-
-Client information:
- - IP Addr : $guest_ip
- - Browser : $guest_br
- - Cur Page: $guest_pg
- - Prv Page: $guest_rf
- - Cookie  : $guest_ck
-__END__;
-
-	return $out;
-    }
-    protected function Exception_Message_toShow($iMsg) {
-	$msg = $iMsg;
-	$htContact = '<a href="'.KWP_HELP_CONTACT.'">contact</a>';
-	$out = <<<__END__
-<b>Ack!</b> We seem to have a small problem here. (If it was a large problem, you wouldn't be seeing this message.)
-The webmaster is being alerted about this; please feel free to $htContact the webmaster.
-
-<br><br>Meanwhile, you might try reloading the page -- a lot of errors are transient,
-which sometimes makes them hard to fix, which is why there are more of them than the other kind.
-
-<br><br>We apologize for the nuisance.
-
-<br><br><b>Error Message</b>: $msg
-<pre>
-__END__;
-	return $out;
-    }
-}
-
-/*%%%%
-  PURPOSE: page which:
-    * handles user log-ins
-    * provides methods for displaying the necessary forms
-      for handling user login/setup (it's up to the implementer to
-      call those methods and decide where the forms should display)
-    * provides methods for managing admin-style menus
-*/
-abstract class clsPageLogin extends clsPageBasic {
-
-    // ++ STATIC ++ //
-
-    /*----
-      RETURNS: URL fragment to add to page's home URL
-	for requesting token validation
-    */
-    protected static function AuthURLPart($idToken,$sToken) {
-	$sTokenHex = bin2hex($sToken);
-	$url = '?auth='.$idToken.':'.$sTokenHex;
-	return $url;
-    }
-    /*----
-      ACTION: Look for Auth information in the user input.
-	If found, check it for validity.
-      RETURNS: array with results, or NULL if not found
-    */
-    protected static function ParseAuth() {
-	if (array_key_exists('auth',$_REQUEST)) {
-	    $sAuth = $_REQUEST['auth'];
-
-	    $id = strtok($sAuth, ':');	// string before ':' is auth-email ID
-	    $sHex = strtok(':');		// string after ':' is token (in hexadecimal)
-	    //$sToken = hex2bin($sHex);	// requires PHP 5.4
-	    $sBin = pack("H*",$sHex);	// equivalent to hex2bin()
-	    $arOut = array(
-	      'auth'	=> $sAuth,	// unparsed -- for forms
-	      'id'		=> $id,
-	      'bin'		=> $sBin	// binary format
-	      );
-	} else {
-	    $arOut = NULL;
-	}
-	return $arOut;
-    }
-
-    // -- STATIC -- //
-    // ++ DYNAMIC ++ //
-
-    // user access stuff
-    private $sLogin;
-    private $sPass;
-    private $sPassX;	// duplicate password for confirming change
-    private $sAuth;	// auth token
-    private $sEmail;
-    private $isLogin;	// is login attempt?
-    private $isReset;
-    private $isNew;	// is request to create new account?
-    private $isAuth;
-    private $doEmail;
-    private $doLogout;
-    // display stuff
-    private $arPageHdrWidgets;
-    // menu
-    private $arPath;	// array of path params
-    private $oMHome;	// menu "home" node
-    private $oMNode;	// selected menu node (if any)
-    private $oMPaint;	// menu painter
-
-    // ++ SETUP ++ //
-
-    public function __construct() {
-	$this->rcUser = NULL;
-	$this->isNew = NULL;
-    }
-
-    // -- SETUP -- //
-    // ++ STATUS ACCESS ++ //
-
-    /*----
-      RETURNS: TRUE iff the user has submitted an authorization token
-    */
-    protected function IsAuthLink($b=NULL) {
-	if (!is_null($b)) {
-	    $this->isAuth = $b;
-	}
-	return $this->isAuth;
-    }
-    /*----
-      RETURNS: TRUE iff this is a request to create an account (user & pw)
-    */
-    protected function IsCreateRequest() {
-	return $this->isNew;
-    }
-    /*----
-      RETURNS: TRUE iff this is a password reset submission
-    */
-    protected function IsResetRequest() {
-	return $this->isReset;
-    }
-    /*----
-      RETURNS: TRUE iff this is an attempt to log in
-    */
-    protected function IsLoginRequest() {
-	return $this->isLogin;
-    }
-    /*----
-      RETURNS: TRUE iff user is logged in
-    */
-    protected function IsLoggedIn() {
-	return $this->App()->Session()->HasUser();
-    }
-    protected function Success($bOk=NULL) {
-	if (!is_null($bOk)) {
-	    $this->ok = $bOk;
-	}
-	return $this->ok;
-    }
-
-    // -- STATUS ACCESS -- //
-    // ++ PAGE VALUES ++ //
-
-    /*----
-      ALIAS for Skin()->PageTitle()
-      RETURNS: string to use for page title
-      NOTES: Needs to be public so page rendering classes
-	can change it from the default.
-    */
-    public function TitleString($sTitle=NULL) {
-	return $this->Skin()->PageTitle($sTitle);
-/*	if (!is_null($sTitle)) {
-	    $this->sTitle = $sTitle;
-	}
-	return $this->sTitle;*/
-    }
-    protected function AuthToken($sNew=NULL) {
-	if (!is_null($sNew)) {
-	    $this->sToken = $sNew;
-	}
-	return $this->sToken;
-    }
-    protected function EmailAddress($sNew=NULL) {
-	if (!is_null($sNew)) {
-	    $this->sEmail = $sNew;
-	}
-	return $this->sEmail;
-    }
-    protected function LoginName($sNew=NULL) {
-	if (!is_null($sNew)) {
-	    $this->sLogin = $sNew;
-	}
-	return $this->sLogin;
-    }
-
-    // -- PAGE VALUES -- //
-    // ++ CLASS NAMES ++ //
-
-    protected function UsersClass() {
-	return 'clsUserAccts';
-    }
-
-    // -- CLASS NAMES -- //
-    // ++ DATA TABLE ACCESS ++ //
-
-    protected function UserTable($id=NULL) {
-	return $this->Data()->Make($this->UsersClass(),$id);
-    }
-
-    // -- DATA TABLE ACCESS -- //
-    // ++ DATA RECORD ACCESS ++ //
-
-    protected function UserRecord() {
-	if (is_null($this->rcUser)) {
-	    $this->SetUserRecord($this->App()->User());
-	}
-	return $this->rcUser;
-    }
-    protected function SetUserRecord(clsUserAcct $rc) {
-	if ($rc->HasRows()) {
-	    $rc->FirstRow();	// make sure first (only) row is loaded
-	    $this->rcUser = $rc;
-	    $this->LoginName($rc->UserName());
-	} // maybe later set a flag if no rows
-    }
-
-    // -- DATA RECORD ACCESS -- //
     // ++ CONFIGURATION ++ //
 
     public function BaseURL_rel() {
@@ -512,18 +237,10 @@ abstract class clsPageLogin extends clsPageBasic {
     public function BaseURL_abs() {
 	return KWP_APP_ABSOLUTE;
     }
-/*
-    abstract protected function BaseURL_rel();	// the home URL for the current page/class
-    protected function BaseURL_abs() {
-	return KWP_APP_ABSOLUTE.$this->BaseURL_rel();
-    } */
 
     // -- CONFIGURATION -- //
-    // ++ PATH/URL/REQUEST MANAGEMENT ++ //
+    // ++ URLS & REQUESTS ++ //
 
-    protected function AuthURL($idToken,$sToken) {
-	return KWP_LOGIN_ABSOLUTE.static::AuthURLPart($idToken,$sToken);
-    }
     /*----
       USED BY: SelfLink(), AuthURL(), and clsActionLink_base->SelfURL()
       INPUT:
@@ -551,15 +268,11 @@ abstract class clsPageLogin extends clsPageBasic {
 	} else {
 	    $arAll = $arArgs;
 	}
-	$url = $urlBase.'/'.clsURL::FromArray($arAll,KS_CHAR_URL_ASSIGN);		// rebuild the path
+	// 2015-11-30 Removing extra '/' because it causes '//' in URL.
+	//$url = $urlBase.'/'.clsURL::FromArray($arAll,KS_CHAR_URL_ASSIGN);		// rebuild the path
+	$url = $urlBase.clsURL::FromArray($arAll,KS_CHAR_URL_ASSIGN);		// rebuild the path
 	return $url;
     }
-    /*----
-      RETURNS: SelfURL, extended by the arguments in $arArgs
-    */
-    /* 2015-07-16 commenting out, because there's no code here
-    public function SelfURL_extend(array $arArgs) {
-    } */
     private $oPath;
     protected function ParsePath() {
 	// get current URL's path relative to base
@@ -570,10 +283,17 @@ abstract class clsPageLogin extends clsPageBasic {
 	    $arPath = array();	// no path
 	}
 	$this->arPath = $arPath;
-	$this->oPath = new clsHTTPInput($arPath);
+	$this->oPath = new fcInputData_array_local($arPath);
     }
+    // 2016-02-22 This should probably be deprecated in favor of URL_RequestObject().
     public function PathObj() {
 	return $this->oPath;
+    }
+    public function URL_RequestObject() {
+	return $this->oPath;
+    }
+    public function HTTP_RequestObject() {
+	return clsHTTP::Request();
     }
     /*----
       RETURNS: keyed array, of either:
@@ -677,6 +397,275 @@ abstract class clsPageLogin extends clsPageBasic {
 	}
     }
 
+    // -- URLS & REQUESTS -- //
+    // ++ EXCEPTIONS ++ //
+
+    /*----
+      HISTORY:
+	2011-03-31 added Page and Cookie to list of reported variables
+    */
+    protected function DoEmailException(exception $e) {
+	$sMsgErr = $e->getMessage();
+
+	$arErr = array(
+	  'descr'	=> $e->getMessage(),
+	  'stack'	=> $e->getTraceAsString(),
+	  'guest.addr'	=> $_SERVER['REMOTE_ADDR'],
+	  'guest.agent'	=> $_SERVER['HTTP_USER_AGENT'],
+	  'guest.ref'	=> NzArray($_SERVER,'HTTP_REFERER'),
+	  'guest.page'	=> $_SERVER['REQUEST_URI'],
+	  'guest.ckie'	=> NzArray($_SERVER,'HTTP_COOKIE'),
+	  );
+
+	$out = $this->Exception_Message_toEmail($arErr);	// generate the message to email
+	$sSubj = $this->Exception_Subject_toEmail($arErr);
+
+//	$ok = mail(KS_TEXT_EMAIL_ADDR_ERROR,$subj,$out);	// email the message
+	$this->App()->DoEmail_Auto(
+	  KS_TEXT_EMAIL_ADDR_ERROR,
+	  KS_TEXT_EMAIL_NAME_ERROR,
+	  $sSubj,$sMsgErr);
+
+	echo $this->Exception_Message_toShow($sMsgErr);		// display something for the guest
+
+	throw $e;
+
+	// FUTURE: log the error and whether the email was successful
+    }
+    protected function Exception_Subject_toEmail(array $arErr) {
+	return 'error in '.KS_SITE_SHORT.' from IP '.$arErr['guest.addr'];
+    }
+    protected function Exception_Message_toEmail(array $arErr) {
+	$guest_ip = $arErr['guest.addr'];
+	$guest_br = $arErr['guest.agent'];
+	$guest_pg = $arErr['guest.page'];
+	$guest_rf = $arErr['guest.ref'];
+	$guest_ck = $arErr['guest.ckie'];
+
+	$out = 'Description: '.$arErr['descr'];
+	$out .= "\nStack trace:\n".$arErr['stack'];
+	$out .= <<<__END__
+
+Client information:
+ - IP Addr : $guest_ip
+ - Browser : $guest_br
+ - Cur Page: $guest_pg
+ - Prv Page: $guest_rf
+ - Cookie  : $guest_ck
+__END__;
+
+	return $out;
+    }
+    protected function Exception_Message_toShow($iMsg) {
+	$msg = $iMsg;
+	$htContact = '<a href="'.KWP_HELP_CONTACT.'">contact</a>';
+	$out = <<<__END__
+<b>Ack!</b> We seem to have a small problem here. (If it was a large problem, you wouldn't be seeing this message.)
+The webmaster is being alerted about this; please feel free to $htContact the webmaster.
+
+<br><br>Meanwhile, you might try reloading the page -- a lot of errors are transient,
+which sometimes makes them hard to fix, which is why there are more of them than the other kind.
+
+<br><br>We apologize for the nuisance.
+
+<br><br><b>Error Message</b>: $msg
+<pre>
+__END__;
+	return $out;
+    }
+    
+    // -- EXCEPTIONS -- //
+
+}
+
+
+/*%%%%
+  PURPOSE: page which:
+    * handles user log-ins
+    * provides methods for displaying the necessary forms
+      for handling user login/setup (it's up to the implementer to
+      call those methods and decide where the forms should display)
+    * provides methods for managing admin-style menus
+*/
+abstract class clsPageLogin extends clsPageBasic {
+
+    // ++ ++ STATIC ++ ++ //
+
+    /*----
+      RETURNS: URL fragment to add to page's home URL
+	for requesting token validation
+    */
+    protected static function AuthURLPart($idToken,$sToken) {
+	$sTokenHex = bin2hex($sToken);
+	$url = '?auth='.$idToken.':'.$sTokenHex;
+	return $url;
+    }
+    /*----
+      ACTION: Look for Auth information in the user input.
+	If found, check it for validity.
+      RETURNS: array with results, or NULL if not found
+    */
+    protected static function ParseAuth() {
+	if (array_key_exists('auth',$_REQUEST)) {
+	    $sAuth = $_REQUEST['auth'];
+
+	    $id = strtok($sAuth, ':');	// string before ':' is auth-email ID
+	    $sHex = strtok(':');		// string after ':' is token (in hexadecimal)
+	    //$sToken = hex2bin($sHex);	// requires PHP 5.4
+	    $sBin = pack("H*",$sHex);	// equivalent to hex2bin()
+	    $arOut = array(
+	      'auth'	=> $sAuth,	// unparsed -- for forms
+	      'id'		=> $id,
+	      'bin'		=> $sBin	// binary format
+	      );
+	} else {
+	    $arOut = NULL;
+	}
+	return $arOut;
+    }
+
+    // -- -- STATIC -- -- //
+    // ++ ++ DYNAMIC ++ ++ //
+
+    // user access stuff
+    private $sLogin;
+    private $sPass;
+    private $sPassX;	// duplicate password for confirming change
+    private $sAuth;	// auth token
+    private $sEmail;
+    private $isLogin;	// is login attempt?
+    private $isReset;
+    private $isNew;	// is request to create new account?
+    private $isAuth;
+    private $doEmail;
+    private $doLogout;
+    // display stuff
+    private $arPageHdrWidgets;
+    // menu
+    private $arPath;	// array of path params
+
+    // ++ SETUP ++ //
+
+    public function __construct() {
+	$this->InitVars();
+    }
+    protected function InitVars() {
+	$this->rcUser = NULL;
+	$this->isNew = NULL;
+    }
+
+    // -- SETUP -- //
+    // ++ STATUS ACCESS ++ //
+
+    /*----
+      RETURNS: TRUE iff the user has submitted an authorization token
+    */
+    protected function IsAuthLink($b=NULL) {
+	if (!is_null($b)) {
+	    $this->isAuth = $b;
+	}
+	return $this->isAuth;
+    }
+    /*----
+      RETURNS: TRUE iff this is a request to create an account (user & pw)
+    */
+    protected function IsCreateRequest() {
+	return $this->isNew;
+    }
+    /*----
+      RETURNS: TRUE iff this is a password reset submission
+    */
+    protected function IsResetRequest() {
+	return $this->isReset;
+    }
+    /*----
+      RETURNS: TRUE iff this is an attempt to log in
+    */
+    protected function IsLoginRequest() {
+	return $this->isLogin;
+    }
+    /*----
+      RETURNS: TRUE iff user is logged in
+    */
+    protected function IsLoggedIn() {
+	return $this->App()->Session()->HasUser();
+    }
+    protected function Success($bOk=NULL) {
+	if (!is_null($bOk)) {
+	    $this->ok = $bOk;
+	}
+	return $this->ok;
+    }
+
+    // -- STATUS ACCESS -- //
+    // ++ PAGE VALUES ++ //
+
+    /*----
+      ALIAS for Skin()->PageTitle()
+      RETURNS: string to use for page title
+      NOTES: Needs to be public so page rendering classes
+	can change it from the default.
+    */
+    public function TitleString($sTitle=NULL) {
+	return $this->Skin()->PageTitle($sTitle);
+    }
+    protected function AuthToken($sNew=NULL) {
+	if (!is_null($sNew)) {
+	    $this->sToken = $sNew;
+	}
+	return $this->sToken;
+    }
+    protected function EmailAddress($sNew=NULL) {
+	if (!is_null($sNew)) {
+	    $this->sEmail = $sNew;
+	}
+	return $this->sEmail;
+    }
+    protected function LoginName($sNew=NULL) {
+	if (!is_null($sNew)) {
+	    $this->sLogin = $sNew;
+	}
+	return $this->sLogin;
+    }
+
+    // -- PAGE VALUES -- //
+    // ++ CLASS NAMES ++ //
+
+    protected function UsersClass() {
+	return 'clsUserAccts';
+    }
+
+    // -- CLASS NAMES -- //
+    // ++ TABLES ++ //
+
+    protected function UserTable($id=NULL) {
+	return $this->Data()->Make($this->UsersClass(),$id);
+    }
+
+    // -- TABLES -- //
+    // ++ RECORDS ++ //
+
+    protected function UserRecord() {
+	if (is_null($this->rcUser)) {
+	    $this->SetUserRecord($this->App()->User());
+	}
+	return $this->rcUser;
+    }
+    protected function SetUserRecord(clsUserAcct $rc) {
+	if ($rc->HasRows()) {
+	    $rc->FirstRow();	// make sure first (only) row is loaded
+	    $this->rcUser = $rc;
+	    $this->LoginName($rc->UserName());
+	} // maybe later set a flag if no rows
+    }
+
+    // -- RECORDS -- //
+    // ++ PATH/URL/REQUEST MANAGEMENT ++ //
+
+    protected function AuthURL($idToken,$sToken) {
+	return KWP_LOGIN_ABSOLUTE.static::AuthURLPart($idToken,$sToken);
+    }
+
     // -- PATH/URL/REQUEST MANAGEMENT -- //
     // ++ PAGE ELEMENTS ++ //
 
@@ -692,6 +681,10 @@ abstract class clsPageLogin extends clsPageBasic {
     public function PageHeaderWidgets(array $arWidgets=NULL) {
 	if (is_array($arWidgets)) {
 	    $this->arPageHdrWidgets = $arWidgets;
+	    foreach ($arWidgets as $o) {
+		// give each one a pointer back here (some need it, some don't)
+		$o->Page($this);
+	    }
 	}
 	return $this->arPageHdrWidgets;
     }
@@ -713,8 +706,12 @@ abstract class clsPageLogin extends clsPageBasic {
 	if (!is_null($arWidgets)) {
 	    $arMenu = array_reverse($arWidgets);	// right-alignment reverses things
 	    foreach ($arMenu as $oLink) {
-		$oLink->Page($this);
-		$htMenu .= "\n".$oLink->Render();
+		if (is_object($oLink)) {
+		    $oLink->Page($this);
+		    $htMenu .= "\n".$oLink->Render();
+		} else {
+		    throw new exception('Menu error: a menu entry is '.gettype($oLink).', and should be an object.');
+		}
 	    }
 	}
 	$out = $this->Skin()->SectionHeader($sTitle,$htMenu,$cssClass);
@@ -760,26 +757,6 @@ abstract class clsPageLogin extends clsPageBasic {
 	    $this->sPassX = $_POST[KSF_USER_CTRL_SET_PASS2];
 	}
     }
-    /* 2015-07-16 other version
-    protected function ParseInput_Login() {
-	$this->isLogin	= $isLogin	= !empty($_POST[KSF_USER_BTN_LOGIN]);
-	$this->isReset	= $isReset	= !empty($_POST[KSF_USER_BTN_SET_PASS]);
-	$this->isNew	= $isNew	= !empty($_POST[KSF_USER_BTN_NEW_ACCT]);
-	$this->doEmail	= $isEmReq	= !empty($_POST['btnSendAuth']);
-	$this->isAuth	= $doGetAuth	= !empty($_GET['auth']);
-	$this->doLogout	= $doLogout	= $this->ReqArgBool('exit');
-
-	if ($isLogin) {
-	    $this->LoginName($_POST['uname']);
-	    $this->sPass = $_POST[KSF_USER_CTRL_ENTER_PASS];
-	} elseif ($isReset) {
-	    $this->sPass = $_POST[KSF_USER_CTRL_SET_PASS1];
-	    $this->sPassX = $_POST[KSF_USER_CTRL_SET_PASS2];
-	    $this->AuthToken(clsHTTP::Request()->GetText('auth'));
-	} elseif ($isEmReq) {	// requesting password request email
-	    $this->EmailAddress($_POST['uemail']);
-	}
-    } */
     /*----
       NOTE 1: There probably needs to be a URL_PostLogin() method, because
 	some apps have the login page on a separate URL and some don't.
@@ -1147,123 +1124,4 @@ abstract class clsPageLogin extends clsPageBasic {
     }
 
     // -- ACCOUNT MANAGEMENT -- //
-    // ++ MENU HANDLING ++ //
-
-    protected function MenuHome(clsMenuItem $oNode=NULL) {
-	if (!is_null($oNode)) {
-	    $this->oMHome = $oNode;
-	    // initialize dependent vars
-	    $this->oMNode = NULL;
-	    $this->oMPaint = NULL;
-	}
-	return $this->oMHome;
-    }
-    /*----
-      USED: internally and by drop-in controllers
-    */
-    protected function MenuNode() {
-	if (is_null($this->oMNode)) {
-	    // figure out which menu item has been invoked
-	    $this->ParsePath();
-	    if ($this->PathArg_exists('page')) {	// if a page is specified
-		$sPage = $this->PathArg('page');
-		if (is_array($sPage)) {
-		    // TODO: silently log an error (may be a bad link): 'page' being set multiple times
-		    $sPage = array_pop($sPage);	// get one element and use that
-		}
-		if (is_null($this->MenuHome())) {
-		    throw new exception('Trying to access menu  when there is no home node.');
-		}
-		// get the menu item object
-		$this->oMNode = $this->MenuHome()->FindNode($sPage);
-	    } else {
-		$this->oMNode = NULL;	// maybe we need some way to prevent this being looked up again?
-	    }
-	}
-	return $this->oMNode;
-    }
-    protected function MenuPainter() {
-	if (is_null($this->oMPaint)) {
-	    $this->oMPaint = $this->MenuPainter_new();
-	}
-	return $this->oMPaint;
-    }
-    abstract protected function MenuPainter_new();
-    protected function RenderHome() {
-	return $this->RenderLogout();	// ok to override this
-    }
-    /*----
-      ACTION: Executes the main action for the currently chosen menu selection
-	(as derived from URL path info)
-      LATER: (2013-12-03) This probably needs to be generalized a bit more,
-	but hopefully it will do for now.
-      HISTORY:
-	2014-01-27 Renamed from HandleMenu() to MenuNode_Exec()
-    */
-    protected function MenuNode_Exec() {
-	$oNode = $this->MenuNode();
-	if (!is_null($oNode)) {
-	    if (is_null($oNode->GoCode())) {
-		// if no Go Code, attempt to use controller
-		$sCtrler = $oNode->Controller();
-		$ok = FALSE;
-		if (!is_null($sCtrler)) {
-		    $id = $this->PathArg('id');
-		    $this->TitleString($oNode->Title());
-		    if (is_null($id)) {
-			$tbl = $this->Data()->Make($sCtrler);
-			// surely this duplicates other code -- but where, and why isn't it being triggered? (https://vbz.net/admin/page:ord/)
-			$out = $tbl->MenuExec($this->PathArgs());
-		    } else {
-			//$rc2 = $tbl->GetItem($id);
-			$rc = $this->Data()->Make($sCtrler,$id);
-			$out = $rc->MenuExec($this->PathArgs());
-		    }
-		    return $out;
-		}
-		if (!$ok) {
-		    $sName = $oNode->Name();
-		    if (empty($sName)) {
-			// this is a bit of a kluge; I don't know why we end up here
-			return $this->DefaultContent();
-		    } else {
-			return 'No action defined for menu item "'.$sName.'".';
-		    }
-		}
-	    } else {
-		$php = $oNode->GoCode();
-		return eval($php);	// execute the menu choice
-	    }
-	} else {
-	    return $this->DefaultContent();
-	}
-    }
-    /*----
-      PURPOSE: Called when no menu item is active
-    */
-    protected function DefaultContent() {
-	return 'Choose an item from the menu, or '.$this->RenderHome().'.';
-    }
-    /*----
-      ACTION: Does any initialization needed for the currently chosen menu selection
-    */
-    protected function MenuNode_Init() {
-	$oNode = $this->MenuNode();
-	if (!is_null($oNode)) {
-	    $oNode->Selected(TRUE);
-	    $sCtrler = $oNode->Controller();
-	    if (!is_null($sCtrler)) {
-		$id = $this->PathArg('id');
-		$obj = $this->Data()->Make($sCtrler,$id);
-		if (method_exists($obj,'MenuInit')) {
-		    $out = $obj->MenuInit($this->PathArgs());
-		} else {
-		    $out = NULL;
-		}
-		return $out;
-	    }
-	}
-    }
-
-    // -- MENU HANDLING -- //
 }

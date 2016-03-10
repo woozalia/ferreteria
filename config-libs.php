@@ -38,14 +38,12 @@ $om = new clsModule(__FILE__, 'events.php');
   $om->AddClass('clsSysEvents');
   $om->AddClass('clsSysEvents_abstract');
   $om->AddClass('clsLogger_DataSet');
-$om = new clsModule(__FILE__, 'menu.php');
-  $om->AddClass('clsMenuRegistry');
-  $om->AddClass('clsMenuItem');
-  $om->AddClass('clsMenuLink');
 $om = new clsModule(__FILE__, 'page.php');
   $om->AddClass('clsPage');
   $om->AddClass('clsPageLogin');
   $om->AddClass('clsPageRestricted');
+$om = new clsModule(__FILE__, 'page.menu.php');
+  $om->AddClass('ftPageMenu');
 $om = new clsModule(__FILE__, 'page-data.php');
   $om->AddClass('fcDataRecs');
 $om = new clsModule(__FILE__, 'skin.php');
@@ -54,9 +52,33 @@ $om = new clsModule(__FILE__, 'skin.php');
 $om = new clsModule(__FILE__, 'skin-login.php');
   $om->AddClass('clsSkin_login');
 
+$om = new clsModule(__FILE__,'db/sql/db-sql.php');
+  $om->AddClass('clsSQL_Query');	// DEPRECATED
+  $om->AddClass('QueryableTable');	// trait
+  $om->AddClass('fcSQL_Select');
+  $om->AddClass('fcSQL_TableSource');
+  $om->AddClass('fcSQLt_Filt');
+
 // DEPRECATED
 $om = new clsModule(__FILE__, 'deprecated/user-mw.php');
   $om->AddClass('clsUser');
+  
+// MENUS
+$om = new clsModule(__FILE__, 'menu/menu-action.php');
+  $om->AddClass('clsActionLink');
+  $om->AddClass('clsActionLink_modeless');
+  $om->AddClass('clsActionLink_option');
+  $om->AddClass('clsAction_section');
+$om = new clsModule(__FILE__, 'menu/menu-item.php');
+  $om->AddClass('clsMenuItem');
+  $om->AddClass('clsMenuLink');
+  $om->AddClass('clsMenuRoot');
+$om = new clsModule(__FILE__, 'menu/menu-manager.php');
+  $om->AddClass('fcMenuMgr');
+$om = new clsModule(__FILE__, 'menu/menu-mapper.php');
+  $om->AddClass('fcMenuMap_Page');
+$om = new clsModule(__FILE__, 'menu/menu-painter.php');
+  $om->AddClass('clsMenuPainter_UL');
 
 // RICH TEXT HANDLERS
 $om = new clsModule(__FILE__, 'rtext/rtext.php');
@@ -67,6 +89,7 @@ $om = new clsModule(__FILE__, 'rtext/rtext-html.php');
 
 // UTILITY LIBRARIES
 $om = new clsModule(__FILE__, 'util/array.php');
+  $om->AddClass('fcArray');
   $om->AddClass('clsArray');
 $om = new clsModule(__FILE__, 'util/cache.php');
   $om->AddClass('clsCacheFile');
@@ -80,13 +103,17 @@ $om = new clsModule(__FILE__, 'util/html.php');
   $om->AddClass('clsHTML');
 $om = new clsModule(__FILE__, 'util/http.php');
   $om->AddClass('clsHTTP');
-  $om->AddClass('clsHTTPInput');
+  $om->AddClass('fcInputData_array');
+  $om->AddClass('fcInputData_array_local');
 $om = new clsModule(__FILE__, 'util/money.php');
+  $om->AddClass('fcMoney');
   $om->AddClass('clsMoney');
 $om = new clsModule(__FILE__, 'util/strings.php');
   $om->AddClass('fcString');
 $om = new clsModule(__FILE__, 'util/string-block.php');
   $om->AddClass('fcStringBlock_static');
+  $om->AddClass('fcsStringBlock');
+  $om->AddClass('fcStringBlock');
 $om = new clsModule(__FILE__, 'util/string-tplt.php');
   $om->AddClass('fcTemplate_array');
   $om->AddClass('clsStringTemplate');
@@ -108,10 +135,8 @@ $om = new clsModule(__FILE__, 'util/url.php');
 // WIDGETS
 $om = new clsModule(__FILE__, 'widgets/data-cache.php');
   $om->AddClass('clsTableCache');
-$om = new clsModule(__FILE__, 'widgets/menu-action.php');
-  $om->AddClass('clsActionLink');
-  $om->AddClass('clsActionLink_modeless');
-  $om->AddClass('clsActionLink_option');
+$om = new clsModule(__FILE__, 'widgets/js.php');
+  $om->AddClass('fcJavaScript');
 $om = new clsModule(__FILE__, 'widgets/object-urls.php');
   $om->AddClass('ftLinkableRecord');
   $om->AddClass('ftLinkableTable');

@@ -124,6 +124,8 @@ abstract class clsTable_abstract {
       HISTORY:
 	2013-12-27 removed iClass parameter because the code ignores it.
 	2014-05-26 I'm now wondering who even uses this, given the existence of GetData().
+	2016-02-09 This is useful for select-from-self when you want to do more than just filter and sort
+	  (e.g. LIMIT). It needs a better name, however.
     */
     public function DataSet($iSQL=NULL) {
 	global $sql;	// for debugging
@@ -140,8 +142,55 @@ abstract class clsTable_abstract {
 	return $obj;
 */
     }
+    public function AllRecords() {
+	return $this->GetRecords();
+    }
     /*----
-      FUTURE: This *so* needs to have iClass LAST, or not at all.
+      NOTE: This replaces GetData()
+    */
+    public function GetRecords($sqlWhere=NULL,$sqlSort=NULL,$sClass=NULL) {
+	global $sql; 	// for debugging
+
+	$sql = 'SELECT * FROM '.$this->NameSQL();
+	if (!is_null($sqlWhere)) {
+	    $sql .= ' WHERE '.$sqlWhere;
+	}
+	if (!is_null($sqlSort)) {
+	    $sql .= ' ORDER BY '.$sqlSort;
+	}
+
+	// TODO: should Query() really be a method of the Recordset-type classes?
+	$rs = $this->SpawnItem($sClass);
+	$rs->Query($sql);
+
+	$this->sqlExec = $sql;
+	if (!is_null($rs)) {
+	    $rs->sqlMake = $sql;
+	}
+	return $rs;
+    }
+    /*----
+      PURPOSE: Same as GetRecord, but
+	(a) throws an exception if more than one record is found
+	(b) advances to the first (only) record
+	(c) returns NULL if no records found
+      TODO: this could be optimized to skip object creation if no records found
+    */
+    public function GetRecord($sqlWhere,$sClass=NULL) {
+	$rc = $this->GetRecords($sqlWhere,NULL,$sClass);
+	$qr = $rc->RowCount();
+	if ($qr == 0) {
+	    return NULL;
+	} elseif ($qr == 1) {
+	    $rc->NextRow();
+	    return $rc;
+	} else {
+	    $sMsg = $qr.' rows found in GetRecord(); should be 1 or 0.';
+	    throw new exception($sMsg);
+	}
+    }
+    /*----
+      TODO: Deprecate this function and replace it with GetRecords()
     */
     public function GetData($iWhere=NULL,$iClass=NULL,$iSort=NULL) {
 	global $sql; 	// for debugging
@@ -179,6 +228,10 @@ abstract class clsTable_abstract {
 	    if ($sqlNames != '') {
 		$sqlNames .= ',';
 		$sqlVals .= ',';
+	    }
+	    if (!(is_string($val) || is_numeric($val))) {
+		$sType = gettype($val);
+		throw new exception("Internal Error: The INSERT value of [$key] is of type $sType.");
 	    }
 	    $sqlNames .= $key;
 	    $sqlVals .= $val;

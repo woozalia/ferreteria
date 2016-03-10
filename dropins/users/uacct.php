@@ -148,8 +148,8 @@ class acUserAcct extends clsUserAcct {
     }
     public function AdminLine() {
 	$htID = $this->AdminLink();
-	$htLogin = htmlspecialchars($this->Value('UserName'));
-	$htName = htmlspecialchars($this->Value('FullName'));
+	$htLogin = fcString::EncodeForHTML($this->Value('UserName'));
+	$htName = fcString::EncodeForHTML($this->Value('FullName'));
 	$htWhen = $this->Value('WhenCreated');
 	$htGrps = $this->GroupList();
 
@@ -236,20 +236,20 @@ __END__;
     private $frmPage;
     protected function PageForm() {
 	if (empty($this->frmPage)) {
-	    $oForm = new fcForm_DB($this->Table()->ActionKey(),$this);
+	    $oForm = new fcForm_DB($this);
 
 	      $oField = new fcFormField_Num($oForm,'ID');
 		$oField->OkToWrite(FALSE);	// never update this field in the db
-		$oCtrl = new fcFormControl_HTML_Hidden($oForm,$oField,array());
+		$oCtrl = new fcFormControl_HTML_Hidden($oField,array());
 
 	      $oField = new fcFormField_Text($oForm,'UserName');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>20));
+		$oCtrl = new fcFormControl_HTML($oField,array('size'=>20));
 
 	      $oField = new fcFormField_Text($oForm,'FullName');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>40));
+		$oCtrl = new fcFormControl_HTML($oField,array('size'=>40));
 
 	      $oField = new fcFormField_Time($oForm,'WhenCreated');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>10));
+		$oCtrl = new fcFormControl_HTML_Timestamp($oField,array('size'=>10));
 		  $oCtrl->Editable(FALSE);
 
 	    $this->frmPage = $oForm;
