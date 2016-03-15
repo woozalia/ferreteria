@@ -24,6 +24,7 @@ $om = new clsModule(__FILE__, 'field-store.php');
   $om->AddClass('fcFieldStorage_Num');
   $om->AddClass('fcFieldStorage_Time');
 $om = new clsModule(__FILE__, 'form.php');
+  $om->AddClass('fcForm');
   $om->AddClass('fcForm_keyed');
 $om = new clsModule(__FILE__, 'form-data.php');
   $om->AddClass('fcForm_DB');

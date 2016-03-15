@@ -35,6 +35,10 @@ class fcForm {
 	}
 	return $this->sName;
     }
+    // USED BY: Control objects. The base class does not do keys.
+    public function HasKey() {
+	return FALSE;
+    }
 
     // -- CONFIG -- //
     // ++ SERVICE ++ //
@@ -164,14 +168,6 @@ class fcForm {
     // -- ACTIONS -- //
     // ++ DATA STORAGE ++ //
 
-    /*----
-      RULE: Call this before attempting to read data
-    */
-//    abstract public function LoadRecord();
-    /*----
-      RULE: Call this to store data after changing
-    */
-//    abstract public function SaveRecord(array $arUpd);
     /*----
       PURPOSE: set or retrieve single value (native format)
     */
@@ -319,6 +315,31 @@ class fcForm {
     // -- RENDERING -- //
     // ++ FORM PROCESSING ++ //
 
+    /*----
+      ACTION: Set native fields from received values
+      USAGE: External only
+	This basically does only the data-receiving part of $this->Save(),
+	  for a single record.
+      HISTORY:
+	2016-03-13 Written for vbzcart checkout forms.
+    */
+    public function Receive(array $arData) {
+	$arCtrls = $this->ControlArray();
+	$arBlank = NULL;
+	$arMissed = NULL;
+	foreach ($arCtrls as $sFieldKey => $oCtrl) {
+	    $arStatus = $oCtrl->ReceiveForm($arData);
+	    if ($arStatus['blank']) {
+		$arBlank[] = $oCtrl;
+	    }
+	    if ($arStatus['absent']) {
+		$arMissed[] = $oCtrl;
+	    }
+	}
+	$arOut['blank'] = $arBlank;
+	$arOut['absent'] = $arMissed;
+	return $arOut;
+    }
     public function Save() {
 	throw new exception('Saving of non-keyed forms is not yet written.');
     }
@@ -353,7 +374,9 @@ abstract class fcForm_keyed extends fcForm {
     
     /*----
       RETURNS: entered value for the given field in the given record
-      USAGE: This is so we can check if certain values are being changed, in case we need
+      USAGE: External only.
+	
+	This is so we can check if certain values are being changed, in case we need
 	to trigger additional events when that happens.
 	
 	It will probably need to be developed further in order to handle weird value formats,

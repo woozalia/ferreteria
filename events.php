@@ -82,13 +82,21 @@ class clsSysEvents extends clsSysEvents_abstract {
       NOTE: This is the method which ultimately determines what the list of values is.
       INPUT: Array containing zero or more elements whose keys match the keys of self::arArgFields,
 	which descendant classes must define.
+      HISTORY:
+	2016-03-13 'params' argument is now automatically serialized if it isn't a string
     */
     public function CalcSQL(array $iArgs) {
 	$arIns = NULL;
+	$db = $this->Engine();
 	foreach ($iArgs as $key=>$val) {
 	    if (array_key_exists($key,self::$arArgFields)) {
 		$sqlKey = self::$arArgFields[$key];
-		$sqlVal = $this->Engine()->SanitizeAndQuote($val);
+		if ($key == 'params') {
+		    if (!is_string($val)) {
+			$val = serialize($val);
+		    }
+		}
+		$sqlVal = $db->SanitizeAndQuote($val);
 	    } else {
 		throw new exception('Unrecognized event argument "'.$key.'".');
 	    }

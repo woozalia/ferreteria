@@ -115,6 +115,18 @@ class fcFormControl_HTML extends fcFormControl {
     protected function NameString() {
 	return $this->NativeObject()->NameString();
     }
+    // PURPOSE: Alias string for use in displaying lists (e.g. missing fields in a form)
+    private $sAlias;
+    public function DisplayAlias($s=NULL) {
+	if (is_null($s)) {
+	    if (empty($this->sAlias)) {
+		$this->sAlias = $this->NameString();
+	    }
+	} else {
+	    $this->sAlias = $s;
+	}
+	return $this->sAlias;
+    }
     
     // -- CONFIGURATION -- //
     // ++ CALCULATIONS ++ //
@@ -139,26 +151,36 @@ class fcFormControl_HTML extends fcFormControl {
     // -- CALCULATIONS -- //
     // ++ CONVERSION ++ //
     
+    /*----
+      OUTPUT: array
+	array['absent']: TRUE or FALSE
+	array['blank']: TRUE or FALSE
+	The plan is for the calling form to use these to compile lists of missing/blank elements
+    */
     public function ReceiveForm(array $arData) {
+	$arOut = array();
 	if ($this->Writable()) {	// don't overwrite value with form data if not editable
 	    $sName = $this->NameString();
 	    $sMsg = NULL;
 	    if (array_key_exists($sName,$arData)) {
-		$vVal = $this->toNative($arData[$sName]);
+		$arOut['absent'] = FALSE;
+		$vPost = $arData[$sName];
+		$arOut['blank'] = (is_null($vPost) || $vPost == '');
+		$vVal = $this->toNative($vPost);
 		$this->NativeObject()->SetValue($vVal);
 	    } else {
-		if ($this->Writable()) {
-		    // this field is editable, but the form isn't sending it:
-		    $sMsg = "Form error: Key [$sName] not found in post data: ".clsArray::Render($arData);
-		    $this->FormObject()->AddMessage($sMsg);
-		    echo $sMsg;	// so it shows up when debugging
-		    // this line may be redundant:
-		    $this->NativeObject()->OkToWrite(FALSE);	// don't try to save this field
-		}
+		// this field is editable, but the form isn't sending it:
+		$arOut['absent'] = TRUE;
+		$sMsg = "Form error: Key [$sName] not found in post data: ".clsArray::Render($arData);
+		$this->FormObject()->AddMessage($sMsg);
+		echo $sMsg;	// so it shows up when debugging
+		// this line may be redundant:
+		$this->NativeObject()->OkToWrite(FALSE);	// don't try to save this field
 	    }
 	} else {
 	    //echo '['.$this->NameString().'] current value: ['.$this->NativeObject()->GetValue().']<br>';
 	}
+	return $arOut;
     }
     /*----
       PURPOSE: convert from received-data (form input) format to internal (native) format
