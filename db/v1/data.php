@@ -838,7 +838,7 @@ function nzApp(&$ioVal,$iTxt=NULL) {
     2012-03-11 iKey can now be an array, for multidimensional iArr
 */
 function nzArray(array $iArr=NULL,$iKey,$iDefault=NULL) {
-    throw new exception('nzArray() is deprecated; call clsArray::Nz() instead.');
+    throw new exception('nzArray() is deprecated; call fcArray::Nz() instead.');
     $out = $iDefault;
     if (is_array($iArr)) {
 	if (is_array($iKey)) {
@@ -856,27 +856,6 @@ function nzArray(array $iArr=NULL,$iKey,$iDefault=NULL) {
 	    }
 	}
     }
-    return $out;
-}
-function nzArray_debug(array $iArr=NULL,$iKey,$iDefault=NULL) {
-    $out = $iDefault;
-    if (is_array($iArr)) {
-	if (is_array($iKey)) {
-	    $out = $iArr;
-	    foreach ($iKey as $key) {
-		if (array_key_exists($key,$out)) {
-		    $out = $out[$key];
-		} else {
-		    return $iDefault;
-		}
-	    }
-	} else {
-	    if (array_key_exists($iKey,$iArr)) {
-		$out = $iArr[$iKey];
-	    }
-	}
-    }
-//echo '<br>IARR:<pre>'.print_r($iArr,TRUE).'</pre> KEY=['.$iKey.'] RETURNING <pre>'.print_r($out,TRUE).'</pre>';
     return $out;
 }
 /*----

@@ -66,7 +66,7 @@ class clsWikiSection2 {
 	    }
 	    return $arOut;
 	} else {
-	    return NzArray($arArgs,$iKey);
+	    return fcArray::Nz($arArgs,$iKey);
 	}
     }
     public function PageVals() {
@@ -189,7 +189,7 @@ abstract class clsWikiSectionLink_base extends clsWikiSectionWidget {
     */
     public function Values_default(array $iarValues) {
 	foreach ($iarValues as $key => $val) {
-	    $this->arData[$key] = NzArray($this->arData,$key,$val);
+	    $this->arData[$key] = fcArray::Nz($this->arData,$key,$val);
 	}
     }
     public function Values(array $iValues=NULL) {
@@ -472,18 +472,6 @@ class clsWikiSection_section extends clsWikiSectionWidget {
 	return $out;
     }
 }
-
-/*
-class clsWikiSectionLink_bool {
-    public function __construct(array $iarData,$iDisp=NULL,$iPopup=NULL,$iKey=NULL) {
-    public function Selected($iOn=NULL) {
-	if (!is_null($iOn)) {
-	    $isActive = !empty($arLink['active']) || $arLink['isdef'];
-	}
-	return NzArray($this->arData,'active');
-    }
-}
-*/
 
 class clsWikiSection {
     // STATIC

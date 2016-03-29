@@ -11,7 +11,6 @@
 */
 
 abstract class fcFormControl {
-    private $bCanEdit;
 
     // ++ SETUP ++ //
 
@@ -28,17 +27,27 @@ abstract class fcFormControl {
       PURPOSE: mainly for setting default options
     */
     protected function Setup() {
-	$this->bCanEdit = TRUE;
+	// config defaults
+	$this->Editable(TRUE);
+	$this->Required(TRUE);
     }
 
     // -- SETUP -- //
     // ++ OPTIONS ++ //
 
+    private $bCanEdit;
     public function Editable($bYes=NULL) {
 	if (!is_null($bYes)) {
 	    $this->bCanEdit = $bYes;
 	}
 	return $this->bCanEdit;
+    }
+    private $bIsReq;
+    public function Required($bYes=NULL) {
+	if (!is_null($bYes)) {
+	    $this->bIsReq = $bYes;
+	}
+	return $this->bIsReq;
     }
 
     // -- OPTIONS -- //
@@ -171,13 +180,17 @@ class fcFormControl_HTML extends fcFormControl {
 	    } else {
 		// this field is editable, but the form isn't sending it:
 		$arOut['absent'] = TRUE;
+		$arOut['blank'] = NULL;
 		$sMsg = "Form error: Key [$sName] not found in post data: ".clsArray::Render($arData);
 		$this->FormObject()->AddMessage($sMsg);
-		echo $sMsg;	// so it shows up when debugging
+		// for debugging:
+		//echo $sMsg;
 		// this line may be redundant:
 		$this->NativeObject()->OkToWrite(FALSE);	// don't try to save this field
 	    }
 	} else {
+	    $arOut['absent'] = NULL;
+	    $arOut['blank'] = NULL;
 	    //echo '['.$this->NameString().'] current value: ['.$this->NativeObject()->GetValue().']<br>';
 	}
 	return $arOut;

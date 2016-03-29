@@ -412,9 +412,9 @@ abstract class clsPageBasic extends clsPageStandalone {
 	  'stack'	=> $e->getTraceAsString(),
 	  'guest.addr'	=> $_SERVER['REMOTE_ADDR'],
 	  'guest.agent'	=> $_SERVER['HTTP_USER_AGENT'],
-	  'guest.ref'	=> NzArray($_SERVER,'HTTP_REFERER'),
+	  'guest.ref'	=> fcArray::Nz($_SERVER,'HTTP_REFERER'),
 	  'guest.page'	=> $_SERVER['REQUEST_URI'],
-	  'guest.ckie'	=> NzArray($_SERVER,'HTTP_COOKIE'),
+	  'guest.ckie'	=> fcArray::Nz($_SERVER,'HTTP_COOKIE'),
 	  );
 
 	$out = $this->Exception_Message_toEmail($arErr);	// generate the message to email
@@ -436,22 +436,25 @@ abstract class clsPageBasic extends clsPageStandalone {
 	return 'error in '.KS_SITE_SHORT.' from IP '.$arErr['guest.addr'];
     }
     protected function Exception_Message_toEmail(array $arErr) {
-	$guest_ip = $arErr['guest.addr'];
-	$guest_br = $arErr['guest.agent'];
-	$guest_pg = $arErr['guest.page'];
-	$guest_rf = $arErr['guest.ref'];
-	$guest_ck = $arErr['guest.ckie'];
+	$sIPAddr = $arErr['guest.addr'];
+	$sBrowser = $arErr['guest.agent'];
+	$uriPgCur = $arErr['guest.page'];
+	$uriPgPrv = $arErr['guest.ref'];
+	$sCookie = $arErr['guest.ckie'];
+	
+	$urlPgCur = KWP_HOME_ABS.$uriPgCur;
+	$urlPgPrv = is_null($uriPgPrv)?'(none)':(KWP_HOME_ABS.$uriPgPrv);
 
 	$out = 'Description: '.$arErr['descr'];
 	$out .= "\nStack trace:\n".$arErr['stack'];
 	$out .= <<<__END__
 
 Client information:
- - IP Addr : $guest_ip
- - Browser : $guest_br
- - Cur Page: $guest_pg
- - Prv Page: $guest_rf
- - Cookie  : $guest_ck
+ - IP Addr : $sIPAddr
+ - Browser : $sBrowser
+ - Cur Page: $urlPgCur
+ - Prv Page: $urlPgPrv
+ - Cookie  : $sCookie
 __END__;
 
 	return $out;

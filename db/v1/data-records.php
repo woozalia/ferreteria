@@ -84,8 +84,16 @@ abstract class clsRecs_abstract {
 	    return $this->objDB;
 	}
     }
+    public function IsNew() {
+	return is_null($this->Values());
+    }
+    
+    // ++ FIELD ACCESS ++ //
+    
+    //++overloaded++//
+    
     /*----
-      RETURNS: associative array of fields/values for the current row
+      ACTION: sets/returns associative array of fields/values for the current row
       HISTORY:
 	2011-01-08 created
 	2011-01-09 actually working; added option to write values
@@ -96,25 +104,6 @@ abstract class clsRecs_abstract {
 	    return $iRow;
 	} else {
 	    return $this->Row;
-	}
-    }
-    public function IsNew() {
-	return is_null($this->Values());
-    }
-    /*----
-      ACTION: only sets the given values in the current row;
-	does not clear any missing values.
-    */
-    public function ValuesSet(array $arVals) {
-	foreach ($arVals as $key => $val) {
-	    $this->Row[$key] = $val;
-	}
-    }
-    protected function ValueEquals($sName,$val) {
-	if ($this->HasValue($sName)) {
-	    return $this->Value($sName) == $val;
-	} else {
-	    return FALSE;
 	}
     }
     /*----
@@ -141,13 +130,14 @@ abstract class clsRecs_abstract {
 		throw new Exception($strMsg);
 	    }
 	} else {
-	    if (!$this->ValueEquals($iName,$iVal)) {
-		$this->Row[$iName] = $iVal;
-		$this->TouchField($iName);
-	    }
+	    $this->SetValue($iName,$iVal);
 	}
 	return $this->Row[$iName];
     }
+    
+    //--overloaded--//
+    //++read-only++//
+
     /*----
       PURPOSE: Like Value() but handles new records gracefully, and is read-only
 	makes it easier for new-record forms not to throw exceptions
@@ -161,6 +151,59 @@ abstract class clsRecs_abstract {
 	    return $this->Row[$iName];
 	} else {
 	    return $iDefault;
+	}
+    }
+    
+    //--read-only--//
+    //++write-only++//
+    
+    /*----
+      ACTION: only sets the given values in the current row;
+	does not clear any missing values.
+    */
+    public function SetValues(array $arVals) {
+	foreach ($arVals as $key => $val) {
+	    $this->Row[$key] = $val;
+	}
+    }
+    public function ValuesSet(array $arVals) {
+	// deprecated; use SetValues()
+	$this->SetValues($arVals);
+    }
+    // 2016-03-25 Not sure if the whole comparison-and-touch thing should be here.
+    public function SetValue($sKey,$val) {
+	if (!$this->ValueEquals($sKey,$val)) {
+	    $this->Row[$sKey] = $val;
+	    $this->TouchField($sKey);
+	}
+    }
+    
+    //--write-only--//
+    
+    // -- FIELD ACCESS -- //
+    // ++ FIELD STATUS ++ //
+
+    /*----
+      HISTORY:
+	2011-02-09 created so we can test for field existence before trying to access
+    */
+    public function HasValue($iName) {
+	if (is_array($this->Row)) {
+	    return array_key_exists($iName,$this->Row);
+	} else {
+	    return FALSE;
+	}
+    }
+
+    // -- FIELD STATUS -- //
+    // ++ FIELD CALCULATIONS ++ //
+
+    // 2016-03-25 Who actually uses this?
+    protected function ValueEquals($sName,$val) {
+	if ($this->HasValue($sName)) {
+	    return $this->Value($sName) == $val;
+	} else {
+	    return FALSE;
 	}
     }
     /*----
@@ -192,17 +235,10 @@ abstract class clsRecs_abstract {
 	}
 	return $ar;
     }
-    /*----
-      HISTORY:
-	2011-02-09 created so we can test for field existence before trying to access
-    */
-    public function HasValue($iName) {
-	if (is_array($this->Row)) {
-	    return array_key_exists($iName,$this->Row);
-	} else {
-	    return FALSE;
-	}
-    }
+    
+    // -- FIELD CALCULATIONS -- //
+    // ++ ACTIONS ++ //
+    
     /*----
       FUNCTION: Clear()
       ACTION: Clears Row[] of any leftover data
@@ -254,10 +290,17 @@ abstract class clsRecs_abstract {
     }
     /*-----
       RETURNS: # of rows iff result has rows, otherwise FALSE
+      HISTORY:
+	2016-03-22 Sometimes when a Ferreteria session is no longer valid, we get a Record
+	  object with no Resource object set. I had an exception set to throw whenever that
+	  happened, but the problem is difficut to reproduce (so figuring out the root cause
+	  will take an inordinate amount of time), so for now I'm just going to return FALSE
+	  when that happens, and see if the rest of the code recovers nicely.
     */
     public function hasRows() {
 	if (!is_object($this->objRes)) {
-	    throw new exception('Internal error: Resource object not set.');
+	    //throw new exception('Internal error: Resource object not set.');
+	    return FALSE;
 	}
 	$rows = $this->objRes->get_count();
 	if ($rows === FALSE) {

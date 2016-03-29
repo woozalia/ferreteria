@@ -35,36 +35,6 @@ abstract class clsNavNode extends clsTreeNode {
 	}
 	return $sClass;
     }
-/* partially-revised old way of doing things
-    public function CSSClass($iClass=NULL,$iState=NULL,$iName=NULL) {
-	$nState = is_null($iState)?0:$iState;
-	if (!is_null($iClass)) {
-	    if (is_null($iName)) {
-		$this->htClass[$nState] = $iClass;
-	    } else {
-		$oNode = $this->Node($iName);
-		if (is_null($oNode)) {
-		    throw new exception('Attempting to access nonexistent node "'.$iName.'".');
-		}
-		$oNode->CSSClass($iClass,$nState);
-	    }
-	} else {
-	    return $this->CSSClass_this($iClass,$nState);
-	}
-    }
-    protected function CSSClass_this($iClass,$iState) {
-	if (is_null(NzArray($this->htClass,$iState]))) {
-	    if ($this->HasParent()) {
-		return $this->Parent()->CSSClass(NULL,$iState);
-	    } else {
-		return NULL;
-	    }
-	} else {
-	    return $this->htClass[$iState];
-	}
-    }
-    protected function CSSClass_sub(
-*/
 }
 
 abstract class clsNavbar extends clsNavNode {

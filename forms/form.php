@@ -117,7 +117,12 @@ class fcForm {
 	}
 	return $this->arFlds[$sName];
     }
-    protected function FieldArray() {
+    /*----
+      PUBLIC so nonstandard data sources can connect with form data more easily.
+	This is a bit of a kluge until I can work out a more general way for
+	different data sources to interconnect.
+    */
+    public function FieldArray() {
 	return $this->arFlds;
     }
     // 2016-02-04 might be useful after all
@@ -203,6 +208,10 @@ class fcForm {
 	  This is needed especially when editing the value of a key, so that
 	  we can redirect to the record's new home. Using the old values will
 	  attempt to pull up a record that doesn't exist.
+	2016-03-25 Empty fields in new records caused a code-trap because
+	  setting $rc->Value() with a NULL $val means it tries to read
+	  from a nonexistent record. I've replaced ->Value() with ->SetValue(),
+	  which I then had to write...
     */
     protected function RecordValues_asNative_set(array $arVals=NULL) {
 	$arFlds = $this->FieldArray();
@@ -212,7 +221,7 @@ class fcForm {
 		// ignore data fields for which there is no Field object
 		$oField = $arFlds[$key];
 		$oField->SetValue($val);
-		$rc->Value($key,$val);	// save to memory-record object also
+		$rc->SetValue($key,$val);	// save to memory-record object also
 	    }
 	}
     }
@@ -329,7 +338,7 @@ class fcForm {
 	$arMissed = NULL;
 	foreach ($arCtrls as $sFieldKey => $oCtrl) {
 	    $arStatus = $oCtrl->ReceiveForm($arData);
-	    if ($arStatus['blank']) {
+	    if ($arStatus['blank'] && $oCtrl->Required()) {
 		$arBlank[] = $oCtrl;
 	    }
 	    if ($arStatus['absent']) {

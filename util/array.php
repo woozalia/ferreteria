@@ -167,7 +167,7 @@ class fcArray {
 	$out .= self::$sRenderSuffix;
 	return $out;
     }
-    static protected function RenderLayer(array $ar,$nDepthCur,$nDepthMax) {
+    static protected function RenderLayer($ar,$nDepthCur,$nDepthMax) {
 	$nDepthCur++;
 	$out = NULL;
 	foreach ($ar as $key => $val) {
@@ -179,7 +179,7 @@ class fcArray {
 	      ;
 
 	    if (($nDepthMax == 0) || ($nDepthCur <= $nDepthMax)) {
-		if (is_array($val) or is_object($val)) {
+		if (is_array($val) || is_object($val)) {
 		    $out .= self::RenderLayer($val,$nDepthCur,$nDepthMax);
 		}
 	    }

@@ -31,6 +31,9 @@ class fctUserSessions extends clsTable {
 	$rcSess->Create();
 	return $rcSess;
     }
+    public function ClearSession() {
+	$this->rcSess = NULL;
+    }
     /*----
       ACTION: tosses the session cookie to the browser
       RETURNS: TRUE iff successful
@@ -424,7 +427,6 @@ class fcrUserSession extends clsDataSet {
 	    // we are trying to RETRIEVE the user
 	    if (empty($this->objUser)) {
 		$tUser = $this->UserTable();
-		echo 'USER TABLE CLASS: ['.get_class($tUser).']<br>';
 		if ($this->HasUser()) {
 		    $this->objUser = $tUser->GetItem($this->Value('ID_User'));
 		} else {

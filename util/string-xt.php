@@ -116,8 +116,8 @@ class xtString {
     */
     public function SplitFirst($iMatch,array $iOpts=NULL) {
 	$isFnd = FALSE;
-	$isList = NzArray($iOpts,'isList');
-	$ifNone = NzArray($iOpts,'ifNone','before');
+	$isList = fcArray::Nz($iOpts,'isList');
+	$ifNone = fcArray::Nz($iOpts,'ifNone','before');
 	if ($isList) {
 	    $strFnd = strpbrk($this->Value,$iMatch);
 	    if ($strFnd === FALSE) {

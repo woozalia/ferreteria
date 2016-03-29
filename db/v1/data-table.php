@@ -233,7 +233,7 @@ abstract class clsTable_abstract {
 		$sType = gettype($val);
 		throw new exception("Internal Error: The INSERT value of [$key] is of type $sType.");
 	    }
-	    $sqlNames .= $key;
+	    $sqlNames .= "`$key`";
 	    $sqlVals .= $val;
 	}
 	return 'INSERT INTO `'.$this->Name().'` ('.$sqlNames.') VALUES('.$sqlVals.');';
@@ -285,17 +285,6 @@ abstract class clsTable_abstract {
     */
     public function SQL_forUpdate(array $iSet,$iWhere) {
 	return self::_SQL_forUpdate($this->Name(),$iSet,$iWhere);
-/*
-	$sqlSet = '';
-	foreach($iSet as $key=>$val) {
-	    if ($sqlSet != '') {
-		$sqlSet .= ',';
-	    }
-	    $sqlSet .= ' `'.$key.'`='.$val;
-	}
-
-	return 'UPDATE `'.$this->Name().'` SET'.$sqlSet.' WHERE '.$iWhere;
-*/
     }
     /*----
       HISTORY:

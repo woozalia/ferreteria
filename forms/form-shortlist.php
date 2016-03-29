@@ -235,7 +235,7 @@ __END__;
 		$arUse = $fHandle($txt);
 		if (is_array($arUse)) {	// $fHandle should return NULL for non-viable entries
 		    $htShow = $arUse['html'];
-		    $htVal = $arUse['val'];
+		    $htVal = htmlspecialchars($arUse['text']);
 		    /*
 		    if (clsArray::Exists($arUse,'id')) {
 			$id = $arUse['id'];

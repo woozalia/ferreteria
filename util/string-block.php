@@ -178,48 +178,4 @@ class fcStringBlock extends xtString {
 	}
 	return $arOut;
     }
-    /*----
-      RETURNS: indexed/unkeyed array
-	array(col1, col2)
-	...because multiple lines may have the same catalog #
-    */
-    /*
-    protected function SplitLine_bad($iLine) {
-	$arOut = NULL;
-
-	$xts = new xtString($iLine);
-
-	$arSplit = $xts->SplitFirst($this->chsComment,array('isList'=>TRUE));		// split at first comment character
-	if (is_null($arSplit)) {
-	    // no comment found; use entire line
-	} else {
-	    // use only portion of line before comment
-	    $xts->Value = $arSplit['before'];
-	}
-//		$xts->DelLead($chsBlanks);				// remove any leading spaces
-	if (!empty($this->chsBlanks)) {
-	    $xts->Value = trim($xts->Value,$this->chsBlanks."\r");	// remove any leading or trailing blanks/CR
-	    $xts->ReplaceSequence($this->chsBlanks,$this->strSep);		// replace all blank sequences with separator string
-	}
-	if ($xts->Value != '') {	// if there's anything left...
-	    if ($this->doArr) {
-		// split it into columns and add that to the output array
-		if ($this->doArrX) {
-		    $arSplit = $xts->Xplode();
-		} else {
-		    $arSplit = explode($this->strSep,$xts->Value);
-		}
-		$arOut[] = $arSplit;
-	    } else {
-		// split it into key/value pair and add to output array
-
-		$arSplit = $xts->SplitFirst($this->strSep);		// split at first separator
-		$strKey = NzArray($arSplit,'before');
-		$strVal = NzArray($arSplit,'after',$this->strDefVal);
-		$arOut[$strKey] = $strVal;
-	    }
-	}
-
-	return $arOut;
-    } */
 }

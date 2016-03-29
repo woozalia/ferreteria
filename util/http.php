@@ -12,7 +12,7 @@
 
 define('HTTP_REDIRECT_POST',303);
 
-class clsHTTP {
+class fcHTTP {
 
     /*----
       NOTES: Some builds of PHP don't have this function.
@@ -75,6 +75,7 @@ class clsHTTP {
 
     // -- FORM DATA -- //
 }
+class clsHTTP extends fcHTTP {}	// alias; deprecate later
 abstract class fcInputData {
     abstract protected function Values();
     abstract protected function Value($sName);

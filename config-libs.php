@@ -102,7 +102,8 @@ $om = new clsModule(__FILE__, 'util/forms.php');
 $om = new clsModule(__FILE__, 'util/html.php');
   $om->AddClass('clsHTML');
 $om = new clsModule(__FILE__, 'util/http.php');
-  $om->AddClass('clsHTTP');
+  $om->AddClass('fcHTTP');
+  $om->AddClass('clsHTTP');	// TODO: deprecate
   $om->AddClass('fcInputData_array');
   $om->AddClass('fcInputData_array_local');
 $om = new clsModule(__FILE__, 'util/money.php');

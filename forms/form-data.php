@@ -118,6 +118,7 @@ class fcForm_DB extends fcForm_keyed {
 	$rc = $this->RecordsObject();
 	$sqlIDFilt = $rc->SelfFilter();
 	$arUpd = $this->ProcessIncomingRecord($arUpd);
+	echo 'ARUPD:'.fcArray::Render($arUpd);
 	$this->RecordValues_asNative_set($arUpd);
 	$arUpd = $this->RecordValues_asSQL_get();
 	$tbl = $this->RecordsObject()->Table();
@@ -142,6 +143,7 @@ class fcForm_DB extends fcForm_keyed {
 	$sErr = $tbl->Engine()->getError();
 	if (!empty($sErr)) {
 	    $this->AddMessage('<b>Error</b>: '.$sErr);
+	    $this->AddMessage('<b>SQL</b>: '.$tbl->sqlExec);
 	}
 	return $id;
     }

@@ -235,7 +235,7 @@ class fcFormField_Num extends fcFormField_Text {
     * Could add user-selected timestamp format for display.
 */
 class fcFormField_Time extends fcFormField_Text {
-
+/*
 // debugging (temporary):
     public function GetValue() {
 	$v = parent::GetValue();
@@ -246,7 +246,7 @@ class fcFormField_Time extends fcFormField_Text {
 	//echo "SETTING VALUE ($val)<br>";
 	parent::SetValue($val);
     }
-
+//*/
 
     // ++ CEMENTING ++ //
     

@@ -122,9 +122,16 @@ abstract class cAppStandard extends clsApp {
 	if (empty($this->rcSess)) {
 	    $tSess = $this->SessionTable();
 	    $this->rcSess = $tSess->GetCurrent();
+	} else {
 	}
 	if (!$this->rcSess->HasRows()) {
-	    throw new exception('Internal error: Loaded Session recordset has no rows.');
+	    //throw new exception('Internal error: Loaded Session recordset has no rows.');
+/* 2016-03-24 I'm guessing that this happens when there is a partial match between the browser cookie
+    and a Session record -- e.g. browser has gone to a new version, so has the cookie but the fingerprint
+    doesn't match. In that case, we should just end the Session and start over.
+*/
+	    $tSess->ClearSession();
+	    $this->rcSess = $tSess->GetCurrent();
 	}
 	return $this->rcSess;
     }
