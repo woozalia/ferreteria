@@ -12,7 +12,7 @@
 */
 
 class fcForm_DB extends fcForm_keyed {
-    
+
     // ++ SETUP ++ //
 
     public function __construct(clsRecs_abstract $rs) {
@@ -33,7 +33,7 @@ class fcForm_DB extends fcForm_keyed {
 	$db = $this->RecordsObject()->Table()->Engine();
 	return $db->SanitizeAndQuote($val);
     }
-    
+
     // -- SERVICES -- //
     // ++ CONFIGURATION ++ //
 
@@ -118,7 +118,6 @@ class fcForm_DB extends fcForm_keyed {
 	$rc = $this->RecordsObject();
 	$sqlIDFilt = $rc->SelfFilter();
 	$arUpd = $this->ProcessIncomingRecord($arUpd);
-	echo 'ARUPD:'.fcArray::Render($arUpd);
 	$this->RecordValues_asNative_set($arUpd);
 	$arUpd = $this->RecordValues_asSQL_get();
 	$tbl = $this->RecordsObject()->Table();
