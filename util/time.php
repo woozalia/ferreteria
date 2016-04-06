@@ -9,7 +9,7 @@
     2015-09-12 moved xtTime here from strings.php
 */
 
-class clsDate {
+class fcDate {
     /*----
       INPUT:
 	$sDate = date string in any format understood by the DateTime class
@@ -48,8 +48,9 @@ class clsDate {
 	}
     }
 }
+class clsDate extends fcDate {}		// alias; deprecated
 
-class clsTime {
+class fcTime {
 
     // this may not be needed -- try clsDate::NzDate
     static public function ShowStamp_HideTime($iStamp) {
@@ -67,7 +68,33 @@ class clsTime {
 	    return NULL;
 	}
     }
+
+    static public function DefaultDate($iTime,$iDate,$iSmallerPfx='<small>',$iSmallerSfx='</small>',$iDateFmt='n/j') {
+	if (empty($iDate)) {
+	    return NULL;
+	} else {
+	    $itTime = strtotime($iTime);	// time to show -- convert to seconds since epoch
+	    $itDate = strtotime($iDate);	// base date -- convert to seconds since epoch
+
+	    // convert dates (only) back to string (leave off time)
+	    $strTimeDate = date('Ymd',$itTime);
+	    $strDateDate = date('Ymd',$itDate);
+
+	    $doDate = ($strTimeDate != $strDateDate);
+	    $out = '';
+	    if ($doDate) {
+		$out .= $iSmallerPfx;
+	    }
+	    $out .= date('H:i',$itTime);
+	    if ($doDate) {
+		$out .= '<br>'.date($iDateFmt,$itTime);
+		$out .= $iSmallerSfx;
+	    }
+	    return $out;
+	}
+    }
 }
+class clsTime extends fcTime {}		// alias; deprecated
 
 
 function DateOnly_string($iTime=NULL) {
@@ -82,6 +109,7 @@ function DateOnly_string($iTime=NULL) {
     $iDate; base date, in text format
 */
 function Time_DefaultDate($iTime,$iDate,$iSmallerPfx='<small>',$iSmallerSfx='</small>',$iDateFmt='n/j') {
+    throw new exception('Call fcTime::DefaultDate() instead.');
     if (empty($iDate)) {
 	return NULL;
     } else {

@@ -18,7 +18,7 @@
     The host class defines what class the LinkBuilder is. The LinkBuilder-descended class
       implements the code which calculates the basic array of values (SelfArray).
     The host class also decides what text is displayed for a link at call-time.
-    
+
   HISTORY:
     2013-12-04 adapted from MediaWiki classes for standalone menu system
     2015-05-08 MW data record classes have no App() method, so resorting to static call in _AdminURL() and BuildLink();

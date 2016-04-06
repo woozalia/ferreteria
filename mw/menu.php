@@ -108,10 +108,14 @@ abstract class clsMenuNode extends clsMenu {
 	$this->IsActive = TRUE;
 	$this->Parent->Activate();
     }
+    /*----
+      HISTORY:
+	2016-03-29 This used to insert a '/' before 'page', but now the base URL includes that.
+    */
     public function Render($iAction) {
 	$wtSelf = $this->Root()->Page;
 	//$wtItem = "[[$wtSelf/page".KS_CHAR_URL_ASSIGN."{$this->DoSpec}|{$this->Text}]]";
-	$url = $wtSelf.'/page'.KS_CHAR_URL_ASSIGN.$this->DoSpec;
+	$url = $wtSelf.'page'.KS_CHAR_URL_ASSIGN.$this->DoSpec;
 	$sText = $this->Text;
 	$ftItem = "<a href='$url'>$sText</a>";
 //	if ($iAction == $this->DoSpec) {

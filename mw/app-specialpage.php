@@ -9,6 +9,8 @@
 if (!defined('KS_CHAR_URL_ASSIGN')) {
     define('KS_CHAR_URL_ASSIGN',':');
 }
+define('KS_CHARACTER_ENCODING','UTF-8');
+// ^ this is a kluge; there ought to be some way to detect the MW installation's actual charset
 
 /* ####
   FUTURE: This could eventually be split into a general page-type and one
