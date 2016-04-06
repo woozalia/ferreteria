@@ -11,10 +11,11 @@
 */
 
 class fcForm {
+    use ftVerbalObject;
+
     private $sName;
     private $arCtrls;   // list of Control objects
     private $arFlds;	// list of Field objects
-    private $arMsgs;	// list of messages (error etc.) to display
 
     // ++ SETUP ++ //
 
@@ -23,7 +24,6 @@ class fcForm {
 	$this->InitVars();
     }
     protected function InitVars() {
-	$this->arMsgs = NULL;
     }
 
     // -- SETUP -- //
@@ -41,24 +41,6 @@ class fcForm {
     }
 
     // -- CONFIG -- //
-    // ++ SERVICE ++ //
-    
-    public function AddMessage($sText) {
-	$this->arMsgs[] = $sText;
-    }
-    public function Messages_asText($sLinePfx='<br>',$sLineSfx=NULL) {
-	$out = NULL;
-	if (is_array($this->arMsgs)) {
-	    foreach ($this->arMsgs as $sText) {
-		$out .= $sLinePfx.$sText.$sLineSfx;
-	    }
-	} else {
-	    $out = NULL;
-	}
-	return $out;
-    }
-    
-    // -- SERVICE -- //
     // ++ CONTROLS ++ //
 
     // NOTE: This is often called twice -- once to clear values, and once to render the controls.

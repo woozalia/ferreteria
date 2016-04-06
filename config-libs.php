@@ -138,6 +138,8 @@ $om = new clsModule(__FILE__, 'widgets/data-cache.php');
   $om->AddClass('clsTableCache');
 $om = new clsModule(__FILE__, 'widgets/js.php');
   $om->AddClass('fcJavaScript');
+$om = new clsModule(__FILE__, 'widgets/object-msgs.php');
+  $om->AddClass('ftVerbalObject');
 $om = new clsModule(__FILE__, 'widgets/object-urls.php');
   $om->AddClass('ftLinkableRecord');
   $om->AddClass('ftLinkableTable');

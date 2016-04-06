@@ -6,6 +6,7 @@
   HISTORY:
     2013-10-25 stripped Session classes out of VbzCart shop.php for use in ATC project
     2013-11-09 backported improved Session classes back into user-session.php
+    2016-04-03 moved RandomString() to fcString::Random().
 */
 /*%%%%
   PURPOSE: Handles the table of user sessions
@@ -79,7 +80,7 @@ class fctUserSessions extends clsTable {
 	* if session object exists, tries to reuse it
       HISTORY:
 	2012-10-13 Added caching of the Session object to avoid creating multiple copies.
-	2015-06-23 Was throwing an error if there was no session key; it should just make a new session. (Fixed.)
+	2015-06-23 Fixed: Was throwing an error if there was no session key; it should just make a new session.
     */
     public function GetCurrent() {
 	$okSession = FALSE;
@@ -120,6 +121,12 @@ class fctUserSessions extends clsTable {
 	if (!$okSession) {
 	  // no current/valid session, so make a new one:
 	    $rcThis = $this->Create();
+	    echo "DONEW: [$doNew]<br>";
+	    if ($doNew) {
+		clsApp::Me()->AddMessage('You have to add items to your cart before you can check out.');
+	    } else {
+		clsApp::Me()->AddMessage('Your existing session was dropped because your fingerprint changed.');
+	    }
 	  // add new record for the new session:
 	    $this->CurrentRecord($rcThis);
 	  // generate key from the new session:
@@ -129,7 +136,11 @@ class fctUserSessions extends clsTable {
 		throw new exception('Internal Error: Cookie could not be sent for session key "'.$sSessKey.'".');
 		// if this happens, then some output was already sent, preventing the cookie.
 	    }
+	} else {
+	    //echo 'SESSION IS FINE, THANKS.<br>';
 	}
+	//echo 'RCTHIS SESSION MESSAGES: '.$rcThis->MessagesString().'<br>';
+	//die('CURRENT SESSION MESSAGES: '.$this->CurrentRecord()->MessagesString());
 	return $this->CurrentRecord();
     }
 }
@@ -137,6 +148,8 @@ class fctUserSessions extends clsTable {
   PURPOSE: Represents a single user session record
 */
 class fcrUserSession extends clsDataSet {
+    use ftVerbalObject;
+
     private $rcClient;
     protected $rcUser;
 
@@ -153,7 +166,7 @@ class fcrUserSession extends clsDataSet {
     }
     public function InitNew() {
 	$this->Values(array(
-	  'Token'	=> RandomString(31),
+	  'Token'	=> fcString::Random(31),
 	  'ID_Client'	=> NULL,
 	  'ID_User'	=> NULL,
 	  'WhenCreated'	=> NULL		// hasn't been created until written to db
@@ -206,6 +219,7 @@ class fcrUserSession extends clsDataSet {
       HISTORY:
 	2015-04-26 This sometimes comes up with no record -- I'm guessing that happens when a matching
 	  Session isn't found. (Not sure why this isn't detected elsewhere.)
+	2016-04-03 Removed commented-out section.
     */
     public function IsValidNow($iKey) {
 	if ($this->IsNew()) {
@@ -215,17 +229,6 @@ class fcrUserSession extends clsDataSet {
 	    if ($ok) {
 		$rcClient = $this->ClientRecord_asSet();
 		$ok = $rcClient->IsValidNow();
-		/* This doesn't make sense. We need to ask the client if it matches the browser fingerprint.
-		$idClientWas = $this->ClientID();
-		$idClientNow = $this->ClientID();
-		if ($idClientWas != $idClientNow) {
-		    // not an error, but could indicate a hacking attempt -- so log it, flagged as severe:
-		    $this->Engine()->LogEvent(
-		      'session.valid',
-		      'KEY='.$iKey,' OLD-CLIENT='.$idClientWas.' NEW-CLIENT='.$idClientNow,
-		      'stored session client mismatch','XCRED',FALSE,TRUE);
-		    $ok = FALSE;
-		} */
 	    }
 	}
 	return $ok;
@@ -442,8 +445,9 @@ class fcrUserSession extends clsDataSet {
 }
 
 /* ===============
- UTILITY FUNCTIONS
+ UTILITY FUNCTIONS - moved to fcString::.
 */
+/*
 function RandomString($iLen) {
     $out = '';
     for ($i = 0; $i<$iLen; $i++) {
@@ -460,4 +464,4 @@ function CharHash($iIndex) {
     } else {
 	return chr($iIndex-36+ord('a'));
     }
-}
+}//*/

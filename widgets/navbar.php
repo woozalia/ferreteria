@@ -38,11 +38,35 @@ abstract class clsNavNode extends clsTreeNode {
 }
 
 abstract class clsNavbar extends clsNavNode {
+
+    private $sDefaultNode;
+    public function SetDefault($sName) {
+	$this->sDefaultNode = $sName;
+    }
+    public function GetDefault() {
+	return $this->sDefaultNode;
+    }
+    
+    // ++ OVERRIDE ++ //
+    
+    public function Node($sName, clsTreeNode $oNode=NULL) {
+	if (empty($sName)) {
+	    $sName = $this->GetDefault();
+	}
+	return parent::Node($sName,$oNode);
+    }
+
+    // -- OVERRIDE -- //
+    // ++ ABSTRACT ++ //
+
     /*----
       USAGE: Should only be called by child nodes
     */
     abstract public function _Add(clsNavItem $iNode);
     abstract public function Render();
+
+    // -- ABSTRACT -- //
+
 }
 
 class clsNavbar_flat extends clsNavbar {
