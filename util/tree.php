@@ -142,13 +142,13 @@ class clsTreeNode {
     }
     // TODO: the names of Node() and NodeAdd() should be swapped
     //	Maybe as an interim step, rename Node() to AddNode()
-    public function Node($iName, clsTreeNode $iNode=NULL) {
-	if (!is_null($iNode)) {
-	    $iNode->Name($iName);
-	    $this->NodeAdd($iNode);
+    public function Node($sName, clsTreeNode $oNode=NULL) {
+	if (!is_null($oNode)) {
+	    $iNode->Name($sName);
+	    $this->NodeAdd($oNode);
 	}
-	if ($this->Exists($iName)) {
-	    return $this->arSubs[$iName];
+	if ($this->Exists($sName)) {
+	    return $this->arSubs[$sName];
 	} else {
 	    return NULL;
 	}

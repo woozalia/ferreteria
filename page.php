@@ -92,10 +92,18 @@ abstract class clsPageStandalone extends clsPage {
       OUTPUT: depends on how document object is handled.
 	Simplest is probably to create a child DoPage() which calls parent (this one) first,
 	then tells Doc() to render itself.
+      RULES:
+	* ParseInput() and HandleInput() are separate for historical reasons, and probably should
+	  be phased out. Descendant classes should implement ProcessPage() for processing input
+	  and rendering output.
+	* Output should always be sent to the Skin() object, not emitted directly.
+      HISTORY:
+	2016-04-03 Added call to ProcessPage(). (Made HandleInput() and ParseInput() non-abstract but empty.)
     */
     public function DoPage() {
 	try {
 	    $this->SaveStartTime();
+	    $this->ProcessPage();
 	    $this->ParseInput();
 	    $this->HandleInput();
 	    $this->PreSkinBuild();
@@ -111,14 +119,9 @@ abstract class clsPageStandalone extends clsPage {
     // -- EXECUTION -- //
     // ++ PAGE GENERATION ++ //
     
-    /*-----
-      ACTION: Grab any expected input and interpret it
-    */
-    protected abstract function ParseInput();
-    /*-----
-      ACTION: Take the parsed input and do any needed processing (e.g. looking up data)
-    */
-    protected abstract function HandleInput();
+    protected function ProcessPage() {}
+    protected function ParseInput() {}
+    protected function HandleInput() {}
     /*
       NOTE: there isn't really any logistical difference between HandleInput()
 	and PreSkinBuild(); it's more a conceptual one:

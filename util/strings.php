@@ -149,6 +149,13 @@ class fcString {
     }
 
     // -- OPTIONS -- //
+    // ++ DETECTION ++ //
+    
+    static public function IsBlank($s) {
+	return (is_null($s) || ($s == ''));
+    }
+    
+    // -- DETECTION -- //
     // ++ GENERAL SPLITTING ++ //
 
     /*----
@@ -391,6 +398,25 @@ class fcString {
     }
 
     // -- NATURAL LANGUAGE -- //
+    // ++ ENCODING ++ //
+    
+    static public function Random($iLen) {
+    $out = '';
+    for ($i = 0; $i<$iLen; $i++) {
+	$n = mt_rand(0,61);
+	$out .= self::CharHash($n);
+    }
+	return $out;
+    }
+    static public function CharHash($iIndex) {
+	if ($iIndex<10) {
+	    return $iIndex;
+	} elseif ($iIndex<36) {
+	    return chr($iIndex-10+ord('A'));
+	} else {
+	    return chr($iIndex-36+ord('a'));
+	}
+    }
 }
 
 

@@ -19,6 +19,8 @@ define('KWP_FERRETERIA_DOC_ERRORS',KWP_FERRETERIA_DOC.'/errors');
   PURPOSE: base class -- container for the application
 */
 abstract class clsApp {
+    use ftVerbalObject;
+
     static protected $me;
     static public function Me(clsApp $oApp=NULL) {
 	if (!is_null($oApp)) {

@@ -261,7 +261,7 @@ __END__;
 	$oForm = $this->PageForm();
 	//$oForm->ClearValues();
 	$oForm->Save();
-	$sMsg = $oForm->Messages_asText();
+	$sMsg = $oForm->MessagesString();
 	$this->SelfRedirect(array('id'=>FALSE),$sMsg);	// clear the form data out of the page reload
     }
     private $tpPage;

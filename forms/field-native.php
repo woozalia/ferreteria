@@ -23,7 +23,7 @@ abstract class fcFormField {
 	$this->FormObject($oForm);	// connect to form
 	//$this->SQL_forBlank('NULL');	// default SQL value
 	$this->vDefault = NULL;		// default native value
-	$this->OkToWrite(TRUE);		// default: writeable field
+	//$this->OkToWrite(TRUE);		// default: writeable field
     }
 
     // -- SETUP -- //
@@ -82,8 +82,9 @@ abstract class fcFormField {
     // -- CONFIGURATION -- //
     // ++ OPTIONS ++ //
     
-    private $okToWrite;	// enable modifying stored field
+    //private $okToWrite;	// enable modifying stored field
     public function OkToWrite($bOk=NULL) {
+	throw new exception('Call StorageObject->Writable() or ControlObject->Editable() instead.');
 	if (!is_null($bOk)) {
 	    $this->okToWrite = $bOk;
 	}
@@ -119,7 +120,7 @@ abstract class fcFormField {
 	  We'll just have to see if returning only IsChanged() causes problems.
     */
     public function ShouldWrite() {
-	return $this->IsChanged();
+	return $this->IsChanged() && $this->StorageObject()->Writable();
     }
     
     // -- MEMBER CALCULATIONS -- //
@@ -153,20 +154,28 @@ abstract class fcFormField {
       HISTORY:
 	2015-11-23 renamed from SetValueNative() to SetValue()
 	2015-11-24 now sets "isSet" flag
+	2016-04-17 When $val is blank, does not override default.
+	  If this behavior is ever undesirable, we'll need an option flag...
     */
     public function SetValue($val) {
-	$this->vValue = $val;
-	$this->isSet = TRUE;
+	if (!fcString::IsBlank($val)) {
+	    $this->vValue = $val;
+	    $this->isSet = TRUE;
+	}
     }
 
     /*++++
       GROUP: get/set/use default value (value to use for new records)
       HISTORY:
 	2015-11-23 renamed from *DefaultNative() to *Default()
+	2016-04-14 Now also sets value if not already set.
     */
     private $vDefault;
     public function SetDefault($val) {
         $this->vDefault = $val;
+        if (!$this->IsChanged()) {
+	    $this->SetValue($val);
+	}
     }
     protected function GetDefault() {
 	return $this->vDefault;

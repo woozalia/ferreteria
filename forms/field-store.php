@@ -17,6 +17,7 @@ abstract class fcFieldStorage {
 	$oForm = $oNative->FormObject();
 	$this->FormObject($oForm);
 	$this->NativeObject($oNative);
+	$this->Writable(TRUE);	// default
     }
     
     // -- SETUP -- //
@@ -36,17 +37,21 @@ abstract class fcFieldStorage {
 	}
 	return $this->oNative;
     }
+    /*----
+      PURPOSE: Form object should check this before saving data to disk.
+	Only save if TRUE.
+    */
+    private $bWritable;
+    public function Writable($b=NULL) {
+	if (!is_null($b)) {
+	    $this->bWritable = $b;
+	}
+	return $this->bWritable;
+    }
 
     // -- CONFIG -- //
     // ++ FORMAT CONVERSION ++ //
     
-    /*----
-      ACTION: Takes data in a format suitable for SQL and sanitizes/quotes it for use in
-	actual SQL statements.
-    */ /* 2015-11-24 this seems unnecessary
-    protected function CookRawSQL($sql) {
-	return $this->FormObject()->CookRawValue($sql);
-    } */
     /*----
       PURPOSE: convert from received-data format to internal format
       INPUT: as received from database engine
@@ -73,31 +78,6 @@ abstract class fcFieldStorage {
 	$vStore = $this->fromNative($vNative);
 	return $vStore;
     }
-    /*----
-      ACTION: returns and/or sets the SQL representation of the field's value
-      USED BY: fcForm_DB::SaveRecord() => fcForm_DB::RecordValues_asSQL_get()
-      HISTORY:
-	2015-03-30 adapted from Forms v1
-	2015-11-23 moved from Field (native) class to DB class and adapted
-    */
-    /* 2015-11-23 not sure if this is actually needed
-    public function Value($sqlVal=NULL) {
-	if (!is_null($sqlVal)) {
-	    $this->NativeObject()->Value($this->toNative($sqlVal));
-	}
-	return $this->fromNative($this->NativeObject()->Value());
-    } */
-    /*----
-      PURPOSE: allows explicitly setting NULL values, converting from string-based timestamps
-	to internal format, etc.
-      NOTE: The input here is not, strictly speaking, SQL; it's just whatever format the database
-	returns its data types in. This set of methods should probably be renamed to something
-	like SetValueDB.
-    */
-    /* 2015-11-23 not sure if this is actually needed
-    public function SetValue($sqlVal) {
-	$this->NativeObject()->SetValue($this->Convert_toNative($sqlVal));
-    }*/
     
     // -- FORMAT CONVERSION -- //
     

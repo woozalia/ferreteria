@@ -1,6 +1,6 @@
 <?php
 /*
-  PURPOSE: helper class for menu system - manages action URLs
+  PURPOSE: traits and helper class for menu system - manages action URLs
     Provides a set of four functions which are wrappers to a LinkBuilder object:
       * SelfArray(array $arAdd=NULL)
 	* returns an array of the currently-defined values to link, based on host object's type and internal state
