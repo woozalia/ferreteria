@@ -784,6 +784,7 @@ function SQLValue($iVal) {
     }
 }
 function SQL_for_filter(array $iVals) {
+throw new exception('Who is even calling this anymore? Deprecated. Use SQL filter object.');
     $sql = NULL;
     foreach ($iVals as $name => $val) {
 	if (!is_null($sql)) {
@@ -791,18 +792,8 @@ function SQL_for_filter(array $iVals) {
 	}
 	$sql .= '('.$name.'='.SQLValue($val).')';
     }
-throw new exception('How did we get here?');
     return $sql;
 }
-/* 2016-01-23 use fcString::NoYes() instead.
-function NoYes($iBool,$iNo='no',$iYes='yes') {
-    if ($iBool) {
-	return $iYes;
-    } else {
-	return $iNo;
-    }
-}*/
-
 function nz(&$iVal,$default=NULL) {
     return empty($iVal)?$default:$iVal;
 }

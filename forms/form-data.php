@@ -133,10 +133,12 @@ class fcForm_DB extends fcForm_keyed {
 		$rc = $tbl->GetItem($idUpd);	// not tested; using $sqlIDFilt might work better
 	    }//*/
 	    $rc->Update($arUpd,$sqlIDFilt);
+	    /* Debugging
 	    echo '<b>CLASS</b>: '.get_class($rc).'<br>';
 	    echo "<b>ID FILT</b>: $sqlIDFilt<br>";
 	    echo '<b>SQL FOR UPDATE</b>: '.$rc->SQL_forUpdate($arUpd,$sqlIDFilt).'<br>';
 	    echo '<b>FINAL SQL</b>: '.$rc->sqlExec.'<br>';
+	    */
 	    $id = $idUpd;
 	}
 	$sErr = $tbl->Engine()->getError();
