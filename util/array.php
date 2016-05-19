@@ -67,17 +67,24 @@ class fcArray {
     /*----
       RETURNS: An array that is the result of ar1 + ar2,
 	where ar2's values will override those in ar1.
+      RULES: A NULL value will never overwrite a non-NULL. If we need NULLs
+	to overwrite, we'll deal with that when there's an actual usage case.
       NOTE: *Somewhere* I had an array merge function already written
 	that deals with the cases PHP's array_merge() can't handle...
       HISTORY:
 	2015-08-27 Ran into a case where ar1 was NULL, so decided that should be handled as well.
+	2016-05-01 NULLs in ar2 no longer overwrite existing values in ar1.
     */
     static public function Merge(array $ar1=NULL, array $ar2=NULL) {
 	if (is_null($ar1)) {
 	    $ar1 = $ar2;
 	} elseif (!is_null($ar2)) {
 	    foreach ($ar2 as $key => $val) {
-		$ar1[$key] = $val;
+		if (array_key_exists($key,$ar1) && is_null($val)) {
+		    // for now, NULLs do not overwrite existing values
+		} else {
+		    $ar1[$key] = $val;
+		}
 	    }
 	}
 	return $ar1;

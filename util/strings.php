@@ -149,6 +149,13 @@ class fcString {
     }
 
     // -- OPTIONS -- //
+    // ++ DETECTION ++ //
+    
+    static public function IsBlank($s) {
+	return (is_null($s) || ($s == ''));
+    }
+    
+    // -- DETECTION -- //
     // ++ GENERAL SPLITTING ++ //
 
     /*----

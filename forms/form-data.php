@@ -172,3 +172,93 @@ class fcForm_DB extends fcForm_keyed {
 
     // -- DEBUGGING -- //
 }
+
+// USED BY: fcForm_blob
+class fcBlobField {
+    private $ar;
+    public function ClearArray() {
+	$this->ar = array();
+    }
+    public function SetArray(array $ar) {
+	$this->ar = $ar;
+    }
+    public function GetArray() {
+	return $this->ar;
+    }
+    public function MergeArray(array $ar) {
+	$this->ar = fcArray::Merge($this->ar,$ar);
+    }
+    public function SetString($s) {
+	if (is_string($s)) {
+	    $v = unserialize($s);
+	    if ($v === FALSE) {
+		throw new exception("Received a non-deserializable string: [$s].");
+	    }
+	    $this->SetArray($v);
+	} elseif (is_null($s)) {
+	    $this->ClearArray();
+	} else {
+	    // NULL is okay, but anything besides string or NULL is not.
+	    throw new exception('Received a non-string, non-NULL value of type ['.gettype($s).'].');
+	}
+    }
+    public function GetString() {
+	return serialize($this->GetArray());
+    }
+    public function SetValue($sName,$sValue) {
+	$this->ar[$sName] = $sValue;
+    }
+    public function GetValue($sName) {
+	return fcArray::Nz($this->ar,$sName);
+    }
+}
+
+/*%%%%
+  PURPOSE: form that serializes itself into a text blob
+*/
+class fcForm_blob extends fcForm {
+
+    // ++ SETUP ++ //
+
+    public function __construct($sName,fcBlobField $oBlobField) {
+	parent::__construct($sName);
+	$this->BlobObject($oBlobField);
+    }
+    
+    private $oBlobField;
+    protected function BlobObject($o=NULL) {
+	if (!is_null($o)) {
+	    $this->oBlobField = $o;
+	}
+	return $this->oBlobField;
+    }
+    
+    // -- SETUP -- //
+    // ++ DATA I/O ++ //
+    
+    // ACTION: Save form fields to blob data
+    public function Save() {
+	$arBlob = $this->RecordValues_asNative_get();
+	$this->BlobObject()->SetArray($arBlob);
+    }
+    // ACTION: Load form fields from blob data
+    public function Load() {
+	$arBlob = $this->BlobObject()->GetArray();
+	$this->RecordValues_asNative_set($arBlob);
+    }
+    
+    // -- DATA I/O -- //
+    // ++ REQUIRED ++ //
+    
+    /*----
+      NOTE: This is a minor kluge, in that it's not really returning a DataSet
+	but just an object that has a SetValue(key,value) method. Fortunately,
+	the blob object does.
+    */
+    protected function RecordsObject() {
+	return $this->BlobObject();
+    }
+    
+    // -- REQUIRED -- //
+
+}

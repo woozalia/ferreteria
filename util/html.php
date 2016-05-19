@@ -6,7 +6,7 @@
   HISTORY:
     2013-12-12 started - ArrayToAttrs(), BuildLink()
 */
-class clsHTML {
+class fcHTML {
 
     // ++ COMPONENTS ++ //
 
@@ -149,3 +149,4 @@ class clsHTML {
     }
 */
 }
+class clsHTML extends fcHTML {}	// DEPRECATED alias

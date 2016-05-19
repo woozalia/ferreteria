@@ -375,12 +375,18 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
 	assert('is_string($sKeyName); /* TABLE: '.$this->Table->Name().' */');
 	return $sKeyName;
     }
+    /*----
+      HISTORY:
+	2016-04-19 This couldn't have been working reliably until now, because the values
+	  were not being sanitize-and-quoted. (Now they are.)
+    */
     protected function UpdateArray() {
 	$arUpd = NULL;
-	$arTouch =$this->TouchedArray();
+	$arTouch = $this->TouchedArray();
 	if (is_array($arTouch)) {
+	    $db = $this->Engine();
 	    foreach ($arTouch as $sField) {
-		$arUpd[$sField] = $this->Value($sField);
+		$arUpd[$sField] = $db->SanitizeAndQuote($this->Value($sField));
 	    }
 	}
 	return $arUpd;

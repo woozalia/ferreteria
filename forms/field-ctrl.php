@@ -8,6 +8,8 @@
     2015-05-02 "Hidden" HTML control class
     2015-11-23 Renamed from ctrl.php -> field-ctrl.php
       Controls will now handle all display formatting.
+    2016-04-08 Decided that toNative() and fromNative() did not need to be required in fcFormControl.
+    2016-04-10 Control objects now add themselves to the Field, not the Form.
 */
 
 abstract class fcFormControl {
@@ -19,7 +21,8 @@ abstract class fcFormControl {
 	
 	$oForm = $oNative->FormObject();
 	$this->FormObject($oForm);
-	$oForm->ControlObject($oNative->NameString(),$this);
+	//$oForm->ControlObject($oNative->NameString(),$this);
+	$oNative->ControlObject($this);
 	
 	$this->Setup();
     }
@@ -67,6 +70,10 @@ abstract class fcFormControl {
 	}
 	return $this->oNative;
     }
+    // PURPOSE: shortcut
+    protected function GetStorageObject() {
+	return $this->NativeObject()->StorageObject();
+    }
 
     // -- RELATED OBJECTS -- //
     // ++ CONVERSION ++ //
@@ -82,7 +89,7 @@ abstract class fcFormControl {
       RETURNS: value in internal format
       USED BY: Form object when doing bulk conversion (DisplayToNative_array)
     */
-    abstract public function toNative($sVal);
+//    abstract public function toNative($sVal);
     /*----
       PURPOSE: convert from internal format to display format
       INPUT: internal (native) format
@@ -91,11 +98,14 @@ abstract class fcFormControl {
 	Functionality seems to be part of RenderValue(), but that takes
 	  local input only. Could split up if needed.
     */
-    abstract protected function fromNative($sVal);
+//    abstract protected function fromNative($sVal);
     
     // -- CONVERSION -- //
     // ++ SHORTCUTS ++ //
 
+    public function NameString() {
+	return $this->NativeObject()->NameString();
+    }
     protected function GetValueNative() {
 	return $this->NativeObject()->GetValue();
     }
@@ -114,15 +124,23 @@ class fcFormControl_HTML extends fcFormControl {
 
     // -- SETUP -- //
     // ++ CONFIGURATION ++ //
-    
+
+    private $bDisabled;
+    public function Disabled($b=NULL) {
+	if (!is_null($b)) {
+	    $this->bDisabled = $b;
+	} else {
+	    if (empty($this->bDisabled)) {
+		$this->bDisabled = FALSE;
+	    }
+	}
+	return $this->bDisabled;
+    }
     public function TagAttributes(array $arAttr=NULL) {
 	if (!is_null($arAttr)) {
 	    $this->arTagAttr = $arAttr;
 	}
 	return $this->arTagAttr;
-    }
-    protected function NameString() {
-	return $this->NativeObject()->NameString();
     }
     // PURPOSE: Alias string for use in displaying lists (e.g. missing fields in a form)
     private $sAlias;
@@ -153,9 +171,10 @@ class fcFormControl_HTML extends fcFormControl {
 	}
 	return $sSpec;
     }
+    /* 2016-04-15 Tentatively, this is redundant.
     protected function Writable() {
 	return $this->Editable() && $this->NativeObject()->OkToWrite();
-    }
+    }//*/
 
     // -- CALCULATIONS -- //
     // ++ CONVERSION ++ //
@@ -165,19 +184,23 @@ class fcFormControl_HTML extends fcFormControl {
 	array['absent']: TRUE or FALSE
 	array['blank']: TRUE or FALSE
 	The plan is for the calling form to use these to compile lists of missing/blank elements
+      HISTORY:
+	2016-04-15 Reworked the logic around Editable() (formerly Writable()) a bit.
     */
     public function ReceiveForm(array $arData) {
 	$arOut = array();
-	if ($this->Writable()) {	// don't overwrite value with form data if not editable
-	    $sName = $this->NameString();
-	    $sMsg = NULL;
-	    if (array_key_exists($sName,$arData)) {
-		$arOut['absent'] = FALSE;
-		$vPost = $arData[$sName];
-		$arOut['blank'] = (is_null($vPost) || $vPost == '');
-		$vVal = $this->toNative($vPost);
-		$this->NativeObject()->SetValue($vVal);
-	    } else {
+	
+	$sName = $this->NameString();
+	$sMsg = NULL;
+	if (array_key_exists($sName,$arData)) {
+	    $arOut['absent'] = FALSE;
+	    $vPost = $arData[$sName];
+	    $arOut['blank'] = (is_null($vPost) || $vPost == '');
+	    $vVal = $this->toNative($vPost);
+	    $this->NativeObject()->SetValue($vVal);
+	} else {
+	    // For some reason, we're not seeing form data for this control.
+	    if ($this->Editable()) {
 		// this field is editable, but the form isn't sending it:
 		$arOut['absent'] = TRUE;
 		$arOut['blank'] = NULL;
@@ -186,12 +209,12 @@ class fcFormControl_HTML extends fcFormControl {
 		// for debugging:
 		//echo $sMsg;
 		// this line may be redundant:
-		$this->NativeObject()->OkToWrite(FALSE);	// don't try to save this field
+		$this->GetStorageObject()->Writable(FALSE);	// don't try to save this field
+	    } else {
+		$arOut['absent'] = NULL;
+		$arOut['blank'] = NULL;
+		//echo '['.$this->NameString().'] current value: ['.$this->NativeObject()->GetValue().']<br>';
 	    }
-	} else {
-	    $arOut['absent'] = NULL;
-	    $arOut['blank'] = NULL;
-	    //echo '['.$this->NameString().'] current value: ['.$this->NativeObject()->GetValue().']<br>';
 	}
 	return $arOut;
     }
@@ -215,18 +238,24 @@ class fcFormControl_HTML extends fcFormControl {
     // ++ RENDERING ++ //
 
     public function Render($doEdit) {
-	if ($doEdit && $this->Writable()) {
+	if ($doEdit && $this->Editable()) {
 	    $out = $this->RenderEditor();
 	} else {
 	    $out = $this->RenderValue();
 	}
 	return $out;
     }
+    /*----
+      HISTORY:
+	2016-04-16 At this point it's not clear under what circumstances we'd want to render
+	  the editable version of a control in disabled mode -- so I'm adding a Disabled()
+	  function which will determine this, but at this point nothing actually sets it.
+    */
     protected function RenderEditor_mainAttribs() {
 	$htName = fcString::EncodeForHTML($this->NameSpec());
 	$out =
 	  " name='$htName'"
-	  .($this->NativeObject()->OkToWrite()?'':' disabled')
+	  .($this->Disabled()?' disabled':'')
 	  .$this->RenderAttr()
 	  ;
 	return $out;
@@ -238,12 +267,6 @@ class fcFormControl_HTML extends fcFormControl {
 	  .' value="'.$htVal.'"'
 	  .'>'
 	  ;
-    /*
-	$out = '<input name="'
-	  .$this->NameSpec()
-	  .'" value="'
-	  .$this->RenderValue().'"'
-	  .$this->RenderAttr().'>'; */
 	return $out;
     }
     protected function RenderAttr() {
