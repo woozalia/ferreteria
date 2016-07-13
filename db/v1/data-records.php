@@ -159,11 +159,13 @@ abstract class clsRecs_abstract {
     
     /*----
       ACTION: only sets the given values in the current row;
-	does not clear any missing values.
+	does not clear any missing values. Sets Touched array,
+	so these values will be saved by Save.
     */
     public function SetValues(array $arVals) {
 	foreach ($arVals as $key => $val) {
 	    $this->Row[$key] = $val;
+	    $this->TouchField($key);
 	}
     }
     public function ValuesSet(array $arVals) {
@@ -380,8 +382,7 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
 	2016-04-19 This couldn't have been working reliably until now, because the values
 	  were not being sanitize-and-quoted. (Now they are.)
     */
-    protected function UpdateArray() {
-	$arUpd = NULL;
+    protected function UpdateArray($arUpd=NULL) {
 	$arTouch = $this->TouchedArray();
 	if (is_array($arTouch)) {
 	    $db = $this->Engine();
@@ -391,17 +392,35 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
 	}
 	return $arUpd;
     }
-    protected function Save() {
-	$arSave = $this->UpdateArray();
-	if (is_array($arSave)) {
-	    if ($this->IsNew()) {
+    /*----
+      PURPOSE: This exists mainly for descendants that might want to do something different for Inserts
+	than for Updates (e.g. set WhenCreated versus WhenEdited).
+    */
+    protected function InsertArray($arIns=NULL) {
+	return $this->UpdateArray($arIns);
+    }
+    /*----
+      HISTORY:
+	2016-06-04 I'm not sure why this was private; it seems like a good general-use function.
+	  I specifically needed it to be public when loading up Customer Address records via either
+	  of two different methods. I *could* have written public SaveThis() and SaveThat() methods,
+	  but that would have increased the amount of special coding needed for This and That yet again.
+    */
+    public function Save() {
+	$out = NULL;
+	if ($this->IsNew()) {
+	    $arSave = $this->InsertArray();
+	    if (is_array($arSave)) {
 		$out = $this->Table()->Insert($arSave);
-	    } else {
-		$out = $this->Update($arSave);
+		if ($out !== FALSE) {
+		    $this->Value($this->KeyName(),$out);	// retrieve new record's ID
+		}
 	    }
 	} else {
-	    // nothing to do
-	    $out = NULL;
+	    $arSave = $this->UpdateArray();
+	    if (is_array($arSave)) {
+		$out = $this->Update($arSave);
+	    }
 	}
 	return $out;
     }
@@ -414,7 +433,6 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
 	2013-07-17 Modified to handle SQL_forUpdate()/SQL_forUpdateMe() split.
     */
     public function Update(array $arUpd,$iWhere=NULL) {
-	//$ok = $this->Table->Update($iSet,$sqlWhere);
 	if (is_null($iWhere)) {
 	    $sql = $this->SQL_forUpdateMe($arUpd);
 	} else {

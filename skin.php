@@ -83,8 +83,6 @@ abstract class clsSkin_basic extends clsSkin {
 }
 
 abstract class clsSkin_standard extends clsSkin_basic {
-    private $sTitle;
-    private $sSheet;
 
     // ++ ACTION ++ //
 
@@ -103,21 +101,28 @@ abstract class clsSkin_standard extends clsSkin_basic {
     // -- ACTION -- //
     // ++ FRAGMENT ACCESS METHODS ++ //
 
-    public function PageTitle($sTitle=NULL) {
-	if (!is_null($sTitle)) {
-	    $this->sTitle = $sTitle;
-	}
-	return $this->sTitle;
+    private $htTitle;	// how the page describes itself - may include HTML
+    public function SetPageTitleString($htTitle) {
+	$this->htTitle = $htTitle;
     }
-    public function Sheet($iName=NULL) {
-	if (!is_null($iName)) {
-	    $this->sSheet = $iName;
+    // TODO: This should not have to be public.
+    public function GetPageTitleString_html() {
+	return $this->htTitle;
+    }
+    // TODO: This should not have to be public.
+    public function GetPageTitleString_text() {
+	return strip_tags($this->GetPageTitleString_html());
+    }
+    private $sSheet;
+    public function Sheet($sName=NULL) {
+	if (!is_null($sName)) {
+	    $this->sSheet = $sName;
 	}
 	return $this->sSheet;
     }
     /*----
       RETURNS: title for browser to display, based on page title
-	This lets you modify just the browser title.
+	This lets skin authors have one format for browser title, another for meta-tag, etc.
     */
     abstract public function BrowserTitle();
 
@@ -134,6 +139,7 @@ $sDocType
 <head>
   <title>$sTitle</title>
   <meta http-equiv="Content-Type" content="text/html; charset=$sCharSet">
+
 __END__;
 
 	if (is_null($this->Sheet())) {
@@ -142,7 +148,7 @@ __END__;
 	$arVars = array('sheet' => $this->Sheet());
 	$objStrTplt = new clsStringTemplate_array(NULL,NULL,$arVars);
 	$objStrTplt->MarkedValue(KHT_PAGE_STYLE);
-	$strContent = KS_SITE_NAME_META.': '.$this->PageTitle();
+	$strContent = KS_SITE_NAME_META.': '.$this->GetPageTitleString_text();
 	$out .= "\n".$objStrTplt->Replace()
 	  ."\n  <meta name=description content=\"$strContent\" />"
 	  ."\n  <meta charset=\"utf-8\" />"

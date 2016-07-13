@@ -20,6 +20,7 @@ $om = new clsModule(__FILE__, 'field-native.php');
   $om->AddClass('fcFormField_Text');
   $om->AddClass('fcFormField_Num');
   $om->AddClass('fcFormField_Time');
+  $om->AddClass('fcFormField_Bit');
   $om->AddClass('fcFormField_BoolInt');
 $om = new clsModule(__FILE__, 'field-store.php');
   $om->AddClass('fcFieldStorage_Text');

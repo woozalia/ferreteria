@@ -356,6 +356,7 @@ class clsIndexer_Recs_multi_key extends clsIndexer_Recs {
     /*----
       NOTE: This is slightly different from the single-keyed Make() in that it assumes there are no autonumber keys.
 	All keys must be specified in the initial data.
+      USAGE: Overrides can use different rules to decide whether to Insert or Update.
     */
     public function Make(array $iarSet) {
 	if ($this->IsNew()) {

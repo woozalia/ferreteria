@@ -106,8 +106,11 @@ abstract class fcFormField {
     */
     private $isSet;
     public function IsChanged() {
-	//return !is_null($this->GetValue());
-	return !empty($this->isSet);
+	$is = !empty($this->isSet);
+	return $is;
+    }
+    protected function MarkChanged() {
+	$this->isSet = TRUE;
     }
     /*----
       RETURNS: TRUE iff the value should be written to the database
@@ -133,9 +136,8 @@ abstract class fcFormField {
     */
 //    abstract protected function IsInRange($sVal);	// NOTE: not sure if input arg is actually needed here
 
-    /*++++
-      GROUP: get/set current value
-    */
+    // ++ ++ CURRENT ++ ++ //
+
     private $vValue;
     /*----
       ACTION: set and/or return the value of the field.
@@ -160,16 +162,23 @@ abstract class fcFormField {
     public function SetValue($val) {
 	if (!fcString::IsBlank($val)) {
 	    $this->vValue = $val;
-	    $this->isSet = TRUE;
+	    $this->MarkChanged();
 	}
     }
+    // USAGE: Internal only. Caller is responsible for calling MarkChanged();
+    protected function ForceValue($val) {
+	$this->vValue = $val;
+    }
 
+    // -- -- CURRENT -- -- //
+    // ++ ++ DEFAULT ++ ++ //
     /*++++
-      GROUP: get/set/use default value (value to use for new records)
+      PURPOSE: get/set/use default value (value to use for new records)
       HISTORY:
 	2015-11-23 renamed from *DefaultNative() to *Default()
 	2016-04-14 Now also sets value if not already set.
     */
+
     private $vDefault;
     public function SetDefault($val) {
         $this->vDefault = $val;
@@ -187,24 +196,8 @@ abstract class fcFormField {
     public function UseDefault() {
         $this->SetValue($this->GetDefault());
     }
-    
-    /*++++
-      GROUP: value access in other formats
-    */
-    /*----
-      ACTION: returns and/or sets the displayable representation of the field's value
-      HISTORY:
-	2011-03-29 created - we're distinguishing between "stored" and "displayed" values now
-	2015-03-30 adapted from Forms v1
-    */
-/* This should be handled by the Control
-    public function ValueDisplay($sVal=NULL) {
-	if (!is_null($sVal)) {
-	    $this->ValueNative($this->Convert_DisplayToNative($sVal));
-	}
-	return $this->Convert_NativeToDisplay($this->ValueNative());
-    } */
 
+    // -- -- DEFAULT -- -- //
     // -- VALUE ACCESS -- //
 
 }
@@ -271,16 +264,37 @@ class fcFormField_Time extends fcFormField_Text {
     // -- FORMAT CONVERSION -- //
 }
 
-class fcFormField_BoolInt extends fcFormField_Text {
+trait ftFormField_Boolean {
 
+    // ++ OVERRIDES ++ //
+
+    /*
+      NOTES: 
+	* With booleans, a blank value is considered "set" if the value has been changed or the value had not been set previously.
+	* However, the way this is set up, we don't load values from the disk before calculating what to save -- so until there's
+	  some way to query the disk value, we'll just say any time this is called, that's considered setting the value.
+    */
+    public function SetValue($val) {
+	$this->ForceValue($val);
+	$this->MarkChanged();
+    }
+    
+    // -- OVERRIDES -- //
     // ++ CEMENTING ++ //
     
-/*    protected function IsInRange($sVal) {
-	return (($sVal == TRUE) || ($sVal == FALSE));
-    } */
     protected function ControlClass() {
 	return 'fcFormControl_HTML_CheckBox';
     }
+    
+    // -- CEMENTING -- //
+
+}
+
+class fcFormField_BoolInt extends fcFormField_Text {
+    use ftFormField_Boolean;
+
+    // ++ CEMENTING ++ //
+    
     protected function StorageClass() {
 	return 'fcFieldStorage_Num';
     }
@@ -289,15 +303,10 @@ class fcFormField_BoolInt extends fcFormField_Text {
 
 }
 class fcFormField_Bit extends fcFormField {
+    use ftFormField_Boolean;
 
     // ++ CEMENTING ++ //
     
-/*    protected function IsInRange($sVal) {
-	return (($sVal == TRUE) || ($sVal == FALSE));
-    } */
-    protected function ControlClass() {
-	return 'fcFormControl_HTML_CheckBox';
-    }
     protected function StorageClass() {
 	return 'fcFieldStorage_Bit';
     }

@@ -534,6 +534,10 @@ class fcSQLt_Filt extends fcSQL_Term {
     public function __construct($sConj=NULL,array $arTerms=NULL) {
 	$this->sConj = $sConj;
 	$this->arTerms = $arTerms;
+	if (!is_string($sConj) && !is_null($sConj)) {
+	    throw new InvalidArgumentException('Internal error: expecting a string or NULL for $sConj; got something else.');
+	}
+
     }
     public function TypeString() {
 	return KS_SQL_TERM_TYPE_FILT;
@@ -542,6 +546,7 @@ class fcSQLt_Filt extends fcSQL_Term {
     // -- SETUP -- //
     // ++ INPUT ++ //
     
+    // NOTE: Although NULL conditions will be added to the array, they will be skipped at rendering time.
     public function AddCond($sCond) {
 	$this->arTerms[] = $sCond;
     }
@@ -557,6 +562,9 @@ class fcSQLt_Filt extends fcSQL_Term {
     }
     // PUBLIC so we can get the rendered filter without the WHERE
     public function RenderValue() {
+	if (!is_array($this->arTerms)) {
+	    throw new InvalidArgumentException('Object needs some terms to render.');
+	}
 	$out = self::Array_toFilter($this->arTerms,$this->sConj);
 	return $out;
     }
@@ -571,6 +579,7 @@ class fcSQLt_Filt extends fcSQL_Term {
 	  key is ignored
 	  cond is either a string or another fcSQLt_Filt object
 	sOper = operator to use (AND or OR)
+      TODO: Rename this to ConditionArray_toFilter()
     */
     static public function Array_toFilter(array $arFilt,$sOper='AND') {
 	$out = NULL;
@@ -584,13 +593,21 @@ class fcSQLt_Filt extends fcSQL_Term {
 		} else {
 		    // if $cond is not a string, it should be a Term object
 		    if (!is_object($cond)) {
-			throw new exception('cond is a '.gettype($cond).'; needs to be either a string or a Term object.');
+			throw new exception('filter term condition is a '.gettype($cond).'; needs to be either a string or a Term object.');
 		    }
 		    $out .= '('.$cond->Render().')';
 		}
 	    }
 	}
 	return $out;
+    }
+    // ASSUMES: Field values are SQL-sanitized
+    static public function ValueArray_to_ConditionArray(array $arData,$sOper='=') {
+	$arCond = NULL;
+	foreach ($arData as $sqlName => $sqlVal) {
+	    $arCond[] = "$sqlName$sOper$sqlVal";
+	}
+	return $arCond;
     }
 
     // -- CALCULATIONS -- //

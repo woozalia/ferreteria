@@ -25,7 +25,6 @@ define('KSF_USER_CTRL_SET_PASS2'	,'upass2');
     Needs to work regardless of whether app is standalone or a plug-in.
 */
 abstract class clsPage {
-    private $oDoc;
 
     // ++ INFORMATION ++ //
 
@@ -85,6 +84,7 @@ abstract class clsPage {
   PURPOSE: base Page type for standalone applications
 */
 abstract class clsPageStandalone extends clsPage {
+
     // ++ EXECUTION ++ //
 
     /*-----
@@ -117,6 +117,15 @@ abstract class clsPageStandalone extends clsPage {
     }
 
     // -- EXECUTION -- //
+    // ++ CONFIGURATION ++ //
+
+    //++title++
+    /* 2016-06-26 just call Skin()->SetPageTitleString(), already.
+    public function SetTitleString($htTitle) {
+	$this->Skin()->SetPageTitleString($htTitle);
+    }*/
+    
+    // -- CONFIGURATION -- //
     // ++ PAGE GENERATION ++ //
     
     protected function ProcessPage() {}
@@ -143,15 +152,6 @@ abstract class clsPageStandalone extends clsPage {
     // -- EXCEPTION HANDLING -- //
     // ++ UTILITIES ++ //
 
-    /*----
-      ACTION: Redirects the page to the given URL, while preserving the optional Message in a cookie.
-    */ /* 2016-01-18 This seems to be already defined by the root parent
-    public function Redirect($url,$sMsg=NULL) {
-	if (!is_null($sMsg)) {
-	    setcookie(KS_MESSAGE_COOKIE,$sMsg,0,'/');
-	}
-	clsHTTP::Redirect($url);
-    } */
     public function RedirectHome($sMsg=NULL) {
 	$this->Redirect($this->BaseURL_rel(),$sMsg);
     }
@@ -165,20 +165,6 @@ abstract class clsPageStandalone extends clsPage {
     public function Reload() {
 	clsHTTP::Redirect($this->SelfURL());
     }
-    /*----
-      ACTION: Look for Message information in the cookie.
-	Remove it from cookie if found.
-      RETURNS: message string if found, NULL if not found.
-    */ /* 2016-01-18 DUPLICATED
-    static protected function GetRedirectMessage() {
-	if (array_key_exists(KS_MESSAGE_COOKIE,$_COOKIE)) {
-	    $sMsg = $_COOKIE[KS_MESSAGE_COOKIE];
-	    setcookie(KS_MESSAGE_COOKIE,NULL);	// delete the cookie
-	    return $sMsg;
-	} else {
-	    return NULL;
-	}
-    } */
     /*----
       RETURNS: The rest of the URI after KWP_PAGE_BASE
       REQUIRES: KWP_PAGE_BASE must be set to the base URL for the expected request (e.g. '/cat/')
@@ -220,6 +206,8 @@ abstract class clsPageStandalone extends clsPage {
 	$this->Skin()->AddFooterStat('exec time',$this->GetExecTime());
     }
     
+    // -- METRICS -- //
+
 }
 
 /*%%%%
@@ -606,15 +594,6 @@ abstract class clsPageLogin extends clsPageBasic {
     // -- STATUS ACCESS -- //
     // ++ PAGE VALUES ++ //
 
-    /*----
-      ALIAS for Skin()->PageTitle()
-      RETURNS: string to use for page title
-      NOTES: Needs to be public so page rendering classes
-	can change it from the default.
-    */
-    public function TitleString($sTitle=NULL) {
-	return $this->Skin()->PageTitle($sTitle);
-    }
     protected function AuthToken($sNew=NULL) {
 	if (!is_null($sNew)) {
 	    $this->sToken = $sNew;
@@ -774,16 +753,17 @@ abstract class clsPageLogin extends clsPageBasic {
 	    clsHTTP::Redirect($this->BaseURL());
 	    //$this->Reload();
 	}
+	$oSkin = $this->Skin();
  	if ($this->doEmail) {
-	    $this->TitleString('Send Password Reset Email');
+	    $oSkin->SetPageTitleString('Send Password Reset Email');
 	} elseif ($this->IsCreateRequest()) {
-	    $this->TitleString('Creating User Account');
+	    $oSkin->SetPageTitleString('Creating User Account');
 	} elseif ($this->IsResetRequest()) {
-	    $this->TitleString('Setting Password');
+	    $oSkin->SetPageTitleString('Setting Password');
 	} elseif ($this->IsAuthLink()) {
-	    $this->TitleString('Authorize Password Reset');
+	    $oSkin->SetPageTitleString('Authorize Password Reset');
 	} elseif ($this->IsLoginRequest()) {
-	    $this->TitleString('User Login');
+	    $oSkin->SetPageTitleString('User Login');
 	    $this->DoLoginCheck();
 	} else {
 	    $this->HandleInput_notLoggedIn();
@@ -898,7 +878,7 @@ abstract class clsPageLogin extends clsPageBasic {
     private $doShowLogin;	// can be altered by subsidiary fx()
     protected function RenderUserAccess() {
 	$oSkin = $this->Skin();
-	$ht = $this->SectionHeader($this->TitleString());
+	$ht = $this->SectionHeader($this->Skin()->GetPageTitleString_html());
 	$oEmAuth = $this->Data()->EmailAuth();
 	$this->doShowLogin = TRUE;	// By default, we'll still show the login form if not logged in
 	$isEmailAuth = FALSE;	// Assume this page is not an email authorization link...

@@ -119,11 +119,15 @@ class fcForm_DB extends fcForm_keyed {
 	$sqlIDFilt = $rc->SelfFilter();
 	$arUpd = $this->ProcessIncomingRecord($arUpd);
 	$this->RecordValues_asNative_set($arUpd);
-	$arUpd = $this->RecordValues_asSQL_get();
+	//$arUpd = $this->RecordValues_asSQL_get();
+	$arUpd = $this->RecordValues_asNative_get();
 	$tbl = $this->RecordsObject()->Table();
 	$idUpd = $this->Get_KeyString_toSave();
 	if ($idUpd == KS_NEW_REC) {
-	    $id = $tbl->Insert($arUpd);
+	    //$id = $tbl->Insert($arUpd);	// 2016-06-12 old version
+	    $rc = $tbl->SpawnItem();
+	    $rc->SetValues($arUpd);
+	    $rc->Save();
 	} else {
 	    //$tbl->Update_Keyed($arUpd,$idUpd);
 	    /*
@@ -132,13 +136,18 @@ class fcForm_DB extends fcForm_keyed {
 	    } else {
 		$rc = $tbl->GetItem($idUpd);	// not tested; using $sqlIDFilt might work better
 	    }//*/
+	    $rc->SetValues($arUpd);
+	    $rc->Save();
+	    /* 2016-06-12 old version
 	    $rc->Update($arUpd,$sqlIDFilt);
+	    */
 	    /* Debugging
 	    echo '<b>CLASS</b>: '.get_class($rc).'<br>';
 	    echo "<b>ID FILT</b>: $sqlIDFilt<br>";
 	    echo '<b>SQL FOR UPDATE</b>: '.$rc->SQL_forUpdate($arUpd,$sqlIDFilt).'<br>';
 	    echo '<b>FINAL SQL</b>: '.$rc->sqlExec.'<br>';
-	    */
+	    die();
+	    //*/
 	    $id = $idUpd;
 	}
 	$sErr = $tbl->Engine()->getError();
@@ -213,6 +222,15 @@ class fcBlobField {
     public function GetValue($sName) {
 	return fcArray::Nz($this->ar,$sName);
     }
+    
+    // ++ DEBUGGING ++ //
+    
+    public function Render() {
+	return fcArray::Render($this->GetArray());
+    }
+    
+    // -- DEBUGGING -- //
+
 }
 
 /*%%%%
@@ -262,5 +280,12 @@ class fcForm_blob extends fcForm {
     }
     
     // -- REQUIRED -- //
+    // ++ DEBUGGING ++ //
+    
+    public function Render() {
+	return $this->BlobObject()->Render();
+    }
+
+    // ++ DEBUGGING ++ //
 
 }
