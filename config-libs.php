@@ -62,7 +62,7 @@ $om = new clsModule(__FILE__,'db/sql/db-sql.php');
 // DEPRECATED
 $om = new clsModule(__FILE__, 'deprecated/user-mw.php');
   $om->AddClass('clsUser');
-  
+
 // MENUS
 $om = new clsModule(__FILE__, 'menu/menu-action.php');
   $om->AddClass('clsActionLink');
@@ -125,7 +125,8 @@ $om = new clsModule(__FILE__, 'util/string-xt.php');
   $om->AddClass('xtString');
 //  $om->AddFunc('Xplode');
 $om = new clsModule(__FILE__, 'util/time.php');
-  $om->AddClass('clsDate');
+  $om->AddClass('fcDate');
+  $om->AddClass('fcTime');
   $om->AddClass('xtTime');
 //  $om->AddFunc('Time_DefaultDate');
   $om->AddFunc('Date_DefaultYear');
