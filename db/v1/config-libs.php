@@ -44,6 +44,8 @@ $om = new clsModule(__FILE__, 'data-table.php');
   $om->AddClass('clsTable');
   $om->AddClass('clsTable_keyed_abstract');
   $om->AddClass('clsTable_key_single');
+$om = new clsModule(__FILE__, 'db-ui.php');
+  $om->AddClass('ftShowableRecord');
 
 // DEPENDENT CLASSES
 

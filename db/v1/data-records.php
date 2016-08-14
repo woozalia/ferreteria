@@ -3,6 +3,7 @@
   PURPOSE: classes for handling data recordsets
   HISTORY:
     2013-12-19 split off from data.php
+    2016-08-14 Hand-merging changes (apparently this never got pushed back to origin)
 */
 
 define('KS_NEW_REC','new');	// value to use for key of new records
@@ -90,8 +91,16 @@ abstract class clsRecs_abstract {
 	    return $this->objDB;
 	}
     }
+    public function IsNew() {
+	return is_null($this->Values());
+    }
+    
+    // ++ FIELD ACCESS ++ //
+    
+    //++overloaded++//
+    
     /*----
-      RETURNS: associative array of fields/values for the current row
+      ACTION: sets/returns associative array of fields/values for the current row
       HISTORY:
 	2011-01-08 created
 	2011-01-09 actually working; added option to write values
@@ -102,22 +111,6 @@ abstract class clsRecs_abstract {
 	    return $iRow;
 	} else {
 	    return $this->Row;
-	}
-    }
-    /*----
-      ACTION: only sets the given values in the current row;
-	does not clear any missing values.
-    */
-    public function ValuesSet(array $arVals) {
-	foreach ($arVals as $key => $val) {
-	    $this->Row[$key] = $val;
-	}
-    }
-    protected function ValueEquals($sName,$val) {
-	if ($this->HasValue($sName)) {
-	    return $this->Value($sName) == $val;
-	} else {
-	    return FALSE;
 	}
     }
     /*----
@@ -144,13 +137,14 @@ abstract class clsRecs_abstract {
 		throw new Exception($strMsg);
 	    }
 	} else {
-	    if (!$this->ValueEquals($iName,$iVal)) {
-		$this->Row[$iName] = $iVal;
-		$this->TouchField($iName);
-	    }
+	    $this->SetValue($iName,$iVal);
 	}
 	return $this->Row[$iName];
     }
+    
+    //--overloaded--//
+    //++read-only++//
+
     /*----
       PURPOSE: Like Value() but handles new records gracefully, and is read-only
 	makes it easier for new-record forms not to throw exceptions
@@ -166,6 +160,38 @@ abstract class clsRecs_abstract {
 	    return $iDefault;
 	}
     }
+    
+    //--read-only--//
+    //++write-only++//
+    
+    /*----
+      ACTION: only sets the given values in the current row;
+	does not clear any missing values. Sets Touched array,
+	so these values will be saved by Save.
+    */
+    public function SetValues(array $arVals) {
+	foreach ($arVals as $key => $val) {
+	    $this->Row[$key] = $val;
+	    $this->TouchField($key);
+	}
+    }
+    public function ValuesSet(array $arVals) {
+	// deprecated; use SetValues()
+	$this->SetValues($arVals);
+    }
+    // 2016-03-25 Not sure if the whole comparison-and-touch thing should be here.
+    public function SetValue($sKey,$val) {
+	if (!$this->ValueEquals($sKey,$val)) {
+	    $this->Row[$sKey] = $val;
+	    $this->TouchField($sKey);
+	}
+    }
+    
+    //--write-only--//
+    
+    // -- FIELD ACCESS -- //
+    // ++ FIELD STATUS ++ //
+
     /*----
       HISTORY:
 	2011-02-09 created so we can test for field existence before trying to access
@@ -177,6 +203,51 @@ abstract class clsRecs_abstract {
 	    return FALSE;
 	}
     }
+
+    // -- FIELD STATUS -- //
+    // ++ FIELD CALCULATIONS ++ //
+
+    // 2016-03-25 Who actually uses this?
+    protected function ValueEquals($sName,$val) {
+	if ($this->HasValue($sName)) {
+	    return $this->Value($sName) == $val;
+	} else {
+	    return FALSE;
+	}
+    }
+    /*----
+      RETURNS: For each record, the value of the given field is
+	appended to the output string. The values are separated by commas.
+	The resulting string is suitable for use as the target of an "IN" clause.
+      ASSUMES: The values do not need to be sanitized or quoted. (If this is
+	needed, write a separate method called SQL_ValueList_safe() with a $doQuote
+	parameter.
+    */
+    public function ColumnValues_SQL($sField) {
+	$out = NULL;
+	if ($this->HasRows()) {
+	    while ($this->NextRow()) {
+		$s = $this->Value($sField);
+		$out .= $s.',';
+	    }
+	    $out = trim($out,','); // remove trailing comma
+	}
+	return $out;
+    }
+    public function ColumnValues_array($sField) {
+	$ar = NULL;
+	if ($this->HasRows()) {
+	    while ($this->NextRow()) {
+		$v = $this->Value($sField);
+		$ar[] = $v;
+	    }
+	}
+	return $ar;
+    }
+    
+    // -- FIELD CALCULATIONS -- //
+    // ++ ACTIONS ++ //
+    
     /*----
       FUNCTION: Clear()
       ACTION: Clears Row[] of any leftover data
@@ -242,10 +313,17 @@ abstract class clsRecs_abstract {
     }
     /*-----
       RETURNS: # of rows iff result has rows, otherwise FALSE
+      HISTORY:
+	2016-03-22 Sometimes when a Ferreteria session is no longer valid, we get a Record
+	  object with no Resource object set. I had an exception set to throw whenever that
+	  happened, but the problem is difficult to reproduce (so figuring out the root cause
+	  will take an inordinate amount of time), so for now I'm just going to return FALSE
+	  when that happens, and see if the rest of the code recovers nicely.
     */
     public function hasRows() {
 	if (!$this->HasResult()) {
-	    throw new exception('Internal error: Resource object not set.');
+	    //throw new exception('Internal error: Resource object not set.');
+	    return FALSE;
 	}
 	$rows = $this->ResultHandler()->get_count();
 	if ($rows === FALSE) {
@@ -264,7 +342,13 @@ abstract class clsRecs_abstract {
 	return $this->ResultHandler()->is_filled();
     } */
     public function RowCount() {
-	return $this->ResultHandler()->get_count();
+	if (is_object($this->ResultHandler())) {
+	    return $this->ResultHandler()->get_count();
+	} else {
+	    // 2016-01-20 Let's just assume that if ResultHandler() is not set, then there wasn't a successful query.
+	    // TODO: maybe set an internal status code/message in order to make it easier to figure out what happened.
+	    return 0;
+	}
     }
     public function RewindRows() {
 	if ($this->hasRows()) {
@@ -303,8 +387,8 @@ abstract class clsRecs_abstract {
 }
 class clsRecs_generic extends clsRecs_abstract {
 }
-/*=============
-  NAME: clsRecs_keyed_abstract -- abstract recordset for keyed data
+/*::::
+  CLASS: clsRecs_keyed_abstract -- abstract recordset for keyed data
     Adds abstract and concrete methods for dealing with keys.
 */
 abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
@@ -321,27 +405,50 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
 	assert('is_string($sKeyName); /* TABLE: '.$this->Table->Name().' */');
 	return $sKeyName;
     }
-    protected function UpdateArray() {
-	$arUpd = NULL;
-	$arTouch =$this->TouchedArray();
+    /*----
+      HISTORY:
+	2016-04-19 This couldn't have been working reliably until now, because the values
+	  were not being sanitize-and-quoted. (Now they are.)
+    */
+    protected function UpdateArray($arUpd=NULL) {
+	$arTouch = $this->TouchedArray();
 	if (is_array($arTouch)) {
+	    $db = $this->Engine();
 	    foreach ($arTouch as $sField) {
-		$arUpd[$sField] = $this->Value($sField);
+		$arUpd[$sField] = $db->SanitizeAndQuote($this->Value($sField));
 	    }
 	}
 	return $arUpd;
     }
-    protected function Save() {
-	$arSave = $this->UpdateArray();
-	if (is_array($arSave)) {
-	    if ($this->IsNew()) {
+    /*----
+      PURPOSE: This exists mainly for descendants that might want to do something different for Inserts
+	than for Updates (e.g. set WhenCreated versus WhenEdited).
+    */
+    protected function InsertArray($arIns=NULL) {
+	return $this->UpdateArray($arIns);
+    }
+    /*----
+      HISTORY:
+	2016-06-04 I'm not sure why this was private; it seems like a good general-use function.
+	  I specifically needed it to be public when loading up Customer Address records via either
+	  of two different methods. I *could* have written public SaveThis() and SaveThat() methods,
+	  but that would have increased the amount of special coding needed for This and That yet again.
+    */
+    public function Save() {
+	$out = NULL;
+	if ($this->IsNew()) {
+	    $arSave = $this->InsertArray();
+	    if (is_array($arSave)) {
 		$out = $this->Table()->Insert($arSave);
-	    } else {
-		$out = $this->Update($arSave);
+		if ($out !== FALSE) {
+		    $this->Value($this->KeyName(),$out);	// retrieve new record's ID
+		}
 	    }
 	} else {
-	    // nothing to do
-	    $out = NULL;
+	    $arSave = $this->UpdateArray();
+	    if (is_array($arSave)) {
+		$out = $this->Update($arSave);
+	    }
 	}
 	return $out;
     }
@@ -354,7 +461,6 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
 	2013-07-17 Modified to handle SQL_forUpdate()/SQL_forUpdateMe() split.
     */
     public function Update(array $arUpd,$iWhere=NULL) {
-	//$ok = $this->Table->Update($iSet,$sqlWhere);
 	if (is_null($iWhere)) {
 	    $sql = $this->SQL_forUpdateMe($arUpd);
 	} else {
@@ -396,6 +502,8 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
     /*----
       HISTORY:
 	2010-11-01 iID=NULL now means object does not have data from an existing record
+	2016-03-03 Rather than checking the keys specifically, let's just see if Values()
+	  is NULL (not an array) -- which can be done in a base class.
     */
     public function IsNew() {
 	return is_null($this->KeyValue());
@@ -447,6 +555,8 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
     }
     /*----
       RETURNS: list of key values from the current recordset, formatted for use in an SQL "IN (...)" clause
+      SEE ALSO: ColumnValues_SQL()
+      TODO: This method could probably use that one.
     */
     public function KeyListSQL() {
 	$sql = NULL;
@@ -463,6 +573,7 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
     /*----
       RETURNS: array of recordsets:
 	array[ID] = Values()
+      SEE ALSO: ColumnValues_array() (related but not identical)
     */
     public function asKeyedArray() {
 	$ar = array();
@@ -542,7 +653,7 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
 	2013-07-17 splitting into SQL_forUpdate and SQL_forUpdateMe
     */
     public function SQL_forUpdate(array $iSet,$iWhere) {
-	return $this->Table->SQL_forUpdate($iSet,$iWhere);
+	return $this->Table()->SQL_forUpdate($iSet,$iWhere);
     }
     /*----
       HISTORY:

@@ -29,19 +29,8 @@ abstract class clsSkin_login extends clsSkin_standard {
 	iAuth: authorization code emailed to user (URL format)
 	iUser: current username (optional)
     */
-/* OLD
-    public function RenderUserSet($iAuth,$iUser) {
-	$htUser = htmlspecialchars($iUser);
-	$out =
-	  '<input type=hidden name=auth value="'.$iAuth.'">'
-	  .' Username:<input name=uname size=10 value="'.$htUser.'">'
-	  .' Password:<input type=password name=upass size=10>'
-	  .' <input type=submit value="Create Account" name=btnSetLogIn>';
-	return $out;
-    }
-    */
     protected function RenderUserModify($iAuth,$iUser,$sButtonName,$sButtonText) {
-	$htUser = htmlspecialchars($iUser);
+	$htUser = fcString::EncodeForHTML($iUser);
 	if (is_null($iUser)) {
 	    $ctUser = '<input name=uname size=16 value="'.$htUser.'">';
 	} else {
@@ -80,7 +69,7 @@ __END__;
     */
     public function RenderForm_Email_RequestReset($iEmail) {
 	$out =
-	  ' Email address:<input name=uemail size=40 value="'.htmlspecialchars($iEmail).'">'
+	  ' Email address:<input name=uemail size=40 value="'.fcString::EncodeForHTML($iEmail).'">'
 	  .' <input type=submit value="Send Email" name="btnSendAuth">';
 	return $out;
     }

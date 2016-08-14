@@ -5,6 +5,8 @@
     2013-12-19 started
 */
 class acUserGroups extends clsUserGroups {
+    use ftLinkableTable;
+
     private $arData;
 
     public function __construct($iDB) {
@@ -80,12 +82,12 @@ class acUserGroup extends clsUserGroup {
     // -- DROP-IN API -- //
     // ++ RENDER UI COMPONENTS ++ //
 
-    protected function AdminRows_start() {
+    protected function AdminRows_start(array $arOptions = NULL) {
 	return "\n<table class=listing>";
     }
-    protected function AdminField($sField) {
+    protected function AdminField($sField,array $arOptions = NULL) {
 	if ($sField == 'ID') {
-	    $val = $this->AdminLink();
+	    $val = $this->SelfLink();
 	} else {
 	    $val = $this->Value($sField);
 	}
@@ -121,7 +123,7 @@ class acUserGroup extends clsUserGroup {
 	    if (!is_null($out)) {
 		$out .= $sSep;
 	    }
-	    $ht = $this->AdminLink($this->Name(),$this->Descr());
+	    $ht = $this->SelfLink($this->Name(),$this->Descr());
 	    if ($this->KeyValue() == ID_GROUP_USERS) {
 		$ht = "($ht)";
 	    }
@@ -182,15 +184,15 @@ class acUserGroup extends clsUserGroup {
 	The checkbox will be named $sName[ID].
     */
     protected function AdminLine_edit($sName=NULL,$bSel=NULL) {
-	$htID = $this->AdminLink();
+	$htID = $this->SelfLink();
 	if (!is_null($sName)) {
 	    $id = $this->KeyValue();
 	    $htID .= clsHTML::CheckBox($sName,$bSel,$id);
 	}
 	$out = $this->AdminLine_core($htID);
 
-	$htName = htmlspecialchars($this->ValueNz('Name'));
-	$htDescr = htmlspecialchars($this->ValueNz('Descr'));
+	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));
+	$htDescr = fcString::EncodeForHTML($this->ValueNz('Descr'));
 	$htWhen = $this->ValueNz('WhenCreated');
 
 	$out = <<<__END__
@@ -205,8 +207,8 @@ __END__;
 	return $out;
     }
     protected function AdminLine_core($htID) {
-	$htName = htmlspecialchars($this->ValueNz('Name'));
-	$htDescr = htmlspecialchars($this->ValueNz('Descr'));
+	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));
+	$htDescr = fcString::EncodeForHTML($this->ValueNz('Descr'));
 	$htWhen = $this->ValueNz('WhenCreated');
 
 	$out = <<<__END__
@@ -259,12 +261,12 @@ __END__;
 	$oTplt = $this->PageTemplate();
 	$arCtrls = $frmEdit->RenderControls($doEdit);
 	  // custom vars
-	  $arCtrls['ID'] = $this->AdminLink();
+	  $arCtrls['ID'] = $this->SelfLink();
 	  if ($this->IsNew()) {
 	      $arCtrls['ID'] = 'n/a';
 	      $arCtrls['WhenCreated'] = '<i>not yet</i>';
 	  } else {
-	      $arCtrls['ID'] = $this->AdminLink();
+	      $arCtrls['ID'] = $this->SelfLink();
 	  }
 
 	// render the form
@@ -297,26 +299,22 @@ __END__;
     private $frmPage;
     protected function PageForm() {
 	if (empty($this->frmPage)) {
-	    $oForm = new fcForm_DB($this->Table()->ActionKey(),$this);
+	    $oForm = new fcForm_DB($this);
 
 	      $oField = new fcFormField_Num($oForm,'ID');
-		$oCtrl = new fcFormControl_HTML_Hidden($oForm,$oField,array());
+		$oCtrl = new fcFormControl_HTML_Hidden($oField,array());
 		  $oCtrl->Editable(FALSE);
 
 	      $oField = new fcFormField_Text($oForm,'Name');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>20));
+		$oCtrl = new fcFormControl_HTML($oField,array('size'=>20));
 
 	      $oField = new fcFormField_Text($oForm,'Descr');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>60));
+		$oCtrl = new fcFormControl_HTML($oField,array('size'=>60));
 
 	      $oField = new fcFormField_Time($oForm,'WhenCreated');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>10));
+		$oField->SetDefault(time());
+		$oCtrl = new fcFormControl_HTML_Timestamp($oField,array('size'=>10));
 		  $oCtrl->Editable(FALSE);
-
-	    $oForm->NewValue('WhenCreated',time());
-
-//	    $frmPage->AddField(new clsFieldTime('WhenCreated'),	new clsCtrlHTML_ReadOnly());
-//	    $frmPage->NewVals(array('WhenCreated'=>'NOW()'));
 
 	    $this->frmPage = $oForm;
 	}

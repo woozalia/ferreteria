@@ -56,9 +56,14 @@ class clsApp_MW extends cAppStandard {
 	}
 	return $this->oPage;
     }
-    // Should this even be here, or should we throw an exception and tell callers to go directly to Page()->BaseURL()?
+    /*----
+      2016-03-29 A note said:
+	"Should this even be here, or should we throw an exception and tell callers to go directly to Page()->BaseURL()?"
+	...but Page()->BaseURL_rel() calls this, so I'm not sure if that would work.
+	Either way, adding a terminating slash because otherwise the links aren't built right.
+    */
     public function BaseURL_rel() {
-	return $this->MWSpecialPage()->BaseURL_rel();
+	return $this->MWSpecialPage()->BaseURL_rel().'/';
     }
 
     // -- CEMENTING -- //

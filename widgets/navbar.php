@@ -35,44 +35,38 @@ abstract class clsNavNode extends clsTreeNode {
 	}
 	return $sClass;
     }
-/* partially-revised old way of doing things
-    public function CSSClass($iClass=NULL,$iState=NULL,$iName=NULL) {
-	$nState = is_null($iState)?0:$iState;
-	if (!is_null($iClass)) {
-	    if (is_null($iName)) {
-		$this->htClass[$nState] = $iClass;
-	    } else {
-		$oNode = $this->Node($iName);
-		if (is_null($oNode)) {
-		    throw new exception('Attempting to access nonexistent node "'.$iName.'".');
-		}
-		$oNode->CSSClass($iClass,$nState);
-	    }
-	} else {
-	    return $this->CSSClass_this($iClass,$nState);
-	}
-    }
-    protected function CSSClass_this($iClass,$iState) {
-	if (is_null(NzArray($this->htClass,$iState]))) {
-	    if ($this->HasParent()) {
-		return $this->Parent()->CSSClass(NULL,$iState);
-	    } else {
-		return NULL;
-	    }
-	} else {
-	    return $this->htClass[$iState];
-	}
-    }
-    protected function CSSClass_sub(
-*/
 }
 
 abstract class clsNavbar extends clsNavNode {
+
+    private $sDefaultNode;
+    public function SetDefault($sName) {
+	$this->sDefaultNode = $sName;
+    }
+    public function GetDefault() {
+	return $this->sDefaultNode;
+    }
+    
+    // ++ OVERRIDE ++ //
+    
+    public function Node($sName, clsTreeNode $oNode=NULL) {
+	if (empty($sName)) {
+	    $sName = $this->GetDefault();
+	}
+	return parent::Node($sName,$oNode);
+    }
+
+    // -- OVERRIDE -- //
+    // ++ ABSTRACT ++ //
+
     /*----
       USAGE: Should only be called by child nodes
     */
     abstract public function _Add(clsNavItem $iNode);
     abstract public function Render();
+
+    // -- ABSTRACT -- //
+
 }
 
 class clsNavbar_flat extends clsNavbar {
@@ -235,7 +229,7 @@ class clsNavLink extends clsNavText {
 	    $out = parent::Render();	// active links show as plain text
 	} else {
 	    $sPopup = $this->Popup();
-	    $htPopup = is_null($sPopup)?'':(' title="'.htmlspecialchars($sPopup).'"');
+	    $htPopup = is_null($sPopup)?'':(' title="'.fcString::EncodeForHTML($sPopup).'"');
 	    $out = '<a href="'.$url.'"'.$htPopup.'>'.parent::Render().'</a>';
 	}
 	return $out;

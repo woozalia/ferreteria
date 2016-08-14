@@ -44,16 +44,17 @@ class clsIndexer_Table_single_key extends clsIndexer_Table {
 	}
 	return $this->vKeyName;
     }
-    public function GetItem($iID=NULL,$iClass=NULL) {
-	if (is_null($iID)) {
-	    $objItem = $this->SpawnItem($iClass);
-	    $objItem->KeyValue(NULL);
+    public function GetItem($id=NULL,$sClass=NULL) {
+	if (is_null($id)) {
+	    $rcItem = $this->SpawnItem($sClass);
+	    $rcItem->KeyValue(NULL);
 	} else {
-	    assert('!is_array($iID); /* TABLE='.$this->TableObj()->Name().' */');
-	    $objItem = $this->TableObj()->GetData($this->vKeyName.'='.SQLValue($iID),$iClass);
-	    $objItem->NextRow();
+	    $tbl = $this->TableObj();
+	    $db = $tbl->Engine();
+	    $rcItem = $tbl->GetData($this->vKeyName.'='.$db->SanitizeAndQuote($id),$sClass);
+	    $rcItem->NextRow();
 	}
-	return $objItem;
+	return $rcItem;
     }
 }
 
@@ -86,13 +87,12 @@ class clsIndexer_Table_multi_key extends clsIndexer_Table {
     */
     public function GetItem($iVals=NULL) {
 	if (is_null($iVals)) {
-	    $objItem = $this->TableObj()->SpawnItem();
+	    $rc = $this->TableObj()->SpawnItem();
 	} else {
 	    if (is_array($iVals)) {
 		$arVals = $iVals;
 	    } else {
-		$x = new xtString($iVals);	// KLUGE to get strings.php to load >.<
-		$arVals = Xplode($iVals);
+		$arVals = fcString::Xplode($iVals);
 	    }
 	    $arKeys = $this->KeyNames();
 	    $arVals = array_reverse($arVals);	// pop takes the last item; we want to start with the first
@@ -100,10 +100,10 @@ class clsIndexer_Table_multi_key extends clsIndexer_Table {
 		$arData[$key] = array_pop($arVals);	// get raw values to match
 	    }
 	    $sqlFilt = $this->MakeFilt($arData,TRUE);
-	    $objItem = $this->TableObj()->GetData($sqlFilt);
-	    $objItem->NextRow();
+	    $rc = $this->TableObj()->GetData($sqlFilt);
+	    $rc->NextRow();
 	}
-	return $objItem;
+	return $rc;
     }
     /*----
       RETURNS: SQL to filter for the current record by key value(s)
@@ -132,7 +132,7 @@ class clsIndexer_Table_multi_key extends clsIndexer_Table {
 		$sql .= ' AND ';
 	    }
 	    if ($iSQLify) {
-		$val = SQLValue($val);
+		$val = $this->TableObj()->Engine()->Sanitize($val);
 	    }
 	    $sql .= '(`'.$name.'`='.$val.')';
 	}
@@ -209,18 +209,22 @@ abstract class clsIndexer_Recs {
       HISTORY:
 	2010-11-20 Created
 	2011-01-09 Adapted from clsDataSet_bare
+	2016-03-03 Had no second parameter for optional filter, which other functions
+	  needed; added it.
     */
-    public function SQL_forUpdate(array $iSet) {
+    public function SQL_forUpdate(array $arSet,$sqlWhere=NULL) {
 	$sqlSet = '';
-	foreach($iSet as $key=>$val) {
+	foreach($arSet as $key=>$val) {
 	    if ($sqlSet != '') {
 		$sqlSet .= ',';
 	    }
 	    $sqlSet .= ' `'.$key.'`='.$val;
 	}
-	$sqlWhere = $this->SQL_forWhere();
-
-	return 'UPDATE `'.$this->TableName().'` SET'.$sqlSet.' WHERE '.$sqlWhere;
+	if (is_null($sqlWhere)) {
+	    $sqlWhere = $this->SQL_forWhere();
+	}
+	$sqlTable = $this->TableName();
+	return "UPDATE `$sqlTable` SET$sqlSet WHERE $sqlWhere";
     }
     /*----
       HISTORY:
@@ -246,7 +250,8 @@ class clsIndexer_Recs_single_key extends clsIndexer_Recs {
     }
 
     public function SQL_forWhere() {
-	$sql = $this->KeyName().'='.SQLValue($this->KeyValue());
+	$db = $this->TableObj()->Engine();
+	$sql = $this->KeyName().'='.$db->SanitizeAndQuote($this->KeyValue());
 	return $sql;
     }
 }
@@ -257,7 +262,7 @@ class clsIndexer_Recs_multi_key extends clsIndexer_Recs {
     */
     public function KeyArray() {
 	$arKeys = $this->TblIdxObj()->KeyNames();
-	$arRow = $this->DataObj()->Row;
+	$arRow = $this->DataObj()->Values();
 	foreach ($arKeys as $key) {
 	    if (array_key_exists($key,$arRow)) {
 		$arOut[$key] = $arRow[$key];
@@ -270,11 +275,23 @@ class clsIndexer_Recs_multi_key extends clsIndexer_Recs {
 	return $arOut;
     }
     /*----
-      NOTE: The definition of "new" is a little more ambiguous with multikey tables;
-	for now, I'm saying that all keys must be NULL, because NULL keys are sometimes
-	valid in multikey contexts.
+      HISTORY:
+	2016-03-03 Trying to retrieve key values from KeyArray() on a new record 
+	  triggers an exception, so that's a bad way to do it. A simpler, more obvious,
+	  and hopefully reliable method is to see if Values() is NULL. This might fail
+	  if a record has been previously loaded and then cleared. If that happens,
+	  we need to make sure that "clearing" a record means setting Values() to NULL.
+
     */
     public function IsNew() {
+	throw new exception('Does anything call this?');
+	return is_null($this->Values());
+    
+    /* 2016-03-03 old code
+      This attempted to retrieve the values of only the keys, then ensure that they
+	were *all* NULL, since NULL might be a valid key value when there is more than
+	one key.
+
 	$arData = $this->KeyArray();
 	foreach ($arData as $key => $val) {
 	    if (!is_null($val)) {
@@ -282,6 +299,7 @@ class clsIndexer_Recs_multi_key extends clsIndexer_Recs {
 	    }
 	}
 	return TRUE;
+	//*/
     }
     /*----
       ASSUMES: keys will always be returned in the same order
@@ -338,6 +356,7 @@ class clsIndexer_Recs_multi_key extends clsIndexer_Recs {
     /*----
       NOTE: This is slightly different from the single-keyed Make() in that it assumes there are no autonumber keys.
 	All keys must be specified in the initial data.
+      USAGE: Overrides can use different rules to decide whether to Insert or Update.
     */
     public function Make(array $iarSet) {
 	if ($this->IsNew()) {

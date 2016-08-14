@@ -6,7 +6,7 @@
   HISTORY:
     2013-12-12 started - ArrayToAttrs(), BuildLink()
 */
-class clsHTML {
+class fcHTML {
 
     // ++ COMPONENTS ++ //
 
@@ -29,19 +29,26 @@ class clsHTML {
 	}
 	return $htAttr;
     }
+    /*----
+      HISTORY:
+	2016-02-24 I was filtering the popup with htmlspecialchars(), but that prevents HTML entities. Removing.
+    */
     static public function BuildLink($urlBase,$sText,$sDescr=NULL,$arAttr=NULL) {
+	if (is_array($sText)) {
+	    echo "STEXT: ".clsArray::Render($sText);
+	    throw new exception('Internal Error: Received an array for $sText instead of a string.');
+	}
 	$htURL = '"'.$urlBase.'"';
 	if (is_null($sDescr)) {
 	    $htDescr = '';
 	} else {
-	    $htDescr = ' title="'.htmlspecialchars($sDescr).'"';
+	    $htDescr = ' title="'.$sDescr.'"';
 	}
 	if (is_null($arAttr)) {
 	    $htAttr = NULL;
 	} else {
 	    $htAttr = ' '.static::ArrayToAttrs($arAttr);
 	}
-
 	$out = "<a href=$htURL$htDescr$htAttr>$sText</a>";
 	return $out;
     }
@@ -59,6 +66,7 @@ class clsHTML {
     }
 
     // -- URLs -- //
+    // ++ WIDGETS ++ //
 
     /*----
       TODO: There's probably a way to set the actual display-character via CSS, too.
@@ -80,6 +88,37 @@ class clsHTML {
 	$out = "<span class=$cssSpan>$sShow</span>";
 	return $out;
     }
+    /*----
+      INPUT:
+	$htName - name for the input element
+	$arRows - array of rows: array(ID => display)
+	$idDefault - default value to choose
+	$sChoose - optional string for first row, telling user to choose something
+	  If NULL, no such row is displayed.
+	  If displayed, and user leaves it there, returned value is NULL/blank.
+    */
+    static public function DropDown_arr($htName,array $arRows,$idDefault,$sChoose=NULL) {
+	$out = "\n<select name='$htName'>";
+	if (!is_null($sChoose)) {
+	    $htSelect = is_null($idDefault)?' selected':NULL;
+	    $out .= "\n  <option$htSelect value=''>$sChoose</option>";
+	}
+	foreach ($arRows as $id => $sDisplay) {
+	    $htSelect = ($id==$idDefault)?' selected':NULL;
+	    $out .= "\n  <option$htSelect value='$id'>$sDisplay</option>";
+	}
+	$out .= "\n</select>";
+	return $out;
+    }
+    
+    // -- WIDGETS -- //
+    // ++ FORMATS ++ //
+    
+    static public function RespectLineBreaks($s) {
+	return str_replace("\n",'<br />',$s);
+    }
+    
+    // -- FORMATS -- //
 
     /*----
       INPUT: arArgs = array of unparsed URL path arguments
@@ -110,3 +149,4 @@ class clsHTML {
     }
 */
 }
+class clsHTML extends fcHTML {}	// DEPRECATED alias

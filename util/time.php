@@ -9,7 +9,7 @@
     2015-09-12 moved xtTime here from strings.php
 */
 
-class clsDate {
+class fcDate {
     /*----
       INPUT:
 	$sDate = date string in any format understood by the DateTime class
@@ -26,9 +26,31 @@ class clsDate {
 	}
 	return $out;
     }
+    // TODO: explain what this function does, and maybe come up with a better name
+    static public function DefaultYear($iDate,$iYear,$iSmallerPfx='<small>',$iSmallerSfx='</small>') {
+	if (empty($iDate)) {
+	    return NULL;
+	} else {
+	    $dtIn = strtotime($iDate);
+	    $yrIn = date('Y',$dtIn);
+	    $doYr = ($yrIn != $iYear);
+	    $out = '';
+	    if ($doYr) {
+		$out .= $iSmallerPfx;
+	    }
+	    $ftIn = date('m/d',$dtIn);
+	    $out .= $ftIn;
+	    if ($doYr) {
+		$out .= '<br>'.$yrIn;
+		$out .= $iSmallerSfx;
+	    }
+	    return $out;
+	}
+    }
 }
+class clsDate extends fcDate {}		// alias; deprecated
 
-class clsTime {
+class fcTime {
 
     // this may not be needed -- try clsDate::NzDate
     static public function ShowStamp_HideTime($iStamp) {
@@ -46,7 +68,33 @@ class clsTime {
 	    return NULL;
 	}
     }
+
+    static public function DefaultDate($iTime,$iDate,$iSmallerPfx='<small>',$iSmallerSfx='</small>',$iDateFmt='n/j') {
+	if (empty($iDate)) {
+	    return NULL;
+	} else {
+	    $itTime = strtotime($iTime);	// time to show -- convert to seconds since epoch
+	    $itDate = strtotime($iDate);	// base date -- convert to seconds since epoch
+
+	    // convert dates (only) back to string (leave off time)
+	    $strTimeDate = date('Ymd',$itTime);
+	    $strDateDate = date('Ymd',$itDate);
+
+	    $doDate = ($strTimeDate != $strDateDate);
+	    $out = '';
+	    if ($doDate) {
+		$out .= $iSmallerPfx;
+	    }
+	    $out .= date('H:i',$itTime);
+	    if ($doDate) {
+		$out .= '<br>'.date($iDateFmt,$itTime);
+		$out .= $iSmallerSfx;
+	    }
+	    return $out;
+	}
+    }
 }
+class clsTime extends fcTime {}		// alias; deprecated
 
 
 function DateOnly_string($iTime=NULL) {
@@ -61,6 +109,7 @@ function DateOnly_string($iTime=NULL) {
     $iDate; base date, in text format
 */
 function Time_DefaultDate($iTime,$iDate,$iSmallerPfx='<small>',$iSmallerSfx='</small>',$iDateFmt='n/j') {
+    throw new exception('Call fcTime::DefaultDate() instead.');
     if (empty($iDate)) {
 	return NULL;
     } else {
@@ -130,6 +179,7 @@ function Date_DefaultTime($iStamp) {
   USED BY: Special:VbzAdmin
 */
 function Date_DefaultYear($iDate,$iYear,$iSmallerPfx='<small>',$iSmallerSfx='</small>') {
+    throw new exception('Date_DefaultYear() has been replaced by clsDate::DefaultYear()');
     if (empty($iDate)) {
 	return NULL;
     } else {
@@ -150,20 +200,31 @@ function Date_DefaultYear($iDate,$iYear,$iSmallerPfx='<small>',$iSmallerSfx='</s
     }
 }
 
-// TODO: determine which of these functions are *not* duplicates of native PHP functions, and document.
+/*----
+  TODO:
+    * Determine which of these functions are *not* duplicates of native PHP functions, and document.
+    * Determine whether/how this is different from fcTime, and document (or merge).
+*/
 class xtTime {
     public function __construct($iValue=NULL) {
 	if (is_string($iValue)) {
 	    $this->Parse($iValue);
+	} else {
+	    $this->Parts();	// set all to NULL;
 	}
     }
+    /*----
+      HISTORY:
+	2016-01-12 This used to only set fields when the input wasn't NULL, but I decided to always
+	  set them because (duh) you can test for NULL if you want to know whether a field was NULL.
+    */
     public function Parts($iYear=NULL,$iMonth=NULL,$iDay=NULL,$iHour=NULL,$iMin=NULL,$iSec=NULL) {
-	if (!is_null($iYear))	{ $this->intYr = $iYear; }
-	if (!is_null($iMonth))	{ $this->intMo = $iMonth; }
-	if (!is_null($iDay))	{ $this->intDy = $iDay; }
-	if (!is_null($iHour))	{ $this->intHr = $iHour; }
-	if (!is_null($iMin))	{ $this->intMi = $iMin; }
-	if (!is_null($iSec))	{ $this->intSe = $iSec; }
+	$this->intYr = $iYear;
+	$this->intMo = $iMonth;
+	$this->intDy = $iDay;
+	$this->intHr = $iHour;
+	$this->intMi = $iMin;
+	$this->intSe = $iSec;
     }
     public function PartsArray($iArray=NULL) {
 	if (!is_null($iArray)) {
@@ -188,7 +249,11 @@ class xtTime {
 	if (!is_null($iYear)) {
 	    $this->intYr = $iYear;
 	}
-	return $this->intYr;
+	if (isset($this->intYr) || is_null($this->intYr)) {
+	    return $this->intYr;
+	} else {
+	    throw new exception('Trying to retrieve intYr before it has been set.');
+	}
     }
     public function Parse($iString) {		// date and/or time
 	$this->DateParse($iString);

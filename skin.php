@@ -37,7 +37,7 @@ abstract class clsSkin {
 	foreach ($this->arPOrder as $sName) {
 	    $sText = $this->arPieces[$sName];
 	    echo "\n<br>===PIECE: [$sName]===<br>\n"
-	      .htmlspecialchars($sText)."\n"
+	      .fcString::EncodeForHTML($sText)."\n"
 	      ."\n<br>===END $sName===<br>";
 	}
     }
@@ -83,8 +83,6 @@ abstract class clsSkin_basic extends clsSkin {
 }
 
 abstract class clsSkin_standard extends clsSkin_basic {
-    private $sTitle;
-    private $sSheet;
 
     // ++ ACTION ++ //
 
@@ -97,27 +95,34 @@ abstract class clsSkin_standard extends clsSkin_basic {
     }
     public function Content($sName,$sText) {
 	$ht = "\n<!-- BEGIN CONTENT - $sName -->$sText\n<!-- END CONTENT - $sName -->";
-	$this->arPieces['content'] = NzArray($this->arPieces,'content').$ht;
+	$this->arPieces['content'] = clsArray::Nz($this->arPieces,'content').$ht;
     }
 
     // -- ACTION -- //
     // ++ FRAGMENT ACCESS METHODS ++ //
 
-    public function PageTitle($sTitle=NULL) {
-	if (!is_null($sTitle)) {
-	    $this->sTitle = $sTitle;
-	}
-	return $this->sTitle;
+    private $htTitle;	// how the page describes itself - may include HTML
+    public function SetPageTitleString($htTitle) {
+	$this->htTitle = $htTitle;
     }
-    public function Sheet($iName=NULL) {
-	if (!is_null($iName)) {
-	    $this->sSheet = $iName;
+    // TODO: This should not have to be public.
+    public function GetPageTitleString_html() {
+	return $this->htTitle;
+    }
+    // TODO: This should not have to be public.
+    public function GetPageTitleString_text() {
+	return strip_tags($this->GetPageTitleString_html());
+    }
+    private $sSheet;
+    public function Sheet($sName=NULL) {
+	if (!is_null($sName)) {
+	    $this->sSheet = $sName;
 	}
 	return $this->sSheet;
     }
     /*----
       RETURNS: title for browser to display, based on page title
-	This lets you modify just the browser title.
+	This lets skin authors have one format for browser title, another for meta-tag, etc.
     */
     abstract public function BrowserTitle();
 
@@ -126,7 +131,16 @@ abstract class clsSkin_standard extends clsSkin_basic {
 
     protected function PageHeader() {
 	$sTitle = $this->BrowserTitle();
-	$out = KHT_PAGE_DOCTYPE."<html>\n<head>\n<title>$sTitle</title>";
+	$sDocType = KHT_PAGE_DOCTYPE;
+	$sCharSet = KS_CHARACTER_ENCODING;
+	$out = <<<__END__
+$sDocType
+<html>
+<head>
+  <title>$sTitle</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=$sCharSet">
+
+__END__;
 
 	if (is_null($this->Sheet())) {
 	    throw new exception('Style sheet not set for this page class.');
@@ -134,10 +148,11 @@ abstract class clsSkin_standard extends clsSkin_basic {
 	$arVars = array('sheet' => $this->Sheet());
 	$objStrTplt = new clsStringTemplate_array(NULL,NULL,$arVars);
 	$objStrTplt->MarkedValue(KHT_PAGE_STYLE);
-	$out .= "\n".$objStrTplt->Replace();
-	$strContent = KS_SITE_NAME_META.': '.$this->PageTitle();
-	$out .= "\n<meta name=description content=\"$strContent\">";
-	$out .= "\n</head>\n".KHT_PAGE_BODY_TAG;
+	$strContent = KS_SITE_NAME_META.': '.$this->GetPageTitleString_text();
+	$out .= "\n".$objStrTplt->Replace()
+	  ."\n  <meta name=description content=\"$strContent\" />"
+	  ."\n  <meta charset=\"utf-8\" />"
+	  ."\n</head>\n".KHT_PAGE_BODY_TAG;
 
 	return $out;
     }

@@ -5,6 +5,7 @@
     2013-12-29 started
 */
 class acUserPerms extends clsUserPerms {
+    use ftLinkableTable;
     private $arData;
 
     // ++ SETUP ++ //
@@ -39,7 +40,7 @@ class acUserPerms extends clsUserPerms {
 	$arPage = $oPage->PathArgs();
 	$arActs = array(
 	  // (array $iarData,$iLinkKey,$iGroupKey=NULL,$iDispOff=NULL,$iDispOn=NULL,$iDescr=NULL)
-	  new clsActionLink_option($arPage,'add','id')
+	  new clsActionLink_option($arPage,KS_NEW_REC,'id')
 	  );
 	$oPage->PageHeaderWidgets($arActs);
 
@@ -98,8 +99,8 @@ __END__;
 	    $htID .= clsHTML::CheckBox($sName,$bSel,$id);
 	}
 
-	$htName = htmlspecialchars($this->ValueNz('Name'));
-	$htDescr = htmlspecialchars($this->ValueNz('Descr'));
+	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));
+	$htDescr = fcString::EncodeForHTML($this->ValueNz('Descr'));
 	$htWhen = $this->ValueNz('WhenCreated');
 
 	$out = <<<__END__
@@ -184,13 +185,13 @@ __END__;
     // ++ ADMIN INTERFACE ++ //
 
     public function AdminLine($sName=NULL,$bSel=NULL) {
-	$htID = $this->AdminLink();
+	$htID = $this->SelfLink();
 	if (!is_null($sName)) {
 	    $id = $this->KeyValue();
 	    $htID .= clsHTML::CheckBox($sName,$bSel,$id);
 	}
-	$htName = htmlspecialchars($this->ValueNz('Name'));
-	$htDescr = htmlspecialchars($this->ValueNz('Descr'));
+	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));
+	$htDescr = fcString::EncodeForHTML($this->ValueNz('Descr'));
 	$htWhen = $this->ValueNz('WhenCreated');
 
 	$out = <<<__END__
@@ -233,7 +234,7 @@ __END__;
 	$oTplt = $this->PageTemplate();
 	$arCtrls = $frmEdit->RenderControls($doEdit);
 	  // custom vars
-	  $arCtrls['ID'] = $this->AdminLink();
+	  $arCtrls['ID'] = $this->SelfLink();
 
 	// render the form
 	$oTplt->VariableValues($arCtrls);
@@ -258,9 +259,10 @@ __END__;
     }
     private function AdminPageSave() {
 	$oForm = $this->PageForm();
-	$oForm->ClearValues();
-	$out = $oForm->Save();
-	$this->AdminRedirect(array('id'=>FALSE),$out);	// clear the form data out of the page reload
+	//$oForm->ClearValues();
+	$oForm->Save();
+	$sMsg = $oForm->MessagesString();
+	$this->SelfRedirect(array('id'=>FALSE),$sMsg);	// clear the form data out of the page reload
     }
     private $tpPage;
     protected function PageTemplate() {
@@ -280,7 +282,7 @@ __END__;
     private $frmPage;
     protected function PageForm() {
 	if (empty($this->frmPage)) {
-	    $oForm = new fcForm_DB($this->Table()->ActionKey(),$this);
+	    $oForm = new fcForm_DB($this);
 
 //	      if (!$this->IsNew()) {
 //		  $oField = new fcFormField_Num($oForm,'ID');
@@ -288,15 +290,15 @@ __END__;
 //	      }
 
 	      $oField = new fcFormField_Text($oForm,'Name');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>20));
+		$oCtrl = new fcFormControl_HTML($oField,array('size'=>20));
 
 	      $oField = new fcFormField_Text($oForm,'Descr');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>60));
+		$oCtrl = new fcFormControl_HTML($oField,array('size'=>60));
 
 	      $oField = new fcFormField_Time($oForm,'WhenCreated');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>10));
-		  $oCtrl->Editable(FALSE);
-		$oField->SetDefaultNative(time());
+		//$oCtrl = new fcFormControl_HTML($oField,array('size'=>10));
+		$oField->ControlObject()->Editable(FALSE);
+		$oField->SetDefault(time());
 
 	    $this->frmPage = $oForm;
 	}

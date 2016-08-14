@@ -1,7 +1,7 @@
 <?php
 /* ===========================
  *** DATA UTILITY CLASSES ***
-  AUTHOR: Woozle (Nick) Staddon
+  AUTHOR: Woozle Staddon
   HISTORY:
     2007-05-20 (wzl) These classes have been designed to be db-engine agnostic, but I wasn't able
 	  to test against anything other than MySQL nor was I able to implement the usage of
@@ -49,11 +49,12 @@
     2012-01-28 (wzl) clsDataEngine classes
     2012-12-31 (wzl) improved error handling in clsDataEngine_MySQL.db_open()
     2013-01-24 (wzl) clsDatabase_abstract:: SelfClass() and Spawn()
-    2015-07-15 resolving conflicts with other edited version
     2016-07-12
       * Have to get mysqli class working, because PHP 7 won't use old mysql calls.
       * Removed debugging functions. This will break some things, but just remove the calls.
 	* Also removed debugging-flag constants.
+    2015-07-15 resolving conflicts with other edited version
+    2016-08-14 Hand-merging changes (apparently rizzo's version never got pushed back to origin)
 */
 
 define('KS_DEFAULT_ENGINE','clsDataEngine_MySQLi');	// classname of default database engine
@@ -88,30 +89,41 @@ abstract class clsDatabase_abstract {
     }
     /*-----
       ACTION: Create a table object of the requested class
+      NOTE: It is possible to abuse this service by requesting a non-Table-type object.
+	The requested class's ancestry is not checked.
       HISTORY:
 	2010-12-01 Added iID parameter to get singular item
 	2011-02-23 Changed from protected to public, to support class registration
 	2012-01-23 Moved from clsDatabase to (new) clsDatabase_abstract
 	2015-09-07
-	  TODO: This *really* ought to be modified just slightly to keep the table objects in an array.
+	  EX-TODO: This *really* ought to be modified just slightly to keep the table objects in an array.
 	  Do it when everything else is working.
-	  TODO: Rename from Make() to MakeTableObject() OSLT.
-
+	2016-03-07 Did that.
+	  TODO: Rename from Make() to MakeTableObject() OSLT. Otherwise it sounds like we're adding a table to the database.
     */
+    private $arTables;
     public function Make($sClass,$id=NULL) {
-	if (!isset($this->$sClass)) {
+	if (empty($this->arTables)) { $this->arTables = array(); }
+	if (array_key_exists($sClass,$this->arTables)) {
+	    // a Table of that class has already been created
+	    $t = $this->arTables[$sClass];
+	} else {
+	    // that class of Table has not yet been created
 	    if (class_exists($sClass)) {
-		$this->$sClass = new $sClass($this);
+		// create & cache it
+		$t = new $sClass($this);
+		$this->arTables[$sClass] = $t;
 	    } else {
+		// no code found for that class
 		throw new exception('Unknown class "'.$sClass.'" requested.');
 	    }
 	}
 	if (is_null($id)) {
 	    // table-type
-	    return $this->$sClass;
+	    return $t;
 	} else {
 	    // recordset-type
-	    return $this->$sClass->GetItem($id);
+	    return $t->GetItem($id);
 	}
     }
 
@@ -163,26 +175,23 @@ abstract class clsDatabase_abstract {
 	return $this->engine_db_safe_param($val);
     }
     public function SanitizeAndQuote($val) {
-	$sql = $this->Sanitize($val);
-	if (!is_numeric($val)) {
-	    $sql = '"'.$sql.'"';
+	if (is_null($val)) {
+	    $sql = 'NULL';
+	} else {
+	    $sql = $this->Sanitize($val);
+	    if (!is_numeric($val)) {
+		$sql = '"'.$sql.'"';
+	    }
 	}
 	return $sql;
     }
-/*
-    public function engine_row_rewind() {
-	return $this->objRes->do_rewind();
+    public function SanitizeAndQuote_ValueArray(array $arVals) {
+	$arOut = NULL;
+	foreach ($arVals as $key => $val) {
+	    $arOut[$key] = $this->SanitizeAndQuote($val);
+	}
+	return $arOut;
     }
-    public function engine_row_get_next() { throw new exception('how did we get here?');
-	return $this->objRes->get_next();
-    }
-    public function engine_row_get_count() {
-	return $this->objRes->get_count();
-    }
-    public function engine_row_was_filled() {
-	return $this->objRes->is_filled();
-    }
-*/
 
     // -- ENGINE WRAPPER FUNCTIONS -- //
 }
@@ -266,6 +275,8 @@ class clsDatabase extends clsDatabase_abstract {
     /*----
       HISTORY:
 	2011-03-04 added DELETE to list of write commands; rewrote to be more robust
+	2016-01-23 This should probably just be removed. I think it was an aid for the SQL Scripting classes,
+	  which didn't really work out.
     */
     protected function OkToExecSQL($iSQL) {
 	if ($this->doAllowWrite) {
@@ -358,6 +369,9 @@ class clsDatabase extends clsDatabase_abstract {
 	if (!is_null($iSQL)) {
 	    if (is_object($rc)) {
 		$rc->Query($iSQL);
+		if (!is_object($rc->ResultHandler())) {
+		    throw new exception('Ferreteria error: ResultHandler() has mysteriously become unset.');
+		}
 	    }
 	}
 	return $rc;

@@ -17,8 +17,7 @@ define('KS_CLASS_SITE_DROPIN_MODULE',	'VCI_DropIn_Module');
 
 // MENU
 
-
-$om = new clsMenuFolder(NULL, '*site','Site','Site Management','site configuration and management');
+$om = new clsMenuFolder($oRoot,'*site','Site','Site Management','site configuration and management');
   $om->NeedPermission(KS_PERM_SITE_VIEW_CONFIG);
   //$om->NeedPermission(NULL);
   $omi = new clsMenuLink($om,KS_PAGE_KEY_DROPINS,'Dropins','Drop-in Modules','manage drop-in modules');
@@ -38,5 +37,4 @@ $arDropin = array(
      ),
   'menu'	=> $om,
   //'permit'	=> array('admin'),	// groups who are allowed access
-  //'requires'	=> array('vbz.syslog')	// other drop-ins this drop-in uses
   );

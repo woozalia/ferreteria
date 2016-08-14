@@ -4,11 +4,15 @@
   HISTORY:
     2013-12-25 started
     2014-04-04 defined HTTP_REDIRECT_POST (is it supposed to be defined somewhere else?)
+    2016-02-22 replaced clsHTTPInput with fcInputData_array_local, and created fcHTTP_REQUEST.
+      TODO: There should probably also be fcHTTP_GET and fcHTTP_POST classes.
+      TODO: fcInputData, fcInputData_array, and fcInputData_array_local probably belong somewhere else.
+      TODO: rename clsHTTP to fcHTTP.
 */
 
 define('HTTP_REDIRECT_POST',303);
 
-class clsHTTP {
+class fcHTTP {
 
     /*----
       NOTES: Some builds of PHP don't have this function.
@@ -32,34 +36,33 @@ class clsHTTP {
     }
     // ++ FORM DATA ++ //
 
+    /* 2016-02-22 old version
     static private $oReq=NULL, $oGet=NULL, $oPost=NULL, $oCookie=NULL;
     static public function Request() {
 	if (is_null(self::$oReq)) {
 	    self::$oReq = new clsHTTPInput($_REQUEST);
 	}
 	return self::$oReq;
+    } //*/
+    static public function Request() {
+	return new fcHTTP_REQUEST();
     }
-    /*
-    static private $oPath;
-    static public function PathArgs(array $arPath=NULL,$sPathSep=KS_CHAR_PATH_SEP,$sArgSep=KS_CHAR_URL_ASSIGN) {
-	if (is_null(self::$oPath)) {
-	    self::$oPath = new clsHTTPInput($arPath);
-	}
-	return self::$oPath;
-    }
-    */
     /*----
       PURPOSE: Saves program output so that it can be displayed after a redirect
+      RETURNS: stored text - from argument (if not null) or from cookie
     */
     static public function DisplayOnReturn($sText=NULL) {
+	$kCookie = 'ferreteria-text-to-show';
 	if (is_null($sText)) {
 	    // not setting cookie -- retrieve it
-	    $sText = clsArray::Nz($_COOKIE,'text-to-show');
+	    $sText = clsArray::Nz($_COOKIE,$kCookie);
 	    // clear the cookie (expire it) so text is only displayed once
-	    setcookie('text-to-show',NULL,time()-3600,'/');
+	    setcookie($kCookie,NULL,time()-3600,'/');
+//	    "clsHTTP: found msg [$sText]";
 	} else {
 	    // set the cookie
-	    setcookie('text-to-show',$sText,0,'/');
+	    setcookie($kCookie,$sText,0,'/');
+//	    "clsHTTP: setting msg [$sText]";
 	}
 	return $sText;
     }
@@ -72,29 +75,34 @@ class clsHTTP {
 
     // -- FORM DATA -- //
 }
-class clsHTTPInput {
-    private $ar;	// raw form data
-    private $isFnd;	// element was found for previous request
-
-    public function __construct(array $ar) {
-	$this->ar = $ar;
-    }
+class clsHTTP extends fcHTTP {}	// alias; deprecate later
+abstract class fcInputData {
+    abstract protected function Values();
+    abstract protected function Value($sName);
+    abstract public function KeyExists($sName);
+    abstract public function GetBool($sName);
+    abstract public function GetText($sName,$vDefault=NULL);
+    abstract public function GetInt($sName,$vDefault=NULL);
+    abstract public function GetArray($sName,$vDefault=array());
     public function DumpHTML() {
 	return '<pre>'.print_r($this->Values(),TRUE).'</pre>';
     }
-    protected function Values() {
-	return $this->ar;
-    }
+}
+/*----
+  IMPLEMENTS everything except Values(). We know we have all the data in an array,
+    but we don't yet know how to access it.
+*/
+abstract class fcInputData_array extends fcInputData {
     protected function Value($sName) {
-	$this->isFnd = array_key_exists($sName,$this->ar);
-	if ($this->isFnd) {
-	    return $this->ar[$sName];
+	$ar = $this->Values();
+	if (array_key_exists($sName,$ar)) {
+	    return $ar[$sName];
 	} else {
 	    return NULL;
 	}
     }
     public function KeyExists($sName) {
-	return array_key_exists($sName,$this->ar);
+	return array_key_exists($sName,$this->Values());
     }
     public function GetBool($sName) {
 	return (boolean)$this->Value($sName);
@@ -122,5 +130,21 @@ class clsHTTPInput {
 	} else {
 	    return $vDefault;
 	}
+    }
+}
+// PURPOSE: fcInputData_array whose data is stored internally
+class fcInputData_array_local extends fcInputData_array {
+    private $ar;	// raw form data
+    public function __construct(array $ar) {
+	$this->ar = $ar;
+    }
+    protected function Values() {
+	return $this->ar;
+    }
+}
+// PURPOSE: fcInputData_array whose data is in $_REQUEST
+class fcHTTP_REQUEST extends fcInputData_array {
+    protected function Values() {
+	return $_REQUEST;
     }
 }

@@ -8,8 +8,36 @@
         ftLoggableRecordset
 */
 
+/*%%%%
+  ASSUMES: object has an Engine() method
+*/
+trait ftLoggableObject {
+    //private $oLogger;
+    private $rcLastEvent;
+    public function StartEvent(array $arArgs) {
+	return $this->Log()->StartEvent($arArgs);
+    }
+    public function FinishEvent(array $arArgs=NULL) {
+	return $this->Log()->FinishEvent($arArgs);
+    }
+    public function CreateEvent(array $arArgs) {
+	$rcEv = $this->Log()->CreateEvent($arArgs);
+	$this->SetEvent($rcEv);	// is this a kluge?
+	return $rcEv;
+    }
+    public function EventListing() {
+	return $this->Log()->EventListing();
+    }
+    protected function SetEvent(clsSysEvent $rcEvent) {
+	$this->rcLastEvent = $rcEvent;
+    }
+    protected function GetEvent() {
+	return $this->rcLastEvent;
+    }
+}
 trait ftLoggableRecord {
-    private $oLogger;
+    use ftLoggableObject;
+  
     protected function Log() {
         static $oLogger = NULL;
 
@@ -19,17 +47,18 @@ trait ftLoggableRecord {
 	}
 	return $oLogger;
     }
-    public function StartEvent(array $arArgs) {
-	return $this->Log()->StartEvent($arArgs);
-    }
-    public function FinishEvent(array $arArgs=NULL) {
-	return $this->Log()->FinishEvent($arArgs);
-    }
-    public function CreateEvent(array $arArgs) {
-	return $this->Log()->CreateEvent($arArgs);
-    }
-    public function EventListing() {
-	return $this->Log()->EventListing();
+}
+trait ftLoggableTable {
+    use ftLoggableObject;
+    
+    protected function Log() {
+        static $oLogger = NULL;
+
+	if (is_null($oLogger)) {
+	    $tLog = $this->Engine()->App()->Events();
+	    $oLogger = new clsLogger_Table($this,$tLog);
+	}
+	return $oLogger;
     }
 }
 
@@ -59,6 +88,7 @@ class clsDataTable_Menu extends clsTable {
 class clsDataRecord_admin extends clsDataSet {
     use ftLinkableRecord;
     use ftLoggableRecord;
+    use ftShowableRecord;
 
     // ++ TRAIT CALLBACKS ++ //
 
@@ -75,59 +105,6 @@ class clsDataRecord_admin extends clsDataSet {
 
     // -- TRAIT CALLBACKS -- //
     // ++ ADMIN UI ++ //
-
-    public function AdminRows(array $arFields) {
-	return
-	  $this->AdminRows_start()
-	  .$this->AdminRows_head($arFields)
-	  .$this->AdminRows_rows($arFields)
-	  .$this->AdminRows_finish()
-	  ;
-    }
-    protected function AdminRows_start() {
-	return "\n<table>";
-    }
-    protected function AdminRows_finish() {
-	return "\n</table>";
-    }
-    /*----
-      ACTION: Just render the table header, if there are data rows.
-    */
-    protected function AdminRows_head(array $arFields) {
-	$out = NULL;
-	if ($this->HasRows()) {
-	    $out .= "\n  <tr>";
-	    foreach ($arFields as $sField => $sLabel) {
-		$out .= "\n    <th>$sLabel</th>";
-	    }
-	    $out .= "\n</tr>";
-	}
-	return $out;
-    }
-    /*----
-      ACTION: Just render the data rows, if any. Return NULL if none.
-    */
-    protected function AdminRows_rows(array $arFields) {
-	$out = NULL;
-	if ($this->HasRows()) {
-	    while ($this->NextRow()) {
-		$out .= "\n  <tr>";
-		foreach ($arFields as $sField => $sLabel) {
-		    $htVal = $this->AdminField($sField);
-		    $out .= "\n    $htVal";
-		}
-		$out .= "\n</tr>";
-	    }
-	}
-	return $out;
-    }
-    /*----
-      PURPOSE: This is basically a stub - override to provide formatting
-    */
-    protected function AdminField($sField) {
-	$val = $this->Value($sField);
-	return "<td>$val</td>";
-    }
 
     // -- ADMIN UI -- //
 }

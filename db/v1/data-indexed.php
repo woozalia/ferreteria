@@ -67,11 +67,6 @@ class clsTable_indexed extends clsTable_keyed_abstract {
 class clsRecs_indexed extends clsRecs_keyed_abstract {
     protected $objIdx;
 
-/* This is never used
-    public function __construct(clsIndexer_Recs $iIndexer=NULL) {
-	$this->Indexer($iIndexer);
-    }
-*/
     // BOILERPLATE BEGINS
     public function Indexer(clsIndexer_Recs $iObj=NULL) {
 	if (!is_null($iObj)) {
@@ -80,9 +75,10 @@ class clsRecs_indexed extends clsRecs_keyed_abstract {
 	assert('is_object($this->objIdx);');
 	return $this->objIdx;
     }
+    /* 2016-03-03 This should just use the parent IsNew(), which is now multi-key compatible.
     public function IsNew() {
 	return !$this->Indexer()->IndexIsSet();
-    }
+    }//*/
     /*----
       USED BY: Administrative UI classes which need a string for referring to a particular record
     */
@@ -97,6 +93,7 @@ class clsRecs_indexed extends clsRecs_keyed_abstract {
 	return $this->Indexer()->SQL_forWhere();
     }
     public function SQL_forUpdate(array $iSet,$iWhere) {
+    echo __FILE__.' line '.__LINE__." - IWHERE: [$iWhere]<br>";
 	return $this->Indexer()->SQL_forUpdate($iSet,$iWhere);
     }
     public function SQL_forUpdateMe(array $iSet) {

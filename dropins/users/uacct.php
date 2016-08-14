@@ -14,6 +14,7 @@
     * scUserAcct <- clsUserAcct (user-access)
 */
 class acUserAccts extends clsUserAccts {
+    use ftLinkableTable;
 
     // ++ SETUP ++ //
 
@@ -118,22 +119,15 @@ class acUserAcct extends clsUserAcct {
     }
 
     // -- DROP-IN API -- //
-    // ++ DATA TABLE ACCESS ++ //
-
-//    protected function CustomerTable($id=NULL) {
-//	return $this->Engine()->Make(KS_CLASS_ADMIN_CUSTOMERS,$id);
-//    }
-
-    // -- DATA TABLE ACCESS -- //
     // ++ ADMIN INTERFACE ++ //
 
-    protected function AdminRows_start() {
+    protected function AdminRows_start(array $arOptions = NULL) {
 	return "\n<table class=listing>";
     }
-    protected function AdminField($sField) {
+    protected function AdminField($sField, array $arOptions = NULL) {
 	switch ($sField) {
 	  case 'ID':
-	    $val = $this->AdminLink();
+	    $val = $this->SelfLink();
 	    break;
 	  case '!grps':
 	    $val = $this->GroupList();
@@ -154,8 +148,8 @@ class acUserAcct extends clsUserAcct {
     }
     public function AdminLine() {
 	$htID = $this->AdminLink();
-	$htLogin = htmlspecialchars($this->Value('UserName'));
-	$htName = htmlspecialchars($this->Value('FullName'));
+	$htLogin = fcString::EncodeForHTML($this->Value('UserName'));
+	$htName = fcString::EncodeForHTML($this->Value('FullName'));
 	$htWhen = $this->Value('WhenCreated');
 	$htGrps = $this->GroupList();
 
@@ -179,24 +173,18 @@ __END__;
 	$doSave = $oPage->ReqArgBool('btnSave');
 	if ($doSave) {
 	    $this->PageForm()->Save();
-	    // return to the list form after saving
-	    //$urlReturn = $oPage->SelfURL(array('id'=>FALSE));
-	    //clsHTTP::Redirect($urlReturn);
-	    $this->AdminRedirect();
+	    $this->SelfRedirect();
 	}
 
 	// saving changes to the group assignments?
 	$doSave = $oPage->ReqArgBool('btnSaveGrps');
 	if ($doSave) {
 	    $out = $this->AdminPage_SaveGroups();
-	    // return to the list form after saving
-	    //$urlReturn = $oPage->SelfURL(array('edit.grp'=>FALSE));
-	    //clsHTTP::Redirect($urlReturn);
-	    $this->AdminRedirect(NULL,$out);
+	    $this->SelfRedirect(NULL,$out);
 	}
 
 	// set up header action-links
-	clsActionLink_option::UseRelativeURL_default(TRUE);	// use relative URLs
+	//clsActionLink_option::UseRelativeURL_default(TRUE);	// use relative URLs
 	$arActs = array(
 	  new clsActionLink_option(array(),'edit')
 	  );
@@ -215,17 +203,24 @@ __END__;
 	$oTplt = $this->PageTemplate();
 	$arCtrls = $frmEdit->RenderControls($doEdit);
 	  // custom vars
-	  $arCtrls['ID'] = $this->AdminLink();
+	  $arCtrls['ID'] = $this->SelfLink();
 
 	// render the form
 	$oTplt->VariableValues($arCtrls);
 	$htForm = $oTplt->Render();
+	
+	if ($doEdit) {
+	    $htFormHdr = "\n<form method=post id='uacct.AdminPage'>";
+	    $htFormBtn = "\n<input type=submit name=btnSave value='Save'>";
+	    $htFormFtr = "\n</form>";
+	} else {
+	    $htFormHdr = NULL;
+	    $htFormBtn = NULL;
+	    $htFormFtr = NULL;
+	}
 
-	$out = "\n<form method=post id='uacct.AdminPage'>"
-	  .$htForm
+	$out = $htFormHdr.$htForm.$htFormBtn.$htFormFtr
 	  .$this->AdminGroups()
-	  ."\n</form>"
-	  //.$this->RenderAddresses()	// TODO: render Stories etc.
 	  ;
 	return $out;
     }
@@ -241,19 +236,20 @@ __END__;
     private $frmPage;
     protected function PageForm() {
 	if (empty($this->frmPage)) {
-	    $oForm = new fcForm_DB($this->Table()->ActionKey(),$this);
+	    $oForm = new fcForm_DB($this);
 
 	      $oField = new fcFormField_Num($oForm,'ID');
-		$oCtrl = new fcFormControl_HTML_Hidden($oForm,$oField,array());
+		$oField->OkToWrite(FALSE);	// never update this field in the db
+		$oCtrl = new fcFormControl_HTML_Hidden($oField,array());
 
 	      $oField = new fcFormField_Text($oForm,'UserName');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>20));
+		$oCtrl = new fcFormControl_HTML($oField,array('size'=>20));
 
 	      $oField = new fcFormField_Text($oForm,'FullName');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>40));
+		$oCtrl = new fcFormControl_HTML($oField,array('size'=>40));
 
 	      $oField = new fcFormField_Time($oForm,'WhenCreated');
-		$oCtrl = new fcFormControl_HTML($oForm,$oField,array('size'=>10));
+		$oCtrl = new fcFormControl_HTML_Timestamp($oField,array('size'=>10));
 		  $oCtrl->Editable(FALSE);
 
 	    $this->frmPage = $oForm;
@@ -283,18 +279,25 @@ __END__;
 	  // (array $iarData,$iLinkKey,$iGroupKey=NULL,$iDispOff=NULL,$iDispOn=NULL,$iDescr=NULL)
 	  new clsActionLink_option(array(),'edit.grp',NULL,'edit')
 	  );
-	$out = $oPage->ActionHeader('Groups',$arActs);
 
-	$doEdit = $oPage->PathArg('edit.grp');
-
-	$rs = $this->UGroupRecords();
-	if ($doEdit) {
-	    $out .= $rs->RenderEditableList();
+	if ($this->IsNew()) {
+	    // don't display or edit groups if user is new -- there can't be any yet
+	    $out .= '<i>(new user - no groups)</i>';
 	} else {
-	    if ($rs->HasRows()) {
-		$out .= $rs->RenderInlineList();
+	    $out = $oPage->ActionHeader('Groups',$arActs);
+	    $doEdit = $oPage->PathArg('edit.grp');
+	    $rs = $this->UGroupRecords();
+	    if ($doEdit) {
+		$out .= "\n<form method=post>"
+		  .$rs->RenderEditableList()
+		  ."\n</form>";
+		  ;
 	    } else {
-		$out .= '<i>(none)</i>';
+		if ($rs->HasRows()) {
+		    $out .= $rs->RenderInlineList();
+		} else {
+		    $out .= '<i>(none)</i>';
+		}
 	    }
 	}
 	return $out;

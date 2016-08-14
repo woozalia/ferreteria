@@ -51,7 +51,7 @@ class clsURL {
 	    $wpLeft = parse_url($urlLeft,PHP_URL_PATH);	// get the post-domain part
 	    // remove ?query and #fragment
 	    //$wpRight = parse_url($wsRight,PHP_URL_PATH);	// this doesn't work reliably
-	    $wpRight = xtString::_DelTail($wsRight,'#?');
+	    $wpRight = fcString::DelTail($wsRight,'#?');
 	    $idx = strpos($wpRight,$wpLeft);
 	    if ($idx == 0) {
 		$wpOut = substr($wpRight,strlen($wpLeft));		// remove URL base
@@ -93,7 +93,7 @@ echo "PARSED:<pre>".print_r($arURI,TRUE).'</pre>';
 	if (!is_string($sPath)) {
 	    throw new exception('ParsePath() was handed something other than a string for the path.');
 	}
-	$fp = clsString::GetBefore($sPath,'?');	// remove query, if any
+	$fp = fcString::GetBefore($sPath,'?');	// remove query, if any
 	$fp = trim($fp,$sPathSep);			// remove beginning/ending path separators
 	$arPath = explode($sPathSep,$fp);
 	foreach ($arPath as $fn) {

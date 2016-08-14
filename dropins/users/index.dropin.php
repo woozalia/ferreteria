@@ -29,16 +29,20 @@ define('KS_CLASS_ADMIN_USER_SESSION',		'acrAdminUserSession');
 define('KS_CLASS_ADMIN_USER_CLIENTS',		'actUserClients');
 define('KS_CLASS_ADMIN_USER_CLIENT',		'acrUserClient');
 
-// FEATURES
+/* names of FEATURES which might or might not be loaded.
+
+These constants need to be defined outside of this file. In [appname]App.php seems like a good place.
 
 define('KS_FEATURE_USER_SECURITY','user.security');
 define('KS_FEATURE_USER_ACCOUNT_ADMIN','user.admin.acct');
 define('KS_FEATURE_USER_SECURITY_ADMIN','user.security.admin');
 define('KS_FEATURE_USER_SESSION_ADMIN','user.admin.sess');
 
+*/
+
 // MENU ADDITIONS
 
-$om = new clsMenuFolder(NULL, '*users','User Permissions','User Access Management','user/group security management');
+$om = new clsMenuFolder($oRoot, '*users','User Permissions','User Access Management','user/group security management');
   //$om->NeedPermission(KS_PERM_SEC_USER_VIEW);
   $om->NeedPermission(NULL);
   $omi = new clsMenuLink($om,KS_ACTION_USER_ACCOUNT,'Users','User Accounts','user account management');
@@ -59,7 +63,6 @@ $om = new clsMenuFolder(NULL, '*users','User Permissions','User Access Managemen
     $omi->NeedPermission(KS_PERM_SEC_GROUP_VIEW);
 
 // MODULE SPEC ARRAY
-
 $arDropin = array(
   'name'	=> 'ferreteria.users',
   'descr'	=> 'user/group security management',
@@ -76,7 +79,7 @@ $arDropin = array(
     'uclient.php'		=> array(KS_CLASS_ADMIN_USER_CLIENTS),
      ),
   'menu'	=> $om,
-  'requires'	=> array('vbz.syslog'),	// other drop-ins used by this drop-in
+  //'requires'	=> array('vbz.syslog'),	// other drop-ins used by this drop-in
   'features'	=> array(
     KS_FEATURE_USER_SECURITY,
     KS_FEATURE_USER_ACCOUNT_ADMIN,
