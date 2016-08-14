@@ -54,6 +54,13 @@ class fcForm {
 	}
 	return $arCtrls;
     }
+    public function GetControlObject($sName) {
+	if (array_key_exists($sName,$this->arCtrls)) {
+	    return $this->arCtrls[$sName];
+	} else {
+	    throw new exception('Attempting to retrieve unknown form field "'.$sName.'".');
+	}
+    }
     /*----
       PUBLIC so Controls can add themselves to the Form
     */

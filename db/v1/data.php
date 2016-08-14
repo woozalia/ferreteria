@@ -183,6 +183,13 @@ abstract class clsDatabase_abstract {
 	}
 	return $sql;
     }
+    public function SanitizeAndQuote_ValueArray(array $arVals) {
+	$arOut = NULL;
+	foreach ($arVals as $key => $val) {
+	    $arOut[$key] = $this->SanitizeAndQuote($val);
+	}
+	return $arOut;
+    }
 /*
     public function engine_row_rewind() {
 	return $this->objRes->do_rewind();

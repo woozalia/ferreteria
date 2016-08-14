@@ -125,6 +125,7 @@ abstract class cAppStandard extends clsApp {
 	    $tSess = $this->SessionTable();
 	    $this->rcSess = $tSess->GetCurrent();
 	} else {
+	    $tSess = $this->rcSess->Table();
 	}
 	if (!$this->rcSess->HasRows()) {
 	    //throw new exception('Internal error: Loaded Session recordset has no rows.');
@@ -147,10 +148,19 @@ abstract class cAppStandard extends clsApp {
 	}
 	return $this->rcUser;
     }
+    // 2016-05-22 It seems like a good idea to have this, to pass to record-creation methods that ask for it. (using it in cart.logic)
+    public function UserID() {
+	if ($this->UserKnown()) {
+	    return $this->Session()->UserID();
+	} else {
+	    return NULL;
+	}
+    }
     /*----
       RETURNS: TRUE iff the user is logged in
     */
     public function UserKnown() {
+	// 2016-05-22 why doesn't Session have a UserKnown method?
 	return (!is_null($this->Session()->UserRecord()));
     }
     /*----

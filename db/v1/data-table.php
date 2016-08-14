@@ -317,7 +317,13 @@ abstract class clsTable_abstract {
 abstract class clsTable_keyed_abstract extends clsTable_abstract {
 
     //abstract public function GetItem_byArray();
+    /*----
+      RETURNS: SQL filter for current record as defined by index
+    */
     abstract protected function MakeFilt(array $iData);
+    /*----
+      PURPOSE: same as MakeFilt(), but does no escaping of SQL data
+    */
     abstract protected function MakeFilt_direct(array $iData);
     /*----
       PURPOSE: method for setting a key which uniquely refers to this table
@@ -357,6 +363,7 @@ abstract class clsTable_keyed_abstract extends clsTable_abstract {
     /*----
       NOTE: This seems kind of inefficient and probably needs to be rethought.
 	Perhaps an ID parameter would help.
+	Should probably also be renamed MakeRecord().
     */
     public function Make(array $iData,$iFilt=NULL) {
 	if (is_null($iFilt)) {
@@ -464,6 +471,7 @@ class clsTable_key_single extends clsTable_keyed_abstract {
 	return $this->LastID()+1;
     }
     /*----
+      RETURNS: SQL filter for current record as defined by index
       HISTORY:
 	2011-02-22 created
 	2012-02-21 this couldn't possibly have worked before, since it used $this->KeyValue(),
@@ -491,6 +499,24 @@ class clsTable_key_single extends clsTable_keyed_abstract {
 	$strName = $this->KeyName();
 	$val = $iData[$strName];
 	return $strName.'='.$val;
+    }
+    /*----
+      RETURNS: SQL filter string for record that matches the given array data
+      INPUT: $arData = array of raw field values to match
+      NOTE:
+	$arData needs to be converted to a slightly different format for use with fcSQLt_Filt.
+	$arData[field name] = value
+	$arCond[index] = "`field name` = value"
+    */
+    protected function MakeFilt_fromRawData(array $arData) {
+	if (is_array($arData)) {
+	    $arDataSQL = $this->Engine()->SanitizeAndQuote_ValueArray($arData);
+	    $arCond = fcSQLt_Filt::ValueArray_to_ConditionArray($arDataSQL);
+	    $oFilt = new fcSQLt_Filt('AND',$arCond);
+	    return $oFilt->RenderValue();
+	} else {
+	    throw new InvalidArgumentException('Internal error: expecting an array, got something else.');
+	}
     }
     /*----
       ACTION: Update the record identified by the key $id
