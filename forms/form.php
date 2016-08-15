@@ -55,17 +55,21 @@ class fcForm {
 	return $arCtrls;
     }
     public function GetControlObject($sName) {
-	if (array_key_exists($sName,$this->arCtrls)) {
-	    return $this->arCtrls[$sName];
-	} else {
-	    throw new exception('Attempting to retrieve unknown form field "'.$sName.'".');
-	}
+// 2016-08-09 old version
+//	if (array_key_exists($sName,$this->arCtrls)) {
+//	    return $this->arCtrls[$sName];
+//	} else {
+//	    throw new exception('Attempting to retrieve unknown form field "'.$sName.'".');
+//	}
+	return $this->FieldObject($sName)->ControlObject();
     }
     /*----
       PUBLIC so Controls can add themselves to the Form
     */
     public function ControlObject($sName,fcFormControl $oCtrl=NULL) {
-	throw new exception('2016-04-10 Controls should add themselves to the Field object now.');
+	// READ: Use GetControlObject() instead.
+	// WRITE: Controls should add themselves to the Field object now.
+	throw new exception('2016-04-10 ControlObject() is deprecated; see code comments for alternatives.');
 	if (!is_null($oCtrl)) {
 	    $this->arCtrls[$sName] = $oCtrl;
 	    //$this->arRec[$sName] = NULL;	// make sure data field exists
@@ -73,6 +77,7 @@ class fcForm {
 	if (array_key_exists($sName,$this->arCtrls)) {
 	    return $this->arCtrls[$sName];
 	} else {
+	    echo 'FIELD LIST: '.fcArray::Render($this->FieldArray());
 	    throw new exception('Attempting to retrieve unknown form field "'.$sName.'".');
 	}
     }

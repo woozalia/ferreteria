@@ -93,15 +93,13 @@ class Cipher_pubkey extends Cipher {
     public function LastPlain() {
 	return $this->sLastPlain;
     }
-    /*
-    public function PubKey_isSet() {
-	return isset($this->sPubKey);
-    }*/
     public function encrypt($input) {
 	$this->sLastPlain = $input;
-	$ok = openssl_public_encrypt($input, $sEncrypted, $this->PublicKey(), OPENSSL_SSLV23_PADDING);
+	$sKey = $this->PublicKey();
+	$ok = openssl_public_encrypt($input, $sEncrypted, $sKey, OPENSSL_SSLV23_PADDING);
 	if (!$ok) {
-	    $this->ReportErrors('encryption');
+	    $sDetails = "\nINPUT: [$input]\nPUBLIC KEY: [$sKey]";
+	    $this->ReportErrors('encryption',$sDetails);
 	}
 	return $sEncrypted;
     }
@@ -112,7 +110,7 @@ class Cipher_pubkey extends Cipher {
 	}
 	return $sDecrypted;
     }
-    protected function ReportErrors($sAction) {
+    protected function ReportErrors($sAction,$sDetails=NULL) {
 	$sMsg = NULL;
 	$qMsg = 0;
 	while ($sErr = openssl_error_string()) {
@@ -124,6 +122,6 @@ class Cipher_pubkey extends Cipher {
 	} else {
 	    $sDescr = 'failed for some reason.';
 	}
-	throw new exception("$sAction $sDescr$sMsg");
+	throw new exception("$sAction $sDescr$sMsg$sDetails");
     }
 }

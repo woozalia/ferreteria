@@ -21,6 +21,8 @@
       Subsequently found clsSQLFilt in data.php and moved it here.
     2016-02-11 major reshuffling of classes to allow outside modification of returned query objects
 */
+define('KSQL_FORMAT_DATE','Y-m-d');	// date() format for dates in SQL
+define('KSQL_FORMAT_DATIME','Y-m-d H:i:s');	// date format for timestamps in SQL
 
 trait QueryableTable {
     public function SQO_Source($sAbbr=NULL) {

@@ -190,20 +190,6 @@ abstract class clsDatabase_abstract {
 	}
 	return $arOut;
     }
-/*
-    public function engine_row_rewind() {
-	return $this->objRes->do_rewind();
-    }
-    public function engine_row_get_next() { throw new exception('how did we get here?');
-	return $this->objRes->get_next();
-    }
-    public function engine_row_get_count() {
-	return $this->objRes->get_count();
-    }
-    public function engine_row_was_filled() {
-	return $this->objRes->is_filled();
-    }
-*/
 }
 /*%%%%
   HISTORY:
@@ -363,11 +349,18 @@ class clsDataResult_MySQL extends clsDataResult {
       HISTORY:
 	2012-09-06 This needs to be public so descendant helper classes can transfer the resource.
     */
-    public function Resource($iRes=NULL) {
-	if (!is_null($iRes)) {
-	    $this->box['res'] = $iRes;
+    public function Resource($res=NULL) {
+	if (!is_null($res)) {
+	    $this->box['res'] = $res;
 	}
-	return $this->box['res'];
+	if (array_key_exists('res',$this->box)) {
+	    return $this->box['res'];
+	} else {
+	    throw new exception('Result resource requested before being set');
+	}
+    }
+    protected function SetResource($res) {
+	$this->box['res'] = $res;
     }
     /*----
       NOTES:
@@ -382,7 +375,7 @@ class clsDataResult_MySQL extends clsDataResult {
 	    $this->Resource($res);
 	    $this->box['ok'] = TRUE;
 	} else {
-	    $this->Resource(NULL);
+	    $this->SetResource(NULL);
 	    $this->box['ok'] = $res;	// TRUE if successful, false otherwise
 	}
     }
@@ -715,6 +708,11 @@ class clsDatabase extends clsDatabase_abstract {
 /******
  SECTION: OBJECT FACTORY
 */
+    /*----
+      NOTE: 2016-07-31 This method's place in the grand scheme of things is a little questionable. It can pretty much only
+	ever be called by a Table object because otherwise the Recordset's internal Table pointer never gets set,
+	making it useless for a lot of stuff.
+    */
     public function DataSet($iSQL=NULL,$iClass=NULL) {
 	if (is_string($iClass)) {
 	    if (!class_exists($iClass,TRUE)) {
@@ -734,10 +732,13 @@ class clsDatabase extends clsDatabase_abstract {
 	}
 	if (!is_null($iSQL)) {
 	    if (is_object($rc)) {
-		$rc->Query($iSQL);
-		if (!is_object($rc->ResultHandler())) {
-		    throw new exception('Ferreteria error: ResultHandler() has mysteriously become unset.');
-		}
+		$res = $this->engine_db_query($iSQL);
+		// TODO: possibly we should check $res to make sure it's okay?
+		$rc->ResultHandler($res);
+		//$rc->Query($iSQL);
+		//if (!is_object($rc->ResultHandler())) {
+		//    throw new exception('Ferreteria error: ResultHandler() has mysteriously become unset.');
+		//}
 	    }
 	}
 	return $rc;
@@ -753,10 +754,12 @@ class clsDatabase extends clsDatabase_abstract {
   DEPRECATED - probably not even used any longer
 */
 function CopyObj(object $iSrce, object $iDest) {
+    throw new exception('2016-08-14 CopyObj() is deprecated because it should not be necessary. If a usage case shows up, figure out why.');
     foreach($iSrce as $key => $val) {
 	$iDest->$key = $val;
     }
 }
+/* 2016-08-14 DEPRECATED - use fcString::Pluralize()
 if (!function_exists('Pluralize')) {
     function Pluralize($iQty,$iSingular='',$iPlural='s') {
 	throw new exception('Use fcString::Pluralize() instead.');
@@ -766,7 +769,7 @@ if (!function_exists('Pluralize')) {
 		  return $iPlural;
 	  }
   }
-}
+}*/
 
 function SQLValue($iVal) {
     throw new exception('SQLValue() is deprecated. Use Engine()->SanitizeAndQuote().');
@@ -931,5 +934,3 @@ function FirstNonEmpty(array $iList) {
 	}
     }
 }
-
-

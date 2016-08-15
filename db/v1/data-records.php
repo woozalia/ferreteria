@@ -16,23 +16,48 @@ define('KS_NEW_REC','new');	// value to use for key of new records
     2011-11-21 changed Table() from protected to public because Scripting needed to access it
 */
 abstract class clsRecs_abstract {
-    public $objDB;	// deprecated; use Engine()
     public $sqlMake;	// optional: SQL used to create the dataset -- used for reloading
     public $sqlExec;	// last SQL executed on this dataset
     public $Table;	// public access deprecated; use Table()
-    protected $objRes;	// result object returned by Engine
     public $Row;	// public access deprecated; use Values()/Value() (data from the active row)
     private $arMod;	// list of modified fields -- for auto-update
 
-//    public function __construct(clsDatabase $iDB=NULL, $iRes=NULL, array $iRow=NULL) {
-    public function __construct(clsDatabase $iDB=NULL) {
-	$this->objDB = $iDB;
+    // ++ SETUP ++ //
+    
+    public function __construct() {
 	$this->InitVars();
     }
     protected function InitVars() {
-	$this->objRes = NULL;
+	$this->ClearResults();
 	$this->Row = NULL;
 	$this->arMod = NULL;
+    }
+    
+    // -- SETUP -- //
+    // ++ OBJECTS ++ //
+    
+      //++engine++//
+
+    /*----
+      HISTORY:
+	2016-07-31 I can't think of any reason a recordset would ever want a different engine object
+	  than the one used by its Table. Even an object cache seems kind of unnecessary, though that
+	  is not how this was implemented. Removing the local Engine object (objDB).
+    */
+    public function Engine() {
+	if (is_null($this->Table())) {
+	    echo 'SQL: '.$this->sqlMake;
+	    throw new exception("Internal error: trying to access Recordset's Engine when it has no Table.");
+	}
+	return $this->Table()->Engine();
+    }
+
+      //--engine--//
+      //++result handler++//
+    
+    protected $objRes;	// result object returned by Engine
+    protected function ClearResults() {
+	$this->objRes = NULL;
     }
     public function ResultHandler($iRes=NULL) {
 	if (!is_null($iRes)) {
@@ -40,15 +65,28 @@ abstract class clsRecs_abstract {
 	}
 	return $this->objRes;
     }
-    public function Table(clsTable_abstract $iTable=NULL) {
-	if (!is_null($iTable)) {
-	    $this->Table = $iTable;
+    
+      //--result handler--//
+      //++table handler++//
+    
+    public function Table(clsTable_abstract $t=NULL) {
+	if (!is_null($t)) {
+	    $this->Table = $t;
 	}
 	return $this->Table;
     }
+    
+      //--table handler--//
+
+    // -- OBJECTS -- //
+    // ++ FIELD MANAGEMENT ++ //
+      
     protected function TouchField($sName) {
 	$this->arMod[] = $sName;
     }
+    /*----
+      RETURNS: array of touched fields (just the field names, without values)
+    */
     protected function TouchedArray() {
 	return $this->arMod;
     }
@@ -76,21 +114,14 @@ abstract class clsRecs_abstract {
 	$out .= "\n<b>SQL</b>: ".$this->sqlMake;
 	return $out;
     }
-    public function Engine() {
-	if (is_null($this->objDB)) {
-	    assert('!is_null($this->Table()); /* SQL: '.$this->sqlMake.' */');
-	    return $this->Table()->Engine();
-	} else {
-	    return $this->objDB;
-	}
-    }
     public function IsNew() {
 	return is_null($this->Values());
     }
     
+    // -- FIELD MANAGEMENT -- //
     // ++ FIELD ACCESS ++ //
     
-    //++overloaded++//
+      //++read/write++//
     
     /*----
       ACTION: sets/returns associative array of fields/values for the current row
@@ -135,8 +166,8 @@ abstract class clsRecs_abstract {
 	return $this->Row[$iName];
     }
     
-    //--overloaded--//
-    //++read-only++//
+      //--read/write--//
+      //++read-only++//
 
     /*----
       PURPOSE: Like Value() but handles new records gracefully, and is read-only
@@ -378,26 +409,38 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
 	return $sKeyName;
     }
     /*----
-      HISTORY:
-	2016-04-19 This couldn't have been working reliably until now, because the values
-	  were not being sanitize-and-quoted. (Now they are.)
+      RETURNS: array of changes to save, in key=value form
     */
-    protected function UpdateArray($arUpd=NULL) {
+    protected function ChangeArray() {
 	$arTouch = $this->TouchedArray();
+	$arChg = NULL;
 	if (is_array($arTouch)) {
 	    $db = $this->Engine();
 	    foreach ($arTouch as $sField) {
-		$arUpd[$sField] = $db->SanitizeAndQuote($this->Value($sField));
+		$arChg[$sField] = $db->SanitizeAndQuote($this->Value($sField));
 	    }
 	}
-	return $arUpd;
+	return $arChg;
+    }
+    /*----
+      HISTORY:
+	2016-04-19 This couldn't have been working reliably until now, because the values
+	  were not being sanitize-and-quoted. (Now they are.)
+	2016-07-31 Removed the optional input array parameter to simplify things; now using ChangeArray();
+	  Overrides should call parent::UpdateArray(), but no longer need to merge with ChangeArray();
+    */
+    protected function UpdateArray() {
+	return $this->ChangeArray();
     }
     /*----
       PURPOSE: This exists mainly for descendants that might want to do something different for Inserts
 	than for Updates (e.g. set WhenCreated versus WhenEdited).
+      HISTORY:
+	2016-07-31 Removed the optional input array parameter to simplify things; now using ChangeArray();
+	  Overrides should call parent::InsertArray(), but no longer need to merge with ChangeArray();
     */
-    protected function InsertArray($arIns=NULL) {
-	return $this->UpdateArray($arIns);
+    protected function InsertArray() {
+	return $this->ChangeArray();
     }
     /*----
       HISTORY:
@@ -409,20 +452,56 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
     public function Save() {
 	$out = NULL;
 	if ($this->IsNew()) {
-	    $arSave = $this->InsertArray();
-	    if (is_array($arSave)) {
-		$out = $this->Table()->Insert($arSave);
-		if ($out !== FALSE) {
-		    $this->Value($this->KeyName(),$out);	// retrieve new record's ID
-		}
-	    }
+	    $out = $this->AutoInsert();
 	} else {
-	    $arSave = $this->UpdateArray();
-	    if (is_array($arSave)) {
-		$out = $this->Update($arSave);
-	    }
+	    $out = $this->AutoUpdate();
 	}
 	return $out;
+    }
+    protected function AutoInsert() {
+	$out = NULL;
+	$arSave = $this->InsertArray();
+	if (is_array($arSave)) {
+	    $out = $this->Table()->Insert($arSave);
+	    if ($out !== FALSE) {
+		$this->Value($this->KeyName(),$out);	// retrieve new record's ID
+	    }
+	}
+    }
+    protected function AutoUpdate() {
+	$out = NULL;
+	$arSave = $this->UpdateArray();
+	if (is_array($arSave)) {
+	    $out = $this->Update($arSave);
+	}
+	return $out;
+    }
+    /*----
+      ACTION:
+	If ID is set, saves data to the identified record in the database.
+	If ID is not set:
+	  If data does not match any existing record, creates a new one.
+	  If data matches an existing record, returns that one.
+	  Undefined function FingerprintFilter() defines the SQL used to search for a match.
+      USAGE: Descendant must define FingerprintFilter().
+	protected function FingerprintFilter() - returns SQL string
+    */
+    public function SaveUnique() {
+	if ($this->IsNew()) {
+	    // ID not set, so check for duplicates
+	    $sqlFilt = $this->FingerprintFilter();
+	    $rs = $this->Table()->GetRecords($sqlFilt);
+	    if ($rs->HasRows()) {
+		$rs->NextRow();
+		$this->Values($rs->Values());	// copy the record here
+		$ok = TRUE;
+	    } else {
+		$ok = $this->AutoInsert();
+	    }
+	} else {
+	    $ok = $this->AutoUpdate();
+	}
+	return $ok;
     }
     /*-----
       ACTION: Saves the data in $iSet to the current record (or records filtered by $iWhere)
@@ -672,19 +751,21 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
     public function HasField($iName) {
 	return isset($this->Row[$iName]);
     }
-    // DEPRECATED - use Values()
+    // RETURNS: A fully-functional copy of the current row, with Engine and Table objects set.
     public function RowCopy() {
 	$strClass = get_class($this);
-	if (is_array($this->Row)) {
-	    $objNew = new $strClass;
+	if (is_array($this->Values())) {
+	    $rsNew = new $strClass;
 // copy critical object fields so methods will work:
-	    $objNew->objDB = $this->objDB;
-	    $objNew->Table = $this->Table;
+	    $rsNew->Table = $this->Table;
+//	    $rsNew->Engine($this->Engine());	// 2016-08-08 Engine is now retrieved from Table
 // copy data fields:
-	    foreach ($this->Row AS $key=>$val) {
-		$objNew->Row[$key] = $val;
-	    }
-	    return $objNew;
+//	    foreach ($this->Row AS $key=>$val) {
+//		$rsNew->Row[$key] = $val;
+//	    }
+	    // 2016-08-08 better way to copy field values
+	    $rsNew->Values($this->Values());
+	    return $rsNew;
 	} else {
 	    //echo 'RowCopy(): No data to copy in class '.$strClass;
 	    return NULL;

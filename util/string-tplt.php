@@ -1,13 +1,18 @@
 <?php
+/*
+  HISTORY:
+    2016-08-08 fcTemplate can now be constructed with no parameters, so we can set marks and template with the same string
+      using MarkedValue().
+*/
 
 abstract class fcTemplate {
     protected $sMarkSt;
     protected $sMarkFi;
     private $sTplt;
 
-    public function __construct($sStartMark, $sFinishMark,$sTemplate=NULL) {
-	$this->StartMark($sStartMark);
-	$this->FinishMark($sFinishMark);
+    public function __construct($sStartMark=NULL, $sFinishMark=NULL,$sTemplate=NULL) {
+	$this->SetStartMark($sStartMark);
+	$this->SetFinishMark($sFinishMark);
 	$this->Template($sTemplate);
     }
     /*----
@@ -23,17 +28,37 @@ abstract class fcTemplate {
 	}
 	return $this->sTplt;
     }
+    protected function SetStartMark($s) {
+	$this->sMarkSt = $s;
+    }
     protected function StartMark($s=NULL) {
 	if (!is_null($s)) {
 	    $this->sMarkSt = $s;
 	}
 	return $this->sMarkSt;
     }
+    protected function SetFinishMark($s) {
+	$this->sMarkFi = $s;
+    }
     protected function FinishMark($s=NULL) {
 	if (!is_null($s)) {
 	    $this->sMarkFi = $s;
 	}
 	return $this->sMarkFi;
+    }
+    /*
+      ACTION: Sets ->Value, ->strStMark, and ->strFiMark from iText
+      INPUT:
+	iText = prefix-delimited string where:
+	  First segment is the start mark
+	  Second segment is the finish mark
+	  Third Segment is the template to process
+    */
+    public function MarkedValue($sValue) {
+	$arIn = fcString::Xplode($sValue);
+	$this->StartMark($arIn[0]);
+	$this->FinishMark($arIn[1]);
+	$this->Template($arIn[2]);
     }
 
     // -- CONFIGURATION -- //

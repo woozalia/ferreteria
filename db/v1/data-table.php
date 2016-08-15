@@ -4,14 +4,19 @@
   HISTORY:
     2013-12-19 split off from data.php
     2015-09-07 Table classes now have InitVars(). I'm surprised that it didn't already.
+    2016-08-07 Tidied up setting the Database object a bit.
+  FUTURE:
+    API FIXES:
+      GetData() should not have an $iClass parameter, or it should be the last parameter.
+	Deprecting this and replacing it with GetRecords() (or should that be GetRows()?).
 */
-/*%%%%
+
+/*::::
   NAME: clsTable_abstract
   PURPOSE: objects for operating on particular tables
     Does not attempt to deal with keys.
 */
 abstract class clsTable_abstract {
-    protected $objDB;
     protected $vTblName;
     protected $vSngClass;	// name of singular class
     public $sqlExec;		// last SQL executed on this table
@@ -36,10 +41,10 @@ abstract class clsTable_abstract {
     }
 
     // -- STATIC -- //
-    // ++ DYNAMIC ++ //
+    // ++ SETUP ++ //
 
-    public function __construct(clsDatabase_abstract $iDB) {
-	$this->objDB = $iDB;
+    public function __construct(clsDatabase_abstract $oEngine) {
+	$this->Engine($oEngine);
 	$this->InitVars();
     }
     protected function DefaultSingularClass() {
@@ -48,12 +53,26 @@ abstract class clsTable_abstract {
     protected function InitVars() {
 	$this->ClassSng($this->DefaultSingularClass());	// default
     }
+    
+    // -- SETUP -- //
+    // ++ FRAMEWORK ++ //
+
     public function DB() {	// DEPRECATED - use Engine()
 	return $this->objDB;
     }
-    public function Engine() {
+    protected $objDB;	// TODO: make this private; rename to $db
+    public function Engine(clsDatabase_abstract $oEngine=NULL) {
+	if (!is_null($oEngine)) {
+	    $this->objDB = $oEngine;
+	} elseif (is_null($this->objDB)) {
+	    throw new exception('Attempting to access Engine object before setting it.');
+	}
 	return $this->objDB;
     }
+    
+    // -- FRAMEWORK -- //
+    // ++ ATTRIBUTES ++ //
+
     public function Name($iName=NULL) {
 	if (!is_null($iName)) {
 	    $this->vTblName = $iName;
@@ -73,13 +92,16 @@ abstract class clsTable_abstract {
 	}
 	return $this->vSngClass;
     }
+    
+    // -- ATTRIBUTES -- //
+    // ++ RECORDS ++ //
+
     /*----
       ACTION: Make sure the item is ready to be released in the wild
     */
-    protected function ReleaseItem(clsRecs_abstract $iItem) {
-	$iItem->Table = $this;
-	$iItem->objDB = $this->objDB;
-	$iItem->sqlMake = $this->sqlExec;
+    protected function ReleaseItem(clsRecs_abstract $r) {
+	$r->Table($this);
+	$r->sqlMake = $this->sqlExec;
     }
     /*----
       ACTION: creates a new uninitialized singular (recordset) object but sets the Table pointer back to self
@@ -135,12 +157,6 @@ abstract class clsTable_abstract {
 	    $sql .= ' '.$iSQL;
 	}
 	return $this->DataSQL($sql);
-/*
-	$strCls = $this->vSngClass;
-	$obj = $this->objDB->DataSet($sql,$strCls);
-	$obj->Table = $this;
-	return $obj;
-*/
     }
     public function AllRecords() {
 	return $this->GetRecords();
@@ -170,7 +186,7 @@ abstract class clsTable_abstract {
 	return $rs;
     }
     /*----
-      PURPOSE: Same as GetRecord, but
+      PURPOSE: Same as GetRecords(), but
 	(a) throws an exception if more than one record is found
 	(b) advances to the first (only) record
 	(c) returns NULL if no records found
@@ -397,9 +413,6 @@ abstract class clsTable_keyed_abstract extends clsTable_abstract {
 class clsTable_key_single extends clsTable_keyed_abstract {
     protected $vKeyName;
 
-    public function __construct(clsDatabase_abstract $iDB) {
-	parent::__construct($iDB);
-    }
     public function KeyName($iName=NULL) {
 	if (!is_null($iName)) {
 	    $this->vKeyName = $iName;
