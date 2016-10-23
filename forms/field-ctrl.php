@@ -18,12 +18,12 @@ abstract class fcFormControl {
 
     public function __construct(fcFormField $oNative) {
 	$this->NativeObject($oNative);
-	
+
 	$oForm = $oNative->FormObject();
 	$this->FormObject($oForm);
 	//$oForm->ControlObject($oNative->NameString(),$this);
 	$oNative->ControlObject($this);
-	
+
 	$this->Setup();
     }
     /*----
@@ -55,7 +55,7 @@ abstract class fcFormControl {
 
     // -- OPTIONS -- //
     // ++ RELATED OBJECTS ++ //
-    
+
     private $oForm;
     protected function FormObject(fcForm $oForm=NULL) {
 	if (!is_null($oForm)) {
@@ -99,7 +99,7 @@ abstract class fcFormControl {
 	  local input only. Could split up if needed.
     */
 //    abstract protected function fromNative($sVal);
-    
+
     // -- CONVERSION -- //
     // ++ SHORTCUTS ++ //
 
@@ -116,7 +116,7 @@ class fcFormControl_HTML extends fcFormControl {
     private $sKey;
 
     // ++ SETUP ++ //
-    
+
     public function __construct(fcFormField $oField, array $arAttr=array()) {
 	parent::__construct($oField);
 	$this->TagAttributes($arAttr);
@@ -154,10 +154,10 @@ class fcFormControl_HTML extends fcFormControl {
 	}
 	return $this->sAlias;
     }
-    
+
     // -- CONFIGURATION -- //
     // ++ CALCULATIONS ++ //
-    
+
     // RETURNS: calculated name spec (including parent form keys as needed)
     protected function NameSpec() {
 	$oForm = $this->FormObject();
@@ -178,7 +178,7 @@ class fcFormControl_HTML extends fcFormControl {
 
     // -- CALCULATIONS -- //
     // ++ CONVERSION ++ //
-    
+
     /*----
       OUTPUT: array
 	array['absent']: TRUE or FALSE
@@ -189,7 +189,7 @@ class fcFormControl_HTML extends fcFormControl {
     */
     public function ReceiveForm(array $arData) {
 	$arOut = array();
-	
+
 	$sName = $this->NameString();
 	$sMsg = NULL;
 	if (array_key_exists($sName,$arData)) {
@@ -197,6 +197,11 @@ class fcFormControl_HTML extends fcFormControl {
 	    $vPost = $arData[$sName];
 	    $arOut['blank'] = (is_null($vPost) || $vPost == '');
 	    $vVal = $this->toNative($vPost);
+
+	    // these are mainly for debugging:
+	    $arOut['recd'] = $vPost;
+	    $arOut['native'] = $vVal;
+	    //echo 'SETTING NATIVE to ['.$vVal.']<br>';
 	    $this->NativeObject()->SetValue($vVal);
 	} else {
 	    // For some reason, we're not seeing form data for this control.
@@ -233,7 +238,7 @@ class fcFormControl_HTML extends fcFormControl {
     protected function fromNative($sVal) {
 	return fcString::EncodeForHTML($sVal);
     }
-    
+
     // -- CONVERSION -- //
     // ++ RENDERING ++ //
 
@@ -288,7 +293,7 @@ class fcFormControl_HTML_Text extends fcFormControl_HTML {
 }
 
 class fcFormControl_HTML_TextArea extends fcFormControl_HTML {
-    
+
     public function Render($doEdit) {
 	if ($doEdit && $this->Editable()) {
 	    $out = $this->RenderEditor();
@@ -404,7 +409,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 
     // -- OPTIONS -- //
     // ++ STATUS CALCULATIONS ++ //
-    
+
     protected function HasRows() {
 	return $this->HasRecords() || $this->HasExtraChoices();
     }
@@ -418,7 +423,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	    return FALSE;	// recordset, but no data
 	}
     }
-    
+
     // -- STATUS CALCULATIONS -- //
     // ++ CACHING ++ //
 
@@ -465,21 +470,21 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 
     // -- CACHING -- //
     // ++ CONVERSION ++ //
-    
+
     /*----
       PURPOSE: When field is not being edited, we want to display the value staticly -- which also lets us
 	show something more than plaintext, e.g. a link to view more information about the currently-chosen value.
       NOTE: There's got to be a way of doing this that doesn't require iterating through all records.
     */
     protected function fromNative($vCurr) {
-	
+
 	// first look in the extras, because it's faster
 	$arExtra = $this->ExtraChoices();
 	if (clsArray::Exists($arExtra,$vCurr)) {
 	    $arChoice = $arExtra[$vCurr];
 	    $out = $arChoice->RenderText();
 	} else {
-	
+
 	    // not found in extras, so now look in the recordset
 	    $arRecs = $this->RecordArray();
 	    if (is_null($arRecs)) {
@@ -508,7 +513,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 
 	return $out;
     }
-    
+
     // -- CONVERSION -- //
     // ++ OVERRIDES ++ //
 
@@ -527,7 +532,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
         }
 
         // we've confirmed there's something to display
-        
+
 	$vDeflt = $this->NativeObject()->GetValue();
 
 	$out = "\n".'<select'
@@ -546,7 +551,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	if ($this->HasRecords()) {
 	    $rs = $this->Records();
 	    if (method_exists($rs,'ListItem_Text')) {
-	      
+
 /*
 		$arRecs = $this->RecordArray();
 		foreach ($arRecs as $id => $arRow) {
@@ -563,9 +568,9 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 		throw new exception(get_class($rs).'::ListItem_Text() needs to be defined.');
 	    }
 	}
-		
+
 	$out .= "\n</select>\n";
-	  
+
 	return $out;
     }
 
@@ -596,7 +601,7 @@ class fcFormControl_HTML_CheckBox extends fcFormControl_HTML {
 
     // -- OPTIONS -- //
     // ++ CONVERSION ++ //
-    
+
     public function ReceiveForm(array $arData) {
 	$sName = $this->NameString();
 	// checkboxes are basically TRUE if the value is reported, FALSE otherwise
@@ -609,7 +614,7 @@ class fcFormControl_HTML_CheckBox extends fcFormControl_HTML {
     protected function fromNative($sVal) {
 	return $sVal?($this->sDispOn):($this->sDispOff);
     }
-    
+
     // -- CONVERSION -- //
     // ++ DISPLAY ++ //
 
@@ -623,7 +628,7 @@ class fcFormControl_HTML_CheckBox extends fcFormControl_HTML {
     }
 
     // -- DISPLAY -- //
-    
+
 }
 class fcFormControl_HTML_Timestamp extends fcFormControl_HTML {
 
@@ -634,7 +639,7 @@ class fcFormControl_HTML_Timestamp extends fcFormControl_HTML {
         // option defaults:
         $this->Format('Y/m/d H:i:s');  // default display format
     }
-    
+
     // -- SETUP -- //
     // ++ OPTIONS ++ //
 
@@ -648,9 +653,13 @@ class fcFormControl_HTML_Timestamp extends fcFormControl_HTML {
 
     // -- OPTIONS -- //
     // ++ CONVERSION ++ //
-    
+
     public function toNative($sVal) {
-	return strtotime($sVal);
+	if (empty($sVal)) {
+	    return NULL;	// empty string = NULL time value
+	} else {
+	    return strtotime($sVal);
+	}
     }
     protected function fromNative($val) {
 	if (!is_numeric($val) && !empty($val)) {
@@ -663,7 +672,7 @@ class fcFormControl_HTML_Timestamp extends fcFormControl_HTML {
 	}
 	return $out;
     }
-    
+
     // -- CONVERSION -- //
 }
 

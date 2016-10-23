@@ -19,7 +19,7 @@ abstract class fcFieldStorage {
 	$this->NativeObject($oNative);
 	$this->Writable(TRUE);	// default
     }
-    
+
     // -- SETUP -- //
     // ++ CONFIG ++ //
 
@@ -51,20 +51,24 @@ abstract class fcFieldStorage {
 
     // -- CONFIG -- //
     // ++ FORMAT CONVERSION ++ //
-    
+
     /*----
       PURPOSE: convert from received-data format to internal format
-      INPUT: as received from database engine
+      INPUT: as received from database engine (raw)
       RETURNS: value in internal format
     */
     protected function toNative($sVal) { return $sVal; }
+    protected function fromNativeRaw($sVal) {
+	return $sVal;	// default
+    }
     /*----
       PURPOSE: convert from internal format to writable-data format (SQL)
       INPUT: internal (native) format
-      RETURNS: value in db-writable format, no additional sanitization needed
+      RETURNS: raw value in db-writable format -- but may still need sanitization
+      METHOD: DB-sanitizes the raw converted value
     */
-    protected function fromNative($sVal) {
-	return $this->FormObject()->CookRawValue($sVal);
+    protected function fromNativeSane($sVal) {
+	return $this->FormObject()->CookRawValue($this->fromNativeRaw($sVal));
     }
     /*----
       ACTION: converts the given value from storage format to native format and saves it in the native object.
@@ -73,14 +77,24 @@ abstract class fcFieldStorage {
 	$vNative = $this->toNative($vStore);
 	$this->NativeObject()->SetValue($vNative);
     }
-    public function GetValue() {
+    /*----
+      NOTE: This method may only need to exist just to keep it *mentally* clear
+	that GetValueRaw()'s output should not be sanitized; it just needs to be
+	in the right format (e.g. for dates, a date string rather than an integer).
+    */
+    public function GetValueSane() {
 	$vNative = $this->NativeObject()->GetValue();
-	$vStore = $this->fromNative($vNative);
+	$vStore = $this->fromNativeSane($vNative);
 	return $vStore;
     }
-    
+    public function GetValueRaw() {
+	$vNative = $this->NativeObject()->GetValue();
+	$vStore = $this->fromNativeRaw($vNative);
+	return $vStore;
+    }
+
     // -- FORMAT CONVERSION -- //
-    
+
 }
 class fcFieldStorage_Text extends fcFieldStorage {
 
@@ -91,7 +105,9 @@ class fcFieldStorage_Text extends fcFieldStorage {
       NOTE: This function quotes the value whether or not it is numeric, because it
 	might be a catalog number with leading zeros that would get removed.
     */
-    protected function fromNative($sVal) {
+
+    /* 2016-10-17 This *should* be unnecessary now - default is to cook the raw converted value
+    protected function fromNativeSane($sVal) {
 	$sqlOut = $this->FormObject()->CookRawValue($sVal);
 	// There's probably a better way to do this: ensure that all values get quoted
 	if (is_numeric($sqlOut)) {
@@ -100,6 +116,7 @@ class fcFieldStorage_Text extends fcFieldStorage {
 	    return $sqlOut;
 	}
     }
+    */
 }
 
 class fcFieldStorage_Num extends fcFieldStorage {
@@ -114,6 +131,14 @@ class fcFieldStorage_Time extends fcFieldStorage {
 	}
 	return $out;
     }
+    protected function fromNativeRaw($sVal) {
+	if (is_null($sVal) or ($sVal=='')) {
+	    $out = NULL;
+	} else {
+	    $out = date('Y-m-d H:i:s',$sVal);
+	}
+	return $out;
+    }
     /*----
       HISTORY:
 	2016-01-31 Dates entered as blank seem to come through as "" rather than NULL,
@@ -121,14 +146,16 @@ class fcFieldStorage_Time extends fcFieldStorage {
 	  allow "1969-12-31 19:00:00", which comes through as zero, as a valid date --
 	  but might change that later.
     */
-    protected function fromNative($sVal) {
+    /* 2016-10-17 This *should* be unnecessary now - default is to cook the raw converted value
+    protected function fromNativeSane($sVal) {
+	$sSane = $this->fromNativeRaw();
 	if (is_null($sVal) or ($sVal=='')) {
 	    $out = 'NULL';
 	} else {
 	    $out = '"'.date('Y-m-d H:i:s',$sVal).'"';
 	}
 	return $out;
-    }
+    } */
 }
 class fcFieldStorage_Bit extends fcFieldStorage {
 
@@ -143,14 +170,17 @@ class fcFieldStorage_Bit extends fcFieldStorage {
 	return (ord($sVal) != 0);
     }
     /*----
-      PURPOSE: convert from internal format to writable-data format (SQL)
+      PURPOSE: convert from internal format to sanitized (cooked) data format
       INPUT: internal (native) format
       RETURNS: value in db-writable format, no additional sanitization needed
+      NOTE: chr($bVal) should also work, and would produce a string that is
+	the same as what is received when reading from the db (i.e. the input to
+	toNative()), but isn't human-readable (for debugging).
     */
-    protected function fromNative($bVal) {
+    protected function fromNativeSane($bVal) {
 	return $bVal?"b'1'":"b'0'";
     }
-    
+
     // -- CEMENTING -- //
 
 }

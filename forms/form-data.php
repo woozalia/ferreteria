@@ -30,8 +30,13 @@ class fcForm_DB extends fcForm_keyed {
 	actual storage commands (typically SQL).
     */
     public function CookRawValue($val) {
-	$db = $this->RecordsObject()->Table()->Engine();
-	return $db->SanitizeAndQuote($val);
+	if (is_null($val)) {
+	    $sql = 'NULL';
+	} else {
+	    $db = $this->RecordsObject()->Table()->Engine();
+	    $sql = $db->SanitizeAndQuote($val);
+	}
+	return $sql;
     }
 
     // -- SERVICES -- //
@@ -77,11 +82,13 @@ class fcForm_DB extends fcForm_keyed {
     */
     protected function RecordValues_asSQL_set(array $arSQL) {
 	$arFlds = $this->FieldArray();
+	//echo 'SQL FIELD ARRAY:'.fcArray::Render($arSQL);
 	foreach ($arSQL as $key => $val) {
 	    if (array_key_exists($key,$arFlds)) {
 		// ignore data fields for which there is no Field object
 		$oField = $arFlds[$key];
 		$oField->StorageObject()->SetValue($val);
+		//echo "VALUE OF [$key] SET TO [$val]<br>";
 	    }
 	}
     }
@@ -112,44 +119,74 @@ class fcForm_DB extends fcForm_keyed {
       RULE: Call this to store data after changing
       INPUT:
 	$this->RecordValues_asNative_get(): main list of values to save
-	$arUpd: array of additional values to save, in native format
+	$arNat: array of additional values to save, in native format
+      HISTORY:
+	2016-06-12
+	  * Changed INSERT code so it uses rc->SetValues(native) instead of tbl->Insert(native)
+	  * Changed UPDATE code so it uses rc->SetValues(native) instead of something complicated
+	2016-10-11
+	  * Changed INSERT code to use tbl->Insert(storage)
+	  * TODO changed UPDATE code to use rc->Update(storage)
+	2016-10-18 When saving a single Session record (in WorkFerret), Save() is expecting
+	  SQL values. Earlier, I had decided it needed to receive Field objects -- but I can't
+	  find the implementation of Save() which is expecting that, so switching back (for now).
     */
-    public function SaveRecord(array $arUpd) {
+    public function SaveRecord(array $arNat) {
+//	echo 'RECORD:'.fcArray::Render($this->RecordsObject()->Values());
+//	echo 'ARNAT 1: '.fcArray::Render($arNat);
 	$rc = $this->RecordsObject();
 	$sqlIDFilt = $rc->SelfFilter();
-	$arUpd = $this->ProcessIncomingRecord($arUpd);
-	$this->RecordValues_asNative_set($arUpd);
+	$arNat = $this->ProcessIncomingRecord($arNat);
+	$this->RecordValues_asNative_set($arNat);
 	//$arUpd = $this->RecordValues_asSQL_get();
-	$arUpd = $this->RecordValues_asNative_get();
+
+	// SQL VALUES (RAW) version
+	$arSave = $this->RecordValues_asStorageSane_get();
+
+	// FIELD OBJECTS version
+	//$arSave = $this->FieldArray();
+
 	$tbl = $this->RecordsObject()->Table();
 	$idUpd = $this->Get_KeyString_toSave();
+
+	// 2016-10-12 new version
 	if ($idUpd == KS_NEW_REC) {
-	    //$id = $tbl->Insert($arUpd);	// 2016-06-12 old version
-	    $rc = $tbl->SpawnItem();
-	    $rc->SetValues($arUpd);
-	    $rc->Save();
-	} else {
-	    //$tbl->Update_Keyed($arUpd,$idUpd);
-	    /*
-	    if ($idUpd = $this->RecordsObject()->KeyString()) {
-		$rc = $this->RecordsObject();
-	    } else {
-		$rc = $tbl->GetItem($idUpd);	// not tested; using $sqlIDFilt might work better
-	    }//*/
-	    $rc->SetValues($arUpd);
-	    $rc->Save();
-	    /* 2016-06-12 old version
-	    $rc->Update($arUpd,$sqlIDFilt);
-	    */
-	    /* Debugging
-	    echo '<b>CLASS</b>: '.get_class($rc).'<br>';
-	    echo "<b>ID FILT</b>: $sqlIDFilt<br>";
-	    echo '<b>SQL FOR UPDATE</b>: '.$rc->SQL_forUpdate($arUpd,$sqlIDFilt).'<br>';
-	    echo '<b>FINAL SQL</b>: '.$rc->sqlExec.'<br>';
-	    die();
-	    //*/
-	    $id = $idUpd;
+	    // Make sure recordset's ID field indicates NEW, so it will INSERT instead of UPDATE:
+	    $rc->ClearKeyValue();
 	}
+	if (method_exists($rc,'Save')) {
+	    $rc->Save($arSave);
+	} else {
+	    throw new exception('Ferreteria caller error: class "'
+	      .get_class($rc)
+	      .'" must use trait "ftSaveableRecord".'
+	      );
+	}
+
+	/* 2016-10-12 Attempting to replace all this with a call to Save(); may not work...
+	if ($idUpd == KS_NEW_REC) {
+	    $arSto = $rc->InsertArray($arSto);
+	    $id = $tbl->Insert($arSto);
+	    // 2016-10-11 old version
+	    //$rc = $tbl->SpawnItem();
+	    //$rc->SetValues($arSto);
+	    //$rc->Save();
+
+	    echo 'SQL: '.$tbl->sqlExec.'<br>'; die();
+	} else {
+	    $rc = $this->RecordsObject();
+	    if ($rc->RowCount() != 1) {
+		throw new exception('Ferreteria error: updating multi-row forms not yet implemented.');
+	    }
+	    $arSto = $rc->UpdateArray($arSto);
+	    $rc->Update($arSto);
+
+	    // 2016-10-11 old version
+	    //$rc->SetValues($arSto);
+	    //$rc->Save();
+
+	    $id = $idUpd;
+	} */
 	$sErr = $tbl->Engine()->getError();
 	if (!empty($sErr)) {
 	    $this->AddMessage('<b>Error</b>: '.$sErr);
@@ -222,13 +259,13 @@ class fcBlobField {
     public function GetValue($sName) {
 	return fcArray::Nz($this->ar,$sName);
     }
-    
+
     // ++ DEBUGGING ++ //
-    
+
     public function Render() {
 	return fcArray::Render($this->GetArray());
     }
-    
+
     // -- DEBUGGING -- //
 
 }
@@ -244,7 +281,7 @@ class fcForm_blob extends fcForm {
 	parent::__construct($sName);
 	$this->BlobObject($oBlobField);
     }
-    
+
     private $oBlobField;
     protected function BlobObject($o=NULL) {
 	if (!is_null($o)) {
@@ -252,10 +289,10 @@ class fcForm_blob extends fcForm {
 	}
 	return $this->oBlobField;
     }
-    
+
     // -- SETUP -- //
     // ++ DATA I/O ++ //
-    
+
     // ACTION: Save form fields to blob data
     public function Save() {
 	$arBlob = $this->RecordValues_asNative_get();
@@ -266,10 +303,10 @@ class fcForm_blob extends fcForm {
 	$arBlob = $this->BlobObject()->GetArray();
 	$this->RecordValues_asNative_set($arBlob);
     }
-    
+
     // -- DATA I/O -- //
     // ++ REQUIRED ++ //
-    
+
     /*----
       NOTE: This is a minor kluge, in that it's not really returning a DataSet
 	but just an object that has a SetValue(key,value) method. Fortunately,
@@ -278,10 +315,10 @@ class fcForm_blob extends fcForm {
     protected function RecordsObject() {
 	return $this->BlobObject();
     }
-    
+
     // -- REQUIRED -- //
     // ++ DEBUGGING ++ //
-    
+
     public function Render() {
 	return $this->BlobObject()->Render();
     }

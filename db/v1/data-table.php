@@ -26,10 +26,19 @@ abstract class clsTable_abstract {
     static public function _SQL_forUpdate($iTblName, array $iSet,$iWhere) {
 	$sqlSet = '';
 	foreach($iSet as $key=>$val) {
-	    if ($sqlSet != '') {
-		$sqlSet .= ',';
+	    if (is_scalar($val)) {
+		if ($sqlSet != '') {
+		    $sqlSet .= ',';
+		}
+		$sqlSet .= ' `'.$key.'`='.$val;
+	    } else {
+		throw new exception('Ferreteria parameter error: value for "'
+		  .$key
+		  .'" is "'
+		  .gettype($val)
+		  .'", which is not a scalar type.'
+		  );
 	    }
-	    $sqlSet .= ' `'.$key.'`='.$val;
 	}
 
 	return "UPDATE `$iTblName` SET$sqlSet WHERE $iWhere";

@@ -6,6 +6,7 @@
     2013-12-17 Created for DataCurr()
     2016-01-18 Same() method added
     2016-02-01 Renaming clsMoney -> fcMoney, with clsMoney as a deprecated alias
+    2016-10-23 Format_withSymbol_asHTML()
 */
 
 class fcMoney {
@@ -15,10 +16,10 @@ class fcMoney {
 	// until PHP 5.6 is more ubiquitous, we have to fake powers of ten:
 	//$fRez = 10 ** (self::$nDigits);
 	$fRez = '1' . str_repeat('0',self::$nDigits);
-	
+
 	$ni1 = (int)($nAmt1 * $fRez);
 	$ni2 = (int)($nAmt2 * $fRez);
-	
+
 	return $ni1 == $ni2;
     }
     static public function BasicFormat($nAmt,$sPfx='$',$sPlus='') {
@@ -66,6 +67,21 @@ class fcMoney {
 	    return $sSymbol.$sNumFmt;
 	}
     }
+    static public function Format_withSymbol_asHTML($nAmt,$sSymbol='$',$sPlus='') {
+	if (is_null($nAmt)) {
+	    return NULL;
+	} else {
+	    // format numerically
+	    $sNumFmt = sprintf("%01.2f",$nAmt);
 
+	    // prefix with sign if needed
+	    if ($nAmt < 0) {
+		//$sNumFmt = '-'.$sNum;
+	    } else {
+		$htNumFmt = "<span class=money-amount><span class=number-sign>$sPlus</span>$sNumFmt</span>";
+	    }
+	    return "<span class=money><span class=money-symbol>$sSymbol</span>$htNumFmt</span>";
+	}
+    }
 }
 class clsMoney extends fcMoney {}	// deprecated

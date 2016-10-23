@@ -87,11 +87,11 @@ abstract class clsRecs_abstract {
     public function IsNew() {
 	return is_null($this->Values());
     }
-    
+
     // ++ FIELD ACCESS ++ //
-    
+
     //++overloaded++//
-    
+
     /*----
       ACTION: sets/returns associative array of fields/values for the current row
       HISTORY:
@@ -134,7 +134,7 @@ abstract class clsRecs_abstract {
 	}
 	return $this->Row[$iName];
     }
-    
+
     //--overloaded--//
     //++read-only++//
 
@@ -153,10 +153,10 @@ abstract class clsRecs_abstract {
 	    return $iDefault;
 	}
     }
-    
+
     //--read-only--//
     //++write-only++//
-    
+
     /*----
       ACTION: only sets the given values in the current row;
 	does not clear any missing values. Sets Touched array,
@@ -179,9 +179,9 @@ abstract class clsRecs_abstract {
 	    $this->TouchField($sKey);
 	}
     }
-    
+
     //--write-only--//
-    
+
     // -- FIELD ACCESS -- //
     // ++ FIELD STATUS ++ //
 
@@ -189,9 +189,17 @@ abstract class clsRecs_abstract {
       HISTORY:
 	2011-02-09 created so we can test for field existence before trying to access
     */
-    public function HasValue($iName) {
-	if (is_array($this->Row)) {
-	    return array_key_exists($iName,$this->Row);
+    public function HasValue($sName) {
+	$ar = $this->Values();
+	if (is_array($ar)) {
+	    return array_key_exists($sName,$ar);
+	} else {
+	    return FALSE;
+	}
+    }
+    public function Value_isSet($sName) {
+	if ($this->HasValue($sName)) {
+	    return !is_null($this->Value($sName));
 	} else {
 	    return FALSE;
 	}
@@ -237,10 +245,10 @@ abstract class clsRecs_abstract {
 	}
 	return $ar;
     }
-    
+
     // -- FIELD CALCULATIONS -- //
     // ++ ACTIONS ++ //
-    
+
     /*----
       FUNCTION: Clear()
       ACTION: Clears Row[] of any leftover data
@@ -376,53 +384,6 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
 	assert('!empty($sKeyName); /* TABLE: '.$this->Table->Name().' */');
 	assert('is_string($sKeyName); /* TABLE: '.$this->Table->Name().' */');
 	return $sKeyName;
-    }
-    /*----
-      HISTORY:
-	2016-04-19 This couldn't have been working reliably until now, because the values
-	  were not being sanitize-and-quoted. (Now they are.)
-    */
-    protected function UpdateArray($arUpd=NULL) {
-	$arTouch = $this->TouchedArray();
-	if (is_array($arTouch)) {
-	    $db = $this->Engine();
-	    foreach ($arTouch as $sField) {
-		$arUpd[$sField] = $db->SanitizeAndQuote($this->Value($sField));
-	    }
-	}
-	return $arUpd;
-    }
-    /*----
-      PURPOSE: This exists mainly for descendants that might want to do something different for Inserts
-	than for Updates (e.g. set WhenCreated versus WhenEdited).
-    */
-    protected function InsertArray($arIns=NULL) {
-	return $this->UpdateArray($arIns);
-    }
-    /*----
-      HISTORY:
-	2016-06-04 I'm not sure why this was private; it seems like a good general-use function.
-	  I specifically needed it to be public when loading up Customer Address records via either
-	  of two different methods. I *could* have written public SaveThis() and SaveThat() methods,
-	  but that would have increased the amount of special coding needed for This and That yet again.
-    */
-    public function Save() {
-	$out = NULL;
-	if ($this->IsNew()) {
-	    $arSave = $this->InsertArray();
-	    if (is_array($arSave)) {
-		$out = $this->Table()->Insert($arSave);
-		if ($out !== FALSE) {
-		    $this->Value($this->KeyName(),$out);	// retrieve new record's ID
-		}
-	    }
-	} else {
-	    $arSave = $this->UpdateArray();
-	    if (is_array($arSave)) {
-		$out = $this->Update($arSave);
-	    }
-	}
-	return $out;
     }
     /*-----
       ACTION: Saves the data in $iSet to the current record (or records filtered by $iWhere)

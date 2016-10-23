@@ -28,7 +28,7 @@ abstract class fcFormField {
 
     // -- SETUP -- //
     // ++ RELATED OBJECTS ++ //
-    
+
     // PUBLIC so Control objects can access it at setup time
     private $oForm;
     public function FormObject(fcForm $oForm=NULL) {
@@ -64,10 +64,10 @@ abstract class fcFormField {
 	}
 	return $this->oStorage;
     }
-    
+
     // -- RELATED OBJECTS -- //
     // ++ CONFIGURATION ++ //
-    
+
     /*----
       PUBLIC because each Control (at least) needs to know what its Field is named.
     */
@@ -81,7 +81,7 @@ abstract class fcFormField {
 
     // -- CONFIGURATION -- //
     // ++ OPTIONS ++ //
-    
+
     //private $okToWrite;	// enable modifying stored field
     public function OkToWrite($bOk=NULL) {
 	throw new exception('Call StorageObject->Writable() or ControlObject->Editable() instead.');
@@ -93,7 +93,7 @@ abstract class fcFormField {
 
     // -- OPTIONS -- //
     // ++ MEMBER CALCULATIONS ++ //
-    
+
     /*----
       RETURNS: TRUE iff the value has been explicitly set
       NOTE: We may eventually need to have a flag for this; for now, we just look
@@ -119,13 +119,13 @@ abstract class fcFormField {
 	  but that prevented me from code-setting read-only values which nonetheless needed to
 	  be set for new records. (Setting Default does not work. Making the field OkToWrite()
 	  gives an error when the control doesn't see the value in the incoming form data.)
-	  
+
 	  We'll just have to see if returning only IsChanged() causes problems.
     */
     public function ShouldWrite() {
 	return $this->IsChanged() && $this->StorageObject()->Writable();
     }
-    
+
     // -- MEMBER CALCULATIONS -- //
     // ++ VALUE ACCESS ++ //
 
@@ -161,6 +161,7 @@ abstract class fcFormField {
     */
     public function SetValue($val) {
 	if (!fcString::IsBlank($val)) {
+//echo "RECEIVED NEW VALUE FOR ".$this->NameString()."]: [$val]<br>";
 	    $this->vValue = $val;
 	    $this->MarkChanged();
 	}
@@ -211,7 +212,7 @@ class fcFormField_Text extends fcFormField {
     protected function StorageClass() {
 	return 'fcFieldStorage_Text';
     }
-    
+
     // -- CEMENTING -- //
 
 }
@@ -251,7 +252,7 @@ class fcFormField_Time extends fcFormField_Text {
 //*/
 
     // ++ CEMENTING ++ //
-    
+
     protected function ControlClass() {
 	return 'fcFormControl_HTML_Timestamp';
     }
@@ -269,7 +270,7 @@ trait ftFormField_Boolean {
     // ++ OVERRIDES ++ //
 
     /*
-      NOTES: 
+      NOTES:
 	* With booleans, a blank value is considered "set" if the value has been changed or the value had not been set previously.
 	* However, the way this is set up, we don't load values from the disk before calculating what to save -- so until there's
 	  some way to query the disk value, we'll just say any time this is called, that's considered setting the value.
@@ -278,14 +279,14 @@ trait ftFormField_Boolean {
 	$this->ForceValue($val);
 	$this->MarkChanged();
     }
-    
+
     // -- OVERRIDES -- //
     // ++ CEMENTING ++ //
-    
+
     protected function ControlClass() {
 	return 'fcFormControl_HTML_CheckBox';
     }
-    
+
     // -- CEMENTING -- //
 
 }
@@ -294,11 +295,11 @@ class fcFormField_BoolInt extends fcFormField_Text {
     use ftFormField_Boolean;
 
     // ++ CEMENTING ++ //
-    
+
     protected function StorageClass() {
 	return 'fcFieldStorage_Num';
     }
-    
+
     // -- CEMENTING -- //
 
 }
@@ -306,11 +307,11 @@ class fcFormField_Bit extends fcFormField {
     use ftFormField_Boolean;
 
     // ++ CEMENTING ++ //
-    
+
     protected function StorageClass() {
 	return 'fcFieldStorage_Bit';
     }
-    
+
     // -- CEMENTING -- //
 
 /* This should be handled by the Control

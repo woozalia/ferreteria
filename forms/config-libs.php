@@ -14,6 +14,7 @@ $om = new clsModule(__FILE__, 'field-ctrl.php');
   $om->AddClass('fcFormControl_HTML_DropDown');
   $om->AddClass('fcFormControl_HTML_CheckBox');
   $om->AddClass('fcFormControl_HTML_TextArea');
+  $om->AddClass('fcFormControl_HTML_Timestamp');
 $om = new clsModule(__FILE__, 'field-ctrl-more.php');
   $om->AddClass('fcInstaModeButton');
 $om = new clsModule(__FILE__, 'field-native.php');
