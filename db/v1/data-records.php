@@ -3,6 +3,7 @@
   PURPOSE: classes for handling data recordsets
   HISTORY:
     2013-12-19 split off from data.php
+    2016-08-14 Hand-merging changes (apparently this never got pushed back to origin)
 */
 
 define('KS_NEW_REC','new');	// value to use for key of new records
@@ -20,25 +21,31 @@ abstract class clsRecs_abstract {
     public $sqlMake;	// optional: SQL used to create the dataset -- used for reloading
     public $sqlExec;	// last SQL executed on this dataset
     public $Table;	// public access deprecated; use Table()
-    protected $objRes;	// result object returned by Engine
     public $Row;	// public access deprecated; use Values()/Value() (data from the active row)
     private $arMod;	// list of modified fields -- for auto-update
 
 //    public function __construct(clsDatabase $iDB=NULL, $iRes=NULL, array $iRow=NULL) {
     public function __construct(clsDatabase $iDB=NULL) {
+	$this->ClearResult();
 	$this->objDB = $iDB;
 	$this->InitVars();
     }
     protected function InitVars() {
-	$this->objRes = NULL;
 	$this->Row = NULL;
 	$this->arMod = NULL;
     }
-    public function ResultHandler($iRes=NULL) {
-	if (!is_null($iRes)) {
-	    $this->objRes = $iRes;
+    private $oRes;	// result object returned by Engine
+    public function ResultHandler(clsDataResult $oRes=NULL) {
+	if (!is_null($oRes)) {
+	    $this->oRes = $oRes;
 	}
-	return $this->objRes;
+	return $this->oRes;
+    }
+    protected function ClearResult() {
+	$this->oRes = NULL;
+    }
+    public function HasResult() {
+	return is_object($this->oRes);
     }
     public function Table(clsTable_abstract $iTable=NULL) {
 	if (!is_null($iTable)) {
@@ -267,20 +274,34 @@ abstract class clsRecs_abstract {
     /*----
       USAGE: caller should always check this and throw an exception if it fails.
     */
-    private function QueryOkay() {
-	if (is_object($this->objRes)) {
-	    $ok = $this->objRes->is_okay();
+    protected function QueryOkay() {
+	if ($this->HasResult()) {
+	    $ok = $this->ResultHandler()->is_okay();
 	} else {
 	    $ok = FALSE;
 	}
 	return $ok;
     }
+    protected function QueryOkay_DebugString() {
+	$ok = $this->HasResult();
+	$sYN = $ok?'Y':'N';
+	$sStatus = "GOT RESULT:[$sYN]";
+	if ($ok) {
+	    $ok = $this->ResultHandler()->is_okay();
+	    $sYN = $ok?'Y':'N';
+	    $sStatus .= " RESULT OK:[$sYN]";
+	} else {
+	    $sErr = $this->Engine()->Engine()->db_get_error();
+	    $sStatus .= " ERROR: [$sErr]";
+	}
+	return $sStatus;
+    }
     public function Query($iSQL) {
-	$this->objRes = $this->Engine()->engine_db_query($iSQL);
+	$this->ResultHandler($this->Engine()->engine_db_query($iSQL));
 	$this->sqlMake = $iSQL;
 	if (!$this->QueryOkay()) {
-	    echo '<pre>';
-	    throw new exception ('Query failed -- SQL='.$iSQL);
+	    $sStatus = $this->QueryOkay_DebugString();
+	    throw new exception ("Query failed (status: $sStatus) SQL: $iSQL");
 	}
     }
     /*----
@@ -303,16 +324,16 @@ abstract class clsRecs_abstract {
       HISTORY:
 	2016-03-22 Sometimes when a Ferreteria session is no longer valid, we get a Record
 	  object with no Resource object set. I had an exception set to throw whenever that
-	  happened, but the problem is difficut to reproduce (so figuring out the root cause
+	  happened, but the problem is difficult to reproduce (so figuring out the root cause
 	  will take an inordinate amount of time), so for now I'm just going to return FALSE
 	  when that happens, and see if the rest of the code recovers nicely.
     */
     public function hasRows() {
-	if (!is_object($this->objRes)) {
+	if (!$this->HasResult()) {
 	    //throw new exception('Internal error: Resource object not set.');
 	    return FALSE;
 	}
-	$rows = $this->objRes->get_count();
+	$rows = $this->ResultHandler()->get_count();
 	if ($rows === FALSE) {
 	    return FALSE;
 	} elseif ($rows == 0) {
@@ -321,9 +342,13 @@ abstract class clsRecs_abstract {
 	    return $rows;
 	}
     }
+    /* 2016-07-15 Need a usage case for this.
+
+    Rows are normally returned to the caller, so why would we need to save one in the Result?
+
     public function hasRow() {
-	return $this->objRes->is_filled();
-    }
+	return $this->ResultHandler()->is_filled();
+    } */
     public function RowCount() {
 	if (is_object($this->ResultHandler())) {
 	    return $this->ResultHandler()->get_count();
@@ -335,7 +360,7 @@ abstract class clsRecs_abstract {
     }
     public function RewindRows() {
 	if ($this->hasRows()) {
-	    $this->objRes->do_rewind();
+	    $this->ResultHandler()->do_rewind();
 	    return TRUE;
 	} else {
 	    return FALSE;
@@ -351,24 +376,27 @@ abstract class clsRecs_abstract {
 	    return FALSE;
 	}
     }
-    /*=====
+    protected function HasRow() {
+	return is_array($this->Row);
+    }
+    /*----
       ACTION: Fetch the next row of data into $this->Row.
 	If no data has been fetched yet, then fetch the first row.
       RETURN: TRUE if row was fetched; FALSE if there were no more rows
 	or the row could not be fetched.
     */
     public function NextRow() {
-	if (!is_object($this->objRes)) {
+	if (!$this->HasResult()) {
 	    throw new exception('Result object not loaded');
 	}
-	$this->Row = $this->objRes->get_next();
+	$this->Row = $this->ResultHandler()->get_next();
 	return $this->hasRow();
     }
 }
 class clsRecs_generic extends clsRecs_abstract {
 }
-/*=============
-  NAME: clsRecs_keyed_abstract -- abstract recordset for keyed data
+/*::::
+  CLASS: clsRecs_keyed_abstract -- abstract recordset for keyed data
     Adds abstract and concrete methods for dealing with keys.
 */
 abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
