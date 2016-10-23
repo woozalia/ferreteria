@@ -4,11 +4,9 @@
   PURPOSE: generic/abstract application framework
   HISTORY:
     2012-05-08 split off from store.php
-    2012-05-13 removed clsPageOutput (renamed clsPageOutput_WHO_USES_THIS some time ago)
-    2013-09-16 clsVbzSkin_Standard renamed clsVbzPage_Standard
-    2013-09-17 clsVbzPage_Standard renamed clsVbzPage_Browse
     2013-10-23 stripped for use with ATC app (renamed as app.php)
     2013-11-11 re-adapted for general library
+    2016-10-01 changes to work with db.v2
 */
 
 define('KWP_FERRETERIA_DOC','http://htyp.org/User:Woozle/Ferreteria');
@@ -35,19 +33,20 @@ abstract class clsApp {
     abstract public function Session();
     abstract public function Skin();
     abstract public function Page(clsPage $iObj=NULL);
-    abstract public function Data(clsDatabase_abstract $iObj=NULL);
+    //abstract public function Data(clsDatabase_abstract $iObj=NULL);
+    abstract public function GetMainDB();
     abstract public function User();
     //abstract public function BaseURL_abs();
     //abstract public function BaseURL_rel();
 }
-abstract class cAppStandard extends clsApp {
+abstract class fcAppStandard extends clsApp {
     private $oPage;
     private $oSkin;
 
     // ++ MAIN ++ //
 
     public function Go() {
-	$db = $this->Data();
+	$db = $this->GetMainDB();
 	$db->Open();
 	if ($db->isOk()) {
 	    $this->Page()->DoPage();
@@ -58,7 +57,7 @@ abstract class cAppStandard extends clsApp {
     }
 
     // -- MAIN -- //
-    // ++ MISC. ++ //
+    // ++ PROFILING ++ //
     
     private $fltStart;
     public function SetStartTime() {
@@ -71,7 +70,7 @@ abstract class cAppStandard extends clsApp {
 	return microtime(true) - $this->fltStart;
     }
     
-    // -- MISC. -- //
+    // -- PROFILING -- //
     // ++ CLASS NAMES ++ //
 
     protected function SessionsClass() {
@@ -88,10 +87,10 @@ abstract class cAppStandard extends clsApp {
     // ++ TABLES ++ //
 
     protected function SessionTable() {
-	return $this->Data()->Make($this->SessionsClass());
+	return $this->GetDataFactory()->Make($this->SessionsClass());
     }
     public function Users($id=NULL) {
-	$o = $this->Data()->Make($this->UsersClass(),$id);
+	$o = $this->GetDataFactory()->Make($this->UsersClass(),$id);
 	return $o;
     }
 
@@ -112,13 +111,14 @@ abstract class cAppStandard extends clsApp {
 	}
 	return $this->oSkin;
     }
+    /*
     private $oData;
     public function Data(clsDatabase_abstract $iObj=NULL) {
 	if (!is_null($iObj)) {
 	    $this->oData = $iObj;
 	}
 	return $this->oData;
-    }
+    }*/
     private $rcSess;
     public function Session() {
 	if (empty($this->rcSess)) {
@@ -177,7 +177,7 @@ abstract class cAppStandard extends clsApp {
 	}
     }
     public function Events($id=NULL) {
-	return $this->Data()->Make($this->EventsClass(),$id);
+	return $this->GetDataFactory()->Make($this->EventsClass(),$id);
     }
 
     // -- RECORDS/OBJECTS -- //

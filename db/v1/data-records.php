@@ -3,6 +3,7 @@
   PURPOSE: classes for handling data recordsets
   HISTORY:
     2013-12-19 split off from data.php
+    2016-08-14 Hand-merging changes (apparently this never got pushed back to origin)
 */
 
 define('KS_NEW_REC','new');	// value to use for key of new records
@@ -15,7 +16,7 @@ define('KS_NEW_REC','new');	// value to use for key of new records
   HISTORY:
     2011-11-21 changed Table() from protected to public because Scripting needed to access it
 */
-abstract class clsRecs_abstract {
+abstract class fcRecs_abstract {
     public $sqlMake;	// optional: SQL used to create the dataset -- used for reloading
     public $sqlExec;	// last SQL executed on this dataset
     public $Table;	// public access deprecated; use Table()
@@ -28,7 +29,7 @@ abstract class clsRecs_abstract {
 	$this->InitVars();
     }
     protected function InitVars() {
-	$this->ClearResults();
+	$this->ClearResult();
 	$this->Row = NULL;
 	$this->arMod = NULL;
     }
@@ -55,15 +56,18 @@ abstract class clsRecs_abstract {
       //--engine--//
       //++result handler++//
     
-    protected $objRes;	// result object returned by Engine
-    protected function ClearResults() {
-	$this->objRes = NULL;
-    }
-    public function ResultHandler($iRes=NULL) {
-	if (!is_null($iRes)) {
-	    $this->objRes = $iRes;
+    private $oRes;	// result object returned by Engine
+    public function ResultHandler(clsDataResult $oRes=NULL) {
+	if (!is_null($oRes)) {
+	    $this->oRes = $oRes;
 	}
-	return $this->objRes;
+	return $this->oRes;
+    }
+    protected function ClearResult() {
+	$this->oRes = NULL;
+    }
+    public function HasResult() {
+	return is_object($this->oRes);
     }
     
       //--result handler--//
@@ -165,10 +169,27 @@ abstract class clsRecs_abstract {
 	}
 	return $this->Row[$iName];
     }
+    /* 2016-09-11 This seemed useful, but then I decided to split the calling methods into Get*() and Set*() instead.
+    // PURPOSE: Like ValueNz(), but can set value as well.
+    public function SetValueNz($sName,$v=NULL) {
+	if (is_null($v)) {
+	    return $this->ValueNz($sName);
+	} else {
+	    $this->SetValue($sName,$v);
+	}
+    }*/
     
       //--read/write--//
       //++read-only++//
 
+    /*----
+      ASSUMES the given field value is set. It may turn out that we need to throw an exception if it doesn't.
+      HISTORY:
+	2016-09-11 Created mainly for symmetry.
+    */
+    public function GetValue($sName) {
+	return $this->Row[$sName];
+    }
     /*----
       PURPOSE: Like Value() but handles new records gracefully, and is read-only
 	makes it easier for new-record forms not to throw exceptions
@@ -203,7 +224,11 @@ abstract class clsRecs_abstract {
 	// deprecated; use SetValues()
 	$this->SetValues($arVals);
     }
-    // 2016-03-25 Not sure if the whole comparison-and-touch thing should be here.
+    /*----
+      NOTES:
+	2016-03-25 Not sure if the whole comparison-and-touch thing should be here.
+	2016-09-11 Tentatively, yes.
+    */
     public function SetValue($sKey,$val) {
 	if (!$this->ValueEquals($sKey,$val)) {
 	    $this->Row[$sKey] = $val;
@@ -290,20 +315,37 @@ abstract class clsRecs_abstract {
     /*----
       USAGE: caller should always check this and throw an exception if it fails.
     */
-    private function QueryOkay() {
-	if (is_object($this->objRes)) {
-	    $ok = $this->objRes->is_okay();
+    protected function QueryOkay() {
+	if ($this->HasResult()) {
+	    $ok = $this->ResultHandler()->is_okay();
 	} else {
 	    $ok = FALSE;
 	}
 	return $ok;
     }
+    protected function QueryOkay_DebugString() {
+	$ok = $this->HasResult();
+	$sYN = $ok?'Y':'N';
+	$sStatus = "GOT RESULT:[$sYN]";
+	if ($ok) {
+	    $ok = $this->ResultHandler()->is_okay();
+	    $sYN = $ok?'Y':'N';
+	    $sStatus .= " RESULT OK:[$sYN]";
+	} else {
+	    $sErr = $this->Engine()->Engine()->db_get_error();
+	    $sStatus .= " ERROR: [$sErr]";
+	}
+	return $sStatus;
+    }
+    /*----
+      PURPOSE: handles a read query (SELECT statement)
+    */
     public function Query($iSQL) {
-	$this->objRes = $this->Engine()->engine_db_query($iSQL);
+	$this->ResultHandler($this->Engine()->engine_read_query($iSQL));
 	$this->sqlMake = $iSQL;
 	if (!$this->QueryOkay()) {
-	    echo '<pre>';
-	    throw new exception ('Query failed -- SQL='.$iSQL);
+	    $sStatus = $this->QueryOkay_DebugString();
+	    throw new exception ("Query failed (status: $sStatus) SQL: $iSQL");
 	}
     }
     /*----
@@ -326,16 +368,16 @@ abstract class clsRecs_abstract {
       HISTORY:
 	2016-03-22 Sometimes when a Ferreteria session is no longer valid, we get a Record
 	  object with no Resource object set. I had an exception set to throw whenever that
-	  happened, but the problem is difficut to reproduce (so figuring out the root cause
+	  happened, but the problem is difficult to reproduce (so figuring out the root cause
 	  will take an inordinate amount of time), so for now I'm just going to return FALSE
 	  when that happens, and see if the rest of the code recovers nicely.
     */
     public function hasRows() {
-	if (!is_object($this->objRes)) {
+	if (!$this->HasResult()) {
 	    //throw new exception('Internal error: Resource object not set.');
 	    return FALSE;
 	}
-	$rows = $this->objRes->get_count();
+	$rows = $this->ResultHandler()->get_count();
 	if ($rows === FALSE) {
 	    return FALSE;
 	} elseif ($rows == 0) {
@@ -344,9 +386,13 @@ abstract class clsRecs_abstract {
 	    return $rows;
 	}
     }
+    /* 2016-07-15 Need a usage case for this.
+
+    Rows are normally returned to the caller, so why would we need to save one in the Result?
+
     public function hasRow() {
-	return $this->objRes->is_filled();
-    }
+	return $this->ResultHandler()->is_filled();
+    } */
     public function RowCount() {
 	if (is_object($this->ResultHandler())) {
 	    return $this->ResultHandler()->get_count();
@@ -358,7 +404,7 @@ abstract class clsRecs_abstract {
     }
     public function RewindRows() {
 	if ($this->hasRows()) {
-	    $this->objRes->do_rewind();
+	    $this->ResultHandler()->do_rewind();
 	    return TRUE;
 	} else {
 	    return FALSE;
@@ -374,27 +420,30 @@ abstract class clsRecs_abstract {
 	    return FALSE;
 	}
     }
-    /*=====
+    protected function HasRow() {
+	return is_array($this->Row);
+    }
+    /*----
       ACTION: Fetch the next row of data into $this->Row.
 	If no data has been fetched yet, then fetch the first row.
       RETURN: TRUE if row was fetched; FALSE if there were no more rows
 	or the row could not be fetched.
     */
     public function NextRow() {
-	if (!is_object($this->objRes)) {
+	if (!$this->HasResult()) {
 	    throw new exception('Result object not loaded');
 	}
-	$this->Row = $this->objRes->get_next();
+	$this->Row = $this->ResultHandler()->get_next();
 	return $this->hasRow();
     }
 }
-class clsRecs_generic extends clsRecs_abstract {
+class fcRecs_generic extends fcRecs_abstract {
 }
-/*=============
-  NAME: clsRecs_keyed_abstract -- abstract recordset for keyed data
+/*::::
+  CLASS: clsRecs_keyed_abstract -- abstract recordset for keyed data
     Adds abstract and concrete methods for dealing with keys.
 */
-abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
+abstract class fcRecs_keyed_abstract extends fcRecs_abstract {
     // ABSTRACT methods
     abstract public function SelfFilter();
     abstract public function KeyString();
@@ -549,7 +598,7 @@ abstract class clsRecs_keyed_abstract extends clsRecs_abstract {
     Does not add field overloading. Field overloading seems to have been a bad idea anyway;
       Use Value() instead.
 */
-class clsRecs_key_single extends clsRecs_keyed_abstract {
+class fcRecs_key_single extends fcRecs_keyed_abstract {
     /*----
       HISTORY:
 	2010-11-01 iID=NULL now means object does not have data from an existing record
@@ -773,14 +822,14 @@ class clsRecs_key_single extends clsRecs_keyed_abstract {
     }
 }
 // alias -- a sort of default dataset type
-class clsDataSet_bare extends clsRecs_key_single {
+class fcDataSet_bare extends fcRecs_key_single {
 }
 /*
   PURPOSE: clsDataSet with overloaded field access methods
   DEPRECATED -- This has turned out to be more problematic than useful.
     Retained only for compatibility with existing code; hope to eliminate eventually.
 */
-class clsDataSet extends clsRecs_key_single {
+class fcDataSet extends fcRecs_key_single {
   // -- accessing individual fields
     public function __set($iName, $iValue) {
 	$sClass = get_class($this);

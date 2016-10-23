@@ -187,7 +187,8 @@ class clsSysEvents extends clsSysEvents_abstract {
 	    $arIns['WhoAdmin'] = $db->SanitizeAndQuote($sUser);
 	    $idNew = $this->Insert($arIns);
 	    if ($idNew) {
-		return $this->GetItem($idNew);
+		$rcEv = $this->GetItem($idNew);
+		return $rcEv;
 	    } else {
 		return NULL;
 	    }
@@ -294,8 +295,14 @@ abstract class clsLogger_data extends clsLogger {
 	return $this->tEv;
     }
     private $rcEvent;
-    protected function EventRecord() {
+    protected function SetEventRecord(clsSysEvent $rc) {
+	$this->rcEvent = $rc;
+    }
+    protected function EventRecord() {	// TODO: rename to GetEventRecord()
 	return $this->rcEvent;
+    }
+    protected function EventStarted() {
+	return is_object($this->rcEvent);
     }
     /*----
       INPUT:
@@ -315,7 +322,7 @@ abstract class clsLogger_data extends clsLogger {
 	2014-07-01 Now using (event)->Finish().
     */
     public function FinishEvent(array $iarArgs=NULL) {
-	if (!is_object($this->EventRecord())) {
+	if (!$this->EventStarted()) {
 	    throw new exception('FinishEvent() called, but event was not Started.');
 	}
 	return $this->EventRecord()->Finish($iarArgs);
@@ -352,7 +359,6 @@ class clsLogger_Table extends clsLogger_data {
 	// add data record's identity info
 	$arArgs['type'] = $tblData->ActionKey();		// TODO: this will crash - $rcData not defined
 	// shouldn't it just be $tblData->ActionKey()?
-
 	$tEvents = $this->EventTable();
 	$this->rcEvent = $tEvents->CreateEvent($arArgs,NULL,$arEdits);
 	if (!is_object($this->rcEvent)) {
@@ -384,7 +390,6 @@ class clsLogger_Table extends clsLogger_data {
       so I made iEdits an optional parameter. THIS IS A KLUGE.
 */
 class clsLogger_DataSet extends clsLogger_data {
-    protected $rcEvent;
 
     public function __construct(clsRecs_key_single $rsD, clsSysEvents_abstract $tEv) {
 	$this->DataRecord($rsD);	// recordset being logged
@@ -409,15 +414,16 @@ class clsLogger_DataSet extends clsLogger_data {
 	$arArgs[KS_EVENT_ARG_MOD_INDEX] = $rcData->KeyValue();	// id
 
 	$tEvents = $this->EventTable();
-	$this->rcEvent = $tEvents->CreateEvent($arArgs,$rcData->Values(),$arEdits);
-	if (!is_object($this->rcEvent)) {
+	$rcEvent = $tEvents->CreateEvent($arArgs,$rcData->Values(),$arEdits);
+	$this->SetEventRecord($rcEvent);
+	if (!$this->EventStarted()) {
 	    $sEventClass = get_class($tEvents);
 	    $sql = $tEvents->sqlExec;
 	    $sRecordClass = get_Class($rcData);
 	    $sMsg = "Class $sEventClass Could not create event object for a $sRecordClass recordset. SQL=[$sql]";
 	    throw new exception($sMsg);
 	}
-	return $this->rcEvent;
+	return $rcEvent;
     }
     /*----
       RETURNS: dataset consisting of events for the record pointed to by $this->DataRecord()

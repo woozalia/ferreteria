@@ -12,35 +12,66 @@ $oL = new clsLibrary('ferreteria.db.mw','mw/config-libs.php');
 
 // CORE DATABASE CLASSES
 
+// data
 $om = new clsModule(__FILE__, 'data.php');
-  $om->AddClass('clsDatabase_abstract');
-  $om->AddClass('clsDatabase');
-  $om->AddFunc('SQLValue');
-  $om->AddFunc('NzArray');
+  $om->AddClass('fcDatabase_abstract');
+  $om->AddClass('fcDatabase');
+
+// data-chained
 $om = new clsModule(__FILE__, 'data-chained.php');
-  $om->AddClass('clsTable_chained');
+  $om->AddClass('fcTable_chained');
+
+// data-engine
+  $om = new clsModule(__FILE__, 'data-engine.php');
+  $om->AddClass('fcDataEngine');
+
+// data-engine-clisrv
+$om = new clsModule(__FILE__, 'data-engine-clisrv.php');
+  $om->AddClass('fcDataEngine_CliSrv');
+
+// data-engine-mysqli
+$om = new clsModule(__FILE__, 'mysqli/data-engine-mysqli.php');
+  $om->AddClass('fcDataEngine_MySQLi');
+
+// data-indexed
 $om = new clsModule(__FILE__, 'data-indexed.php');
-  $om->AddClass('clsTable_indexed');
+  $om->AddClass('fcTable_indexed');
+
+// data-indexer
 $om = new clsModule(__FILE__, 'data-indexer.php');
-  $om->AddClass('clsIndexer_Table');
-  $om->AddClass('clsIndexer_Table_single_key');
-  $om->AddClass('clsIndexer_Table_multi_key');
+  $om->AddClass('fcIndexer_Table');
+  $om->AddClass('fcIndexer_Table_single_key');
+  $om->AddClass('fcIndexer_Table_multi_key');
+
+// data-records
 $om = new clsModule(__FILE__, 'data-records.php');
-  $om->AddClass('clsDataSet');
-  $om->AddClass('clsRecs_keyed_abstract');
-  $om->AddClass('clsRecs_key_single');
+  $om->AddClass('fcDataSet');
+  $om->AddClass('fcRecs_keyed_abstract');
+  $om->AddClass('fcRecs_key_single');
+
+// data-result
+$om = new clsModule(__FILE__, 'data-result.php');
+  $om->AddClass('fcDataResult');
+
+// data-result-mysqli
+$om = new clsModule(__FILE__, 'mysqli/data-result-mysqli.php');
+  $om->AddClass('fcDataResult_MySQLi');
+
+// data-table
 $om = new clsModule(__FILE__, 'data-table.php');
-  $om->AddClass('clsTable_abstract');
-  $om->AddClass('clsTable');
-  $om->AddClass('clsTable_keyed_abstract');
-  $om->AddClass('clsTable_key_single');
+  $om->AddClass('fcTable_abstract');
+  $om->AddClass('fcTable');
+  $om->AddClass('fcTable_keyed_abstract');
+  $om->AddClass('fcTable_key_single');
+
+// db-ui
 $om = new clsModule(__FILE__, 'db-ui.php');
   $om->AddClass('ftShowableRecord');
 
 // DEPENDENT CLASSES
 
 $om = new clsModule(__FILE__, 'menu-data.php');
-  $om->AddClass('clsDataTable_Menu');
-  $om->AddClass('clsDataRecord_Menu');
-  $om->AddClass('clsDataRecord_admin');
+  $om->AddClass('fcDataTable_Menu');
+  $om->AddClass('fcDataRecord_Menu');
+  $om->AddClass('fcDataRecord_admin');
   $om->AddClass('ftLoggableRecord');

@@ -32,6 +32,8 @@ abstract class clsActionWidget {
     public function Page(clsPageLogin $oPage=NULL) {
 	if (!is_null($oPage)) {
 	    $this->oPage = $oPage;
+	} else if (is_null($this->oPage)) {
+	    throw new exception('Attempting to access Page object before setting it.');
 	}
 	return $this->oPage;
     }

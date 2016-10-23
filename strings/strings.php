@@ -380,6 +380,45 @@ class fcString {
     }
     
     // -- REPLACEMENT -- //
+    // ++ PARSING ++ //
+
+    /*----
+      ACTION: Finds the next *paired* occurrence of $sRight. That is, each occurrence of $sLeft must be matched with
+	an $sRight, and we're looking for the one that is paired with the first $sLeft.
+      EXAMPLE: FindPair('<abcd<efghi>jkl>mnop','<','>') would return 15, the position of the second '>'.
+      RETURNS: zero-based index of target, or NULL if not found.
+      HISTORY:
+	2016-09-20 written for w3tpl
+    */
+    static public function FindPair($s,$sLeft,$sRight) {
+	$isLeftFnd = FALSE;
+	$isRightFnd = FALSE;
+	$idxLeft = strpos($s,$sLeft);
+	if ($idxLeft === FALSE) {
+	    return NULL;
+	} else {
+	    $nDepth = 1;
+	    while ($nDepth > 0) {
+		$idxLeft = strpos($s,$sLeft);
+		$idxRight = strpos($s,$sRight);
+		if ($idxLeft === FALSE) {
+		    $nDepth--;
+		} elseif ($idxRight === FALSE) {
+		    // there is no match
+		    return FALSE;
+		} elseif ($idxLeft < $idxRight) {
+		    // opener was next item found
+		    $nDepth++;
+		} else {
+		    // closer was next item found
+		    $nDepth--;
+		}
+	    }
+	    return $idxRight;
+	}
+    }
+
+    // -- PARSING -- //
     // ++ NATURAL LANGUAGE ++ //
 
     static public function Pluralize($iQty,$iSingular='',$iPlural='s') {

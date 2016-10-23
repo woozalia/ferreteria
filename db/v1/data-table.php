@@ -16,7 +16,7 @@
   PURPOSE: objects for operating on particular tables
     Does not attempt to deal with keys.
 */
-abstract class clsTable_abstract {
+abstract class fcTable_abstract {
     protected $vTblName;
     protected $vSngClass;	// name of singular class
     public $sqlExec;		// last SQL executed on this table
@@ -58,6 +58,7 @@ abstract class clsTable_abstract {
     // ++ FRAMEWORK ++ //
 
     public function DB() {	// DEPRECATED - use Engine()
+	throw new exception('2016-08-25 DB() is deprecated; call Engine().');
 	return $this->objDB;
     }
     protected $objDB;	// TODO: make this private; rename to $db
@@ -255,6 +256,7 @@ abstract class clsTable_abstract {
 	return 'INSERT INTO `'.$this->Name().'` ('.$sqlNames.') VALUES('.$sqlVals.');';
     }
     /*----
+      RETURNS: ID of new record, or FALSE if it could not be created
       HISTORY:
 	2010-11-16 Added "array" requirement for iData
 	2010-11-20 Calculation now takes place in SQL_forInsert()
@@ -268,7 +270,7 @@ abstract class clsTable_abstract {
 	if ($ok) {
 	    return $this->Engine()->NewID();
 	} else {
-	    return $ok;
+	    return FALSE;
 	}
     }
     /*----
@@ -330,7 +332,7 @@ abstract class clsTable_abstract {
   NAME: clsTable_keyed_abstract
   PURPOSE: adds abstract methods for dealing with keys
 */
-abstract class clsTable_keyed_abstract extends clsTable_abstract {
+abstract class fcTable_keyed_abstract extends fcTable_abstract {
 
     //abstract public function GetItem_byArray();
     /*----
@@ -410,7 +412,7 @@ abstract class clsTable_keyed_abstract extends clsTable_abstract {
   NAME: clsTable_key_single
   PURPOSE: table with a single key field
 */
-class clsTable_key_single extends clsTable_keyed_abstract {
+class fcTable_key_single extends fcTable_keyed_abstract {
     protected $vKeyName;
 
     public function KeyName($iName=NULL) {
@@ -541,5 +543,5 @@ class clsTable_key_single extends clsTable_keyed_abstract {
     }
 }
 // alias -- sort of a default table type
-class clsTable extends clsTable_key_single {
+class fcTable extends fcTable_key_single {
 }

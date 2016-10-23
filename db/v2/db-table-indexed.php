@@ -1,4 +1,4 @@
 <?php
 
-abstract class fcDataTable_indexed extends fcDataTable {
+abstract class fcTable_indexed extends fcDataTable {
 }

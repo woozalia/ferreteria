@@ -7,8 +7,6 @@
     2015-03-13 created
 */
 
-fcDBOFactory::RegisterType('mysql','fcDataConn_MySQL');
-
 class fcDataConn_MySQL extends fcDataConn_CliSrv {
 
     // ++ CONFIGURATION FIELDS ++ //
@@ -24,6 +22,13 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     // -- CONFIGURATION FIELDS -- //
     // ++ INFORMATION ++ //
 
+    public function IsOkay() {
+    throw new exception('Working HERE');
+    }
+    public function ErrorNumber() {
+    }
+    public function ErrorString() {
+    }
     public function Sanitize($sSQL) {
 	return $this->NativeObject()->escape_string($sSQL);
     }

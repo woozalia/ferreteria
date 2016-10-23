@@ -51,18 +51,17 @@ trait ftLoggableRecord {
 trait ftLoggableTable {
     use ftLoggableObject;
     
+    private $oLogger;
     protected function Log() {
-        static $oLogger = NULL;
-
-	if (is_null($oLogger)) {
+	if (empty($this->oLogger)) {
 	    $tLog = $this->Engine()->App()->Events();
-	    $oLogger = new clsLogger_Table($this,$tLog);
+	    $this->oLogger = new clsLogger_Table($this,$tLog);
 	}
-	return $oLogger;
+	return $this->oLogger;
     }
 }
 
-class clsDataTable_Menu extends clsTable {
+class fcDataTable_Menu extends fcTable {
     use ftLinkableTable;
     /*----
       NOTE: Not sure if this is really necessary, but leaving it for now.
@@ -85,7 +84,7 @@ class clsDataTable_Menu extends clsTable {
 /*%%%%
   PURPOSE: intermediate recordset class that doesn't assume a standalone application implemented with Ferreteria
 */
-class clsDataRecord_admin extends clsDataSet {
+class fcDataRecord_admin extends fcDataSet {
     use ftLinkableRecord;
     use ftLoggableRecord;
     use ftShowableRecord;
@@ -112,7 +111,7 @@ class clsDataRecord_admin extends clsDataSet {
   PURPOSE: not sure. The implementation of BaseURL_rel() only works within Ferreteria's app framework,
     but surely there's a more general way of handling this.
 */
-class clsDataRecord_Menu extends clsDataRecord_admin {
+class fcDataRecord_Menu extends fcDataRecord_admin {
 
     // ++ HELPER CALLBACKS ++ //
 

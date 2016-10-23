@@ -200,7 +200,11 @@ function Date_DefaultYear($iDate,$iYear,$iSmallerPfx='<small>',$iSmallerSfx='</s
     }
 }
 
-// TODO: determine which of these functions are *not* duplicates of native PHP functions, and document.
+/*----
+  TODO:
+    * Determine which of these functions are *not* duplicates of native PHP functions, and document.
+    * Determine whether/how this is different from fcTime, and document (or merge).
+*/
 class xtTime {
     public function __construct($iValue=NULL) {
 	if (is_string($iValue)) {

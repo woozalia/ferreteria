@@ -98,7 +98,7 @@ class fctUserSessions extends clsTable {
 	    list($idRecd,$sToken) = explode('-',$sSessKey);
 	    if (empty($idRecd)) {
 		// TODO: this should just silently log a possible hacking attempt
-		throw new exception('Input Error: Received session cookie has no ID.');
+		throw new exception("Input Error: Received session cookie has no ID. Session Key=[$sSessKey]");
 	    }
 	    // TODO: look up the ID and token in the session table
 
@@ -144,7 +144,7 @@ class fctUserSessions extends clsTable {
 	return $this->CurrentRecord();
     }
 }
-/*%%%%
+/*::::
   PURPOSE: Represents a single user session record
 */
 class fcrUserSession extends clsDataSet {
@@ -234,6 +234,9 @@ class fcrUserSession extends clsDataSet {
 	return $ok;
     }
     public function SessKey() {
+	if ($this->IsNew()) {
+	    throw new exception('Trying to generate a session key when session record has no ID.');
+	}
 	return $this->KeyValue().'-'.$this->Token();
     }
 

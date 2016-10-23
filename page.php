@@ -9,7 +9,7 @@
     2012-05-08 split off from store.php
     2012-05-13 removed clsPageOutput (renamed clsPageOutput_WHO_USES_THIS some time ago)
     2013-09-16 clsVbzSkin_Standard renamed clsVbzPage_Standard
-    2013-09-17 clsVbzPage_Standard renamed clsVbzPage_Browse
+    2013-09-17 clsVbzPage_Standard renamed clsVbzPage_Browse0
     2013-10-23 stripped for use with ATC app (renamed as app.php)
     2013-11-11 re-adapted for general library (split off page classes from app.php into page.php)
 */
@@ -20,7 +20,7 @@ define('KSF_USER_CTRL_ENTER_PASS'	,'upass');
 define('KSF_USER_CTRL_SET_PASS1'	,'upass1');
 define('KSF_USER_CTRL_SET_PASS2'	,'upass2');
 
-/*%%%%
+/*::::
   PURPOSE: base type for all Page classes
     Needs to work regardless of whether app is standalone or a plug-in.
 */

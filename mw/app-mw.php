@@ -6,7 +6,7 @@
     2015-07-12 resolving conflicts with other edited version
 */
 
-class clsApp_MW extends cAppStandard {
+class clsApp_MW extends fcAppStandard {
 
     public function Session() {
 	throw new exception('Who is calling this?');
@@ -14,6 +14,7 @@ class clsApp_MW extends cAppStandard {
     public function User() {
 	throw new exception('Who is calling this?');
     }
+    /* 2016-10-03 this should be obsolete now
     public function Data(clsDatabase_abstract $iObj=NULL) {
 	if (is_null($iObj)) {
 	    $db = parent::Data();
@@ -22,6 +23,10 @@ class clsApp_MW extends cAppStandard {
 	    }
 	}
 	return parent::Data($iObj);
+    }
+    */
+    public function GetMainDB() {
+	return new fcDataConn_MW(wfGetDB(DB_SLAVE));
     }
 
     // ++ APP FRAMEWORK ++ //

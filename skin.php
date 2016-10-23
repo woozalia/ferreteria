@@ -102,17 +102,19 @@ abstract class clsSkin_standard extends clsSkin_basic {
     // ++ FRAGMENT ACCESS METHODS ++ //
 
     private $htTitle;	// how the page describes itself - may include HTML
-    public function SetPageTitleString($htTitle) {
+    public function SetPageTitle($htTitle) {
 	$this->htTitle = $htTitle;
     }
     // TODO: This should not have to be public.
-    public function GetPageTitleString_html() {
+    public function GetPageTitle() {
 	return $this->htTitle;
     }
+    
+    /* 2016-09-19 This shouldn't be necessary now that we have separate methods for the browser title.
     // TODO: This should not have to be public.
-    public function GetPageTitleString_text() {
-	return strip_tags($this->GetPageTitleString_html());
-    }
+    public function GetPageTitleText() {
+	return strip_tags($this->GetPageTitleHTML());
+    } */
     private $sSheet;
     public function Sheet($sName=NULL) {
 	if (!is_null($sName)) {
@@ -120,17 +122,31 @@ abstract class clsSkin_standard extends clsSkin_basic {
 	}
 	return $this->sSheet;
     }
+    /*
+      RETURNS: title for browser to display if not explicitly set (typically: based on page title)
+    */
+    abstract protected function GetBrowserTitle_default();
     /*----
       RETURNS: title for browser to display, based on page title
 	This lets skin authors have one format for browser title, another for meta-tag, etc.
     */
-    abstract public function BrowserTitle();
+    private $sBrowserTitle;
+    public function GetBrowserTitle() {
+	if (empty($this->sBrowserTitle)) {
+	    return $this->GetBrowserTitle_default();
+	} else {
+	    return $this->sBrowserTitle;
+	}
+    }
+    public function SetBrowserTitle($s) {
+	$this->sBrowserTitle = $s;
+    }
 
     // -- ACCESS METHODS -- //
     // ++ SUBSTANCE ++ //
 
     protected function PageHeader() {
-	$sTitle = $this->BrowserTitle();
+	$sTitle = $this->GetBrowserTitle();
 	$sDocType = KHT_PAGE_DOCTYPE;
 	$sCharSet = KS_CHARACTER_ENCODING;
 	$out = <<<__END__
@@ -148,7 +164,7 @@ __END__;
 	$arVars = array('sheet' => $this->Sheet());
 	$objStrTplt = new clsStringTemplate_array(NULL,NULL,$arVars);
 	$objStrTplt->MarkedValue(KHT_PAGE_STYLE);
-	$strContent = KS_SITE_NAME_META.': '.$this->GetPageTitleString_text();
+	$strContent = KS_SITE_NAME_META.': '.$this->GetPageTitle();
 	$out .= "\n".$objStrTplt->Replace()
 	  ."\n  <meta name=description content=\"$strContent\" />"
 	  ."\n  <meta charset=\"utf-8\" />"

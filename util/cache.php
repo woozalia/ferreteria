@@ -11,7 +11,8 @@
     2010-11-09 another significant rewrite to use queries instead of procedures
     2010-11-10 ...which turned out not to be a good idea. Change back later, or adapt to use either one.
     2010-11-14 finally renamed file from datamgr.php to cache.php
-    2011-03-03 clsCacheFile
+    2011-03-03 clsCacheFile (later renamed vcCacheFile)
+    2016-09-25 updated some class names from "cls*" to "fc*"
 */
 
 /*
@@ -31,7 +32,7 @@ clsLibMgr::Load('data',__FILE__,__LINE__);
 /*=====
   PURPOSE: dead simple file-based cache for a small number of larger chunks of data
 */
-class clsCacheFile {
+class fcCacheFile {
     protected $fpFolder;
 
     public function __construct($iFolder) {
@@ -59,7 +60,7 @@ class clsCacheFile {
 /* ============ *\
     manager
 \* ============ */
-class clsCacheMgr {
+class fcCacheMgr {
 // parent object
     protected $objDB;	// database where tables are located
 // child objects
@@ -212,7 +213,7 @@ class clsCacheMgr {
 /* ============= *\
    DataMgr Table
 \* ============= */
-class clsMgrTable extends clsTable_indexed {
+abstract class fcMgrTable extends fcTable_indexed {
     protected $objMgr;
 
     public function __construct(clsCacheMgr $iMgr, clsIndexer_Table $iIndexer=NULL) {
@@ -231,37 +232,27 @@ class clsMgrTable extends clsTable_indexed {
 	2010-11-10 Removed "clsCacheMgr $iMgr" input parameter -- should be getting this from $this->objMgr
     */
     public function GetMgrData($iWhere,$iClass=NULL) {
-	CallEnter($this,__LINE__,'clsMgrTable.GetMgrData(...,"'.$iWhere.'","'.$iClass.'")');
-	$objOut = $this->GetData($iWhere,$iClass);
-	$objOut->Mgr($this->objMgr);
-	CallExit('clsMgrTable.GetMgrData()');
-	return $objOut;
+	$sClass = __CLASS__;
+	$rs = $this->GetData($iWhere,$iClass);
+	$rs->Mgr($this->Mgr());
+	return $rs;
     }
     /*----
       HISTORY:
 	2010-11-10 Removed "clsCacheMgr $iMgr" input parameter -- should be getting this from $this->objMgr
 	  Actually... replaced with GetItem()
     */
-/*
-    public function GetMgrItem($iID,$iClass=NULL) {
-	CallEnter($this,__LINE__,'clsMgrTable.GetMgrItem(...,'.$iID.',"'.$iClass.'")');
-	$objOut = $this->GetItem($iID,$iClass);
-	$objOut->Mgr($this->objMgr);
-	CallExit('clsMgrTable.GetMgrItem()');
-	return $objOut;
-    }
-*/
 }
 /*====
   HISTORY:
     2011-01-19 Created -- Flows classes were not working right
 */
-class clsMgrTable_single_key extends clsMgrTable {
+abstract class fcMgrTable_single_key extends fcMgrTable {
     /*
       FUTURE: Modify this to use clsIndexer_Table_single_key, once that is written
     */
     public function __construct(clsCacheMgr $iMgr) {
-	$objIdx = new clsIndexer_Table_single_key($this);
+	$objIdx = new fcIndexer_Table_single_key($this);
 	$objIdx->KeyName('ID');
 	$this->objMgr = $iMgr;
 	parent::__construct($iMgr,$objIdx);
@@ -277,7 +268,7 @@ class clsMgrTable_single_key extends clsMgrTable {
 	return $objOut;
     }
 }
-class clsMgrData extends clsRecs_indexed {
+class fcMgrData extends fcRecords_indexed {
     protected $objMgr;
 
     public function Mgr(clsCacheMgr $iMgr=NULL) {
@@ -299,7 +290,7 @@ class clsMgrData extends clsRecs_indexed {
     }
 */
 }
-class clsMgrData_single_key extends clsMgrData {
+class fcMgrData_single_key extends fcMgrData {
     public function KeyValue() {
 	return $this->objIdx->KeyValue('ID');	// TO DO: generalize this
     }
@@ -307,7 +298,7 @@ class clsMgrData_single_key extends clsMgrData {
 /* ============ *\
    DataTables
 \* ============ */
-class clsCacheTables extends clsMgrTable_single_key {
+abstract class fcCacheTables extends fcMgrTable_single_key {
     public function __construct(clsCacheMgr $iMgr, $iName) {
 	parent::__construct($iMgr);
 	  $this->Name($iName);
@@ -315,7 +306,7 @@ class clsCacheTables extends clsMgrTable_single_key {
 	  $this->ClassSng('clsCacheTable');
     }
 }
-class clsCacheTable extends clsMgrData_single_key {
+class fcCacheTable extends fcMgrData_single_key {
 
     // INFO methods
 
@@ -581,7 +572,7 @@ class clsCacheTable extends clsMgrData_single_key {
 /* ============ *\
   Cache Procedures
 \* ============ */
-class clsCacheProcs extends clsMgrTable_single_key {
+abstract class fcCacheProcs extends fcMgrTable_single_key {
     public function __construct(clsCacheMgr $iMgr,$iName) {
 	assert('is_string($iName); /* '.print_r($iName,TRUE).' */');
 	parent::__construct($iMgr);
@@ -594,7 +585,7 @@ class clsCacheProcs extends clsMgrTable_single_key {
 	return $rsRows->DropDown($iName,$iDefault,$iExclude);
     }
 }
-class clsCacheProc extends clsMgrData_single_key {
+class fcCacheProc extends fcMgrData_single_key {
 // status
     public $sql;	// last SQL executed (or attempted)
 
@@ -750,7 +741,7 @@ class clsCacheProc extends clsMgrData_single_key {
 }/* ============ *\
  CACHE FLOW classes
 \* ============ */
-class clsCacheFlows extends clsMgrTable {
+abstract class fcCacheFlows extends fcMgrTable {
     protected $objIndex;	// indexing helper object
 
     public function __construct(clsCacheMgr $iMgr,$iName) {
@@ -825,7 +816,7 @@ class clsCacheFlows extends clsMgrTable {
 	}
     }
 }
-class clsCacheFlow extends clsMgrData {
+class clsCacheFlow extends fcMgrData {
 // object cache
     protected $objProc;		// stored procedure which updates destination from source
     protected $objTable;	// relevant table
@@ -1123,7 +1114,7 @@ WHAT USES THIS?
 /* =====
   CLASSES: cache event logging
 */
-class clsCacheEvents extends clsMgrTable_single_key {
+abstract class fcCacheEvents extends fcMgrTable_single_key {
     public function __construct(clsCacheMgr $iMgr,$iName) {
 	assert('is_string($iName); /* '.print_r($iName,TRUE).' */');
 	parent::__construct($iMgr);
@@ -1165,7 +1156,7 @@ class clsCacheEvents extends clsMgrTable_single_key {
 	return $rcEntry;
     }
 }
-class clsCacheEvent extends clsMgrData_single_key {
+class clsCacheEvent extends fcMgrData_single_key {
     public function Finish() {
 	$objTbls = $this->objMgr->Tables;
 	assert('is_object($objTbls)');

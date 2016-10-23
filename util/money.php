@@ -11,6 +11,8 @@
 class fcMoney {
     static private $nDigits = 2;	// TODO: make this an overrideable option
 
+    // ++ COMPARISON ++ //
+    
     static public function Same($nAmt1, $nAmt2) {
 	// until PHP 5.6 is more ubiquitous, we have to fake powers of ten:
 	//$fRez = 10 ** (self::$nDigits);
@@ -21,6 +23,35 @@ class fcMoney {
 	
 	return $ni1 == $ni2;
     }
+
+    // -- COMPARISON -- //
+    // ++ MATH ++ //
+
+    /*
+      HISTORY:
+	2011-08-03 added round() function to prevent round-down error
+	2016-09-11 converted from standalone function in VbzCart:shop.php to fcMoney method
+    */
+    static public function Add($iMoney1,$iMoney2) {
+	$intMoney1 = (int)round($iMoney1 * 100);
+	$intMoney2 = (int)round($iMoney2 * 100);
+	$intSum = $intMoney1 + $intMoney2;
+	return $intSum/100;
+    }
+    /*
+      HISTORY:
+	2011-08-03 added round() function to prevent round-down error
+    */
+    static public function Sum(&$iMoney,$iMoneyAdd) {
+	$intBase = (int)round(($iMoney * 100));
+	$intAdd = (int)round(($iMoneyAdd * 100));
+	$intSum = $intBase + $intAdd;
+	$iMoney = $intSum/100;
+    }
+    
+    // -- MATH -- //
+    // ++ FORMATTING ++ //
+    
     static public function BasicFormat($nAmt,$sPfx='$',$sPlus='') {
 	throw new exception('BasicFormat() is deprecated; call Format_withSymbol() or Format_number().');
 	if (is_null($nAmt)) {
@@ -66,6 +97,8 @@ class fcMoney {
 	    return $sSymbol.$sNumFmt;
 	}
     }
+
+    // -- FORMATTING -- //
 
 }
 class clsMoney extends fcMoney {}	// deprecated

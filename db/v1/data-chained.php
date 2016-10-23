@@ -13,7 +13,7 @@ HISTORY:
   NAME: clsTable_chained
   PURPOSE: table singly-keyed to a parent table
 */
-class clsTable_chained extends clsTable_abstract {
+class fcTable_chained extends fcTable_abstract {
     private $arDeps;
     private $sKeyReq, $sKeyRet;
     protected $oIdx;
@@ -315,7 +315,7 @@ die();
     }
 }
 
-class clsRecordset_chained extends clsRecs_key_single {
+class fcRecordset_chained extends fcRecs_key_single {
     private $sKey;
     /*----
       PURPOSE: Chained recordsets sometimes need to have different keys for different queries.
@@ -407,7 +407,7 @@ class clsRecordset_chained extends clsRecs_key_single {
     }
 }
 
-class clsIndexer_Table_chained extends clsIndexer_Table {
+class fcIndexer_Table_chained extends fcIndexer_Table {
     public function GetItem($iID=NULL,$iClass=NULL) {
 	if (is_null($iID)) {
 	    $objItem = $this->TableObj()->SpawnItem($iClass);

@@ -22,9 +22,9 @@ $oL = new clsLibrary('ferreteria.login','user-access/config-libs.php');
 
 $om = new clsModule(__FILE__, 'app.php');
   $om->AddClass('clsApp');
-  $om->AddClass('cAppStandard');
+  $om->AddClass('fcAppStandard');
 $om = new clsModule(__FILE__, 'app-user.php');
-  $om->AddClass('clsDatabase_UserAuth');
+  $om->AddClass('fcDBOF_UserAuth');
 $om = new clsModule(__FILE__, 'crypt.php');
   $om->AddClass('Cipher');
   $om->AddClass('Cipher_pubkey');
@@ -62,7 +62,7 @@ $om = new clsModule(__FILE__,'db/sql/db-sql.php');
 // DEPRECATED
 $om = new clsModule(__FILE__, 'deprecated/user-mw.php');
   $om->AddClass('clsUser');
-  
+
 // MENUS
 $om = new clsModule(__FILE__, 'menu/menu-action.php');
   $om->AddClass('clsActionLink');
@@ -87,12 +87,27 @@ $om = new clsModule(__FILE__, 'rtext/rtext-html.php');
   $om->AddClass('clsRTDoc_HTML');
   $om->AddClass('clsNavList');
 
+// STRING CLASSES
+$om = new clsModule(__FILE__, 'strings/strings.php');
+  $om->AddClass('fcString');
+$om = new clsModule(__FILE__, 'strings/string-block.php');
+  $om->AddClass('fcStringBlock_static');
+  $om->AddClass('fcsStringBlock');
+  $om->AddClass('fcStringBlock');
+$om = new clsModule(__FILE__, 'strings/string-tplt.php');
+  $om->AddClass('fcTemplate_array');
+  $om->AddClass('clsStringTemplate');
+  $om->AddClass('clsStringTemplate_array');
+$om = new clsModule(__FILE__, 'strings/string-xt.php');
+  $om->AddClass('xtString_static');
+  $om->AddClass('xtString');
+
 // UTILITY LIBRARIES
 $om = new clsModule(__FILE__, 'util/array.php');
   $om->AddClass('fcArray');
   $om->AddClass('clsArray');
 $om = new clsModule(__FILE__, 'util/cache.php');
-  $om->AddClass('clsCacheFile');
+  $om->AddClass('fcCacheFile');
 /* 2015-11-23 These classes are now deprecated.
 $om = new clsModule(__FILE__, 'util/forms.php');
   $om->AddClass('clsCtrls');
@@ -110,22 +125,10 @@ $om = new clsModule(__FILE__, 'util/http.php');
 $om = new clsModule(__FILE__, 'util/money.php');
   $om->AddClass('fcMoney');
   $om->AddClass('clsMoney');
-$om = new clsModule(__FILE__, 'util/strings.php');
-  $om->AddClass('fcString');
-$om = new clsModule(__FILE__, 'util/string-block.php');
-  $om->AddClass('fcStringBlock_static');
-  $om->AddClass('fcsStringBlock');
-  $om->AddClass('fcStringBlock');
-$om = new clsModule(__FILE__, 'util/string-tplt.php');
-  $om->AddClass('fcTemplate_array');
-  $om->AddClass('clsStringTemplate');
-  $om->AddClass('clsStringTemplate_array');
-$om = new clsModule(__FILE__, 'util/string-xt.php');
-  $om->AddClass('xtString_static');
-  $om->AddClass('xtString');
 //  $om->AddFunc('Xplode');
 $om = new clsModule(__FILE__, 'util/time.php');
-  $om->AddClass('clsDate');
+  $om->AddClass('fcDate');
+  $om->AddClass('fcTime');
   $om->AddClass('xtTime');
 //  $om->AddFunc('Time_DefaultDate');
   $om->AddFunc('Date_DefaultYear');

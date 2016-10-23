@@ -117,7 +117,7 @@ trait ftPageMenu {
 		$ok = FALSE;
 		if (!is_null($sCtrler)) {
 		    $id = $this->PathArg('id');
-		    $this->Skin()->SetPageTitleString($oNode->Title());
+		    $this->Skin()->SetPageTitle($oNode->Title());
 		    if (is_null($id)) {
 			$tbl = $this->Data()->Make($sCtrler);
 			// surely this duplicates other code -- but where, and why isn't it being triggered? (https://vbz.net/admin/page:ord/)

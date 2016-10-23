@@ -5,7 +5,7 @@
     This class can manage multiple records, but only accesses them one at a time.
 */
 
-class fcDataRecord {
+class fcRecords {
 
     // ++ SETUP ++ //
 
