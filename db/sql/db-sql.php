@@ -20,18 +20,11 @@
       does not include ID_Item.
       Subsequently found clsSQLFilt in data.php and moved it here.
     2016-02-11 major reshuffling of classes to allow outside modification of returned query objects
+    2016-11-06 split off trait into separate files for db.v1 and db.v2
 */
 define('KSQL_FORMAT_DATE','Y-m-d');	// date() format for dates in SQL
 define('KSQL_FORMAT_DATIME','Y-m-d H:i:s');	// date format for timestamps in SQL
 
-trait QueryableTable {
-    public function SQO_Source($sAbbr=NULL) {
-	return new fcSQL_TableSource($this->Name(),$sAbbr);
-    }
-    public function SQO_Select($sAbbr=NULL) {
-	return new fcSQL_Select($this->SQO_Source($sAbbr));
-    }
-}
 
 abstract class fcSQL_base_element {
     abstract public function Render();

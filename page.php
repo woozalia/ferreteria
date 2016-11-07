@@ -35,21 +35,33 @@ abstract class clsPage {
     // -- INFORMATION -- //
     // ++ APP FRAMEWORK ++ //
 
-    public function App(clsApp $iObj=NULL) {
-	return clsApp::Me();
+    /*
+      NOTE: 2016-10-31 Using the app framework access trait here seems like a bad idea because Page would be redundant
+	and Skin won't work because it gets the object from Page, i.e. this object, so infinite loop with nobody ever
+	actually creating the object.
+    */
+    
+    // PROTECTED because really, get your own AppObject method. Loser.
+    protected function AppObject() {
+	return fcApp::Me();
     }
-
     private $oSkin;
-    public function Skin() {
+    public function GetSkinObject() {
 	if (empty($this->oSkin)) {
-	    $this->oSkin = $this->NewSkin();
+	    $this->oSkin = $this->DefaultSkinObject();
 	}
 	return $this->oSkin;
     }
-    protected function Data() {
-	return $this->App()->Data();
+    protected function GetDatabase() {
+	return $this->AppObject()->GetDatabase();
     }
-
+    protected function Data() {
+	throw new exception("page.Data() is deprecated; call page.GetDatabase() instead.");
+	return $this->AppObject()->GetMainDB();
+    }
+    protected function GetSessionRecord() {
+	return $this->AppObject()->GetSessionRecord();
+    }
     // -- APP FRAMEWORK -- //
     // ++ UTILITIES ++ //
 
@@ -57,9 +69,6 @@ abstract class clsPage {
       ACTION: Redirects the page to the given URL, while preserving the optional Message in a cookie.
     */
     public function Redirect($url,$sMsg=NULL) {
-/*	if (!is_null($sMsg)) {
-	    setcookie(KS_MESSAGE_COOKIE,$sMsg,0,'/');
-	} */
 	clsHTTP::DisplayOnReturn($sMsg);
 	clsHTTP::Redirect($url);
     }
@@ -108,24 +117,15 @@ abstract class clsPageStandalone extends clsPage {
 	    $this->HandleInput();
 	    $this->PreSkinBuild();
 	    $this->ShowExecTime();
-	    $this->Skin()->Build();	// tell the skin to fill in its pieces
+	    $this->GetSkinObject()->Build();	// tell the skin to fill in its pieces
 	    $this->PostSkinBuild();
-	    $this->Skin()->DoPage();
+	    $this->GetSkinObject()->DoPage();
 	} catch(exception $e) {
 	    $this->DoEmailException($e);
 	}
     }
 
     // -- EXECUTION -- //
-    // ++ CONFIGURATION ++ //
-
-    //++title++
-    /* 2016-06-26 just call Skin()->SetPageTitleString(), already.
-    public function SetTitleString($htTitle) {
-	$this->Skin()->SetPageTitleString($htTitle);
-    }*/
-    
-    // -- CONFIGURATION -- //
     // ++ PAGE GENERATION ++ //
     
     protected function ProcessPage() {}
@@ -203,7 +203,7 @@ abstract class clsPageStandalone extends clsPage {
 	return microtime(TRUE) - $this->nStartTime;
     }
     protected function ShowExecTime() {
-	$this->Skin()->AddFooterStat('exec time',$this->GetExecTime());
+	$this->GetSkinObject()->AddFooterStat('exec time',$this->GetExecTime());
     }
     
     // -- METRICS -- //
@@ -582,7 +582,7 @@ abstract class clsPageLogin extends clsPageBasic {
       RETURNS: TRUE iff user is logged in
     */
     protected function IsLoggedIn() {
-	return $this->App()->Session()->HasUser();
+	return $this->AppObject()->UserIsLoggedIn();
     }
     protected function Success($bOk=NULL) {
 	if (!is_null($bOk)) {
@@ -624,21 +624,25 @@ abstract class clsPageLogin extends clsPageBasic {
     // ++ TABLES ++ //
 
     protected function UserTable($id=NULL) {
-	return $this->Data()->Make($this->UsersClass(),$id);
+	return $this->GetDatabase()->MakeTableWrapper($this->UsersClass(),$id);
     }
 
     // -- TABLES -- //
     // ++ RECORDS ++ //
 
+    // TODO: Rename this GetUserRecord()
     protected function UserRecord() {
 	if (is_null($this->rcUser)) {
-	    $this->SetUserRecord($this->App()->User());
+	    $this->SetUserRecord($this->AppObject()->GetUserRecord());
 	}
 	return $this->rcUser;
     }
     protected function SetUserRecord(clsUserAcct $rc) {
 	if ($rc->HasRows()) {
-	    $rc->FirstRow();	// make sure first (only) row is loaded
+	    // make sure first (only) row is loaded
+	    $rc->RewindRows();
+	    $rc->NextRow();
+	    
 	    $this->rcUser = $rc;
 	    $this->LoginName($rc->UserName());
 	} // maybe later set a flag if no rows
@@ -655,10 +659,10 @@ abstract class clsPageLogin extends clsPageBasic {
     // ++ PAGE ELEMENTS ++ //
 
     protected function RenderLogin($iUName=NULL) {
-	return $this->Skin()->RenderLogin($iUName);
+	return $this->GetSkinObject()->RenderLogin($iUName);
     }
     protected function RenderLogout($iText='log out') {
-	return $this->Skin()->RenderLogout($iText);
+	return $this->GetSkinObject()->RenderLogout($iText);
     }
     /*----
       ACTION: sets the action widgets to use in the page header
@@ -699,7 +703,7 @@ abstract class clsPageLogin extends clsPageBasic {
 		}
 	    }
 	}
-	$out = $this->Skin()->SectionHeader($sTitle,$htMenu,$cssClass);
+	$out = $this->GetSkinObject()->SectionHeader($sTitle,$htMenu,$cssClass);
 	return $out;
     }
 
@@ -710,10 +714,10 @@ abstract class clsPageLogin extends clsPageBasic {
       ACTION: Checks the login credentials and logs the user in if they're good.
     */
     protected function DoLoginCheck() {
-	$this->App()->Session()->UserLogin($this->LoginName(),$this->sPass);
+	$this->AppObject()->GetSessionRecord()->UserLogin($this->LoginName(),$this->sPass);
     }
     public function DoLogout() {
-	$this->App()->Session()->UserLogout();
+	$this->AppObject()->GetSessionRecord()->UserLogout();
     }
     protected function ParseInput_Login() {
 	$this->isLogin	= $isLogin	= !empty($_POST[KSF_USER_BTN_LOGIN]);
@@ -753,17 +757,17 @@ abstract class clsPageLogin extends clsPageBasic {
 	    clsHTTP::Redirect($this->BaseURL());
 	    //$this->Reload();
 	}
-	$oSkin = $this->Skin();
+	$oSkin = $this->GetSkinObject();
  	if ($this->doEmail) {
-	    $oSkin->SetPageTitleString('Send Password Reset Email');
+	    $oSkin->SetPageTitle('Send Password Reset Email');
 	} elseif ($this->IsCreateRequest()) {
-	    $oSkin->SetPageTitleString('Creating User Account');
+	    $oSkin->SetPageTitle('Creating User Account');
 	} elseif ($this->IsResetRequest()) {
-	    $oSkin->SetPageTitleString('Setting Password');
+	    $oSkin->SetPageTitle('Setting Password');
 	} elseif ($this->IsAuthLink()) {
-	    $oSkin->SetPageTitleString('Authorize Password Reset');
+	    $oSkin->SetPageTitle('Authorize Password Reset');
 	} elseif ($this->IsLoginRequest()) {
-	    $oSkin->SetPageTitleString('User Login');
+	    $oSkin->SetPageTitle('User Login');
 	    $this->DoLoginCheck();
 	} else {
 	    $this->HandleInput_notLoggedIn();
@@ -777,7 +781,7 @@ abstract class clsPageLogin extends clsPageBasic {
     */
     protected function UserAccess_ProcessAuth(array $ar) {
 	$ht = NULL;
-	$oSkin = $this->Skin();
+	$oSkin = $this->GetSkinObject();
 	if ($ar['ok']) {
 	    $ht = $this->UserAccess_ProcessAuth_valid($ar);
 	} else {
@@ -798,7 +802,7 @@ abstract class clsPageLogin extends clsPageBasic {
       PURPOSE: process User Access forms for when a valid auth token has been received
     */
     protected function UserAccess_ProcessAuth_valid(array $ar) {
-	$oSkin = $this->Skin();
+	$oSkin = $this->GetSkinObject();
 	$ht = NULL;
 	// find out if this email address matches an existing user account
 	$this->sEmail	= $ar['em_s'];	// grab the email to go back into the "request another" form
@@ -832,8 +836,8 @@ abstract class clsPageLogin extends clsPageBasic {
 	$this->CheckAuth();
 	if ($this->Success()) {
 	    // check for duplicate username
-	    $sUser = $this->App()->UserName();
-	    $tUsers = $this->App()->Users();
+	    $sUser = $this->AppObject()->UserName();
+	    $tUsers = $this->AppObject()->UserTable();
 	    if ($tUsers->UserExists($sUser)) {
 		// the username already exists -- can't create it
 		$ht .= $oSkin->ErrorMessage('The username "'.$sUser.'" already exists; please choose another.<br>');
@@ -856,7 +860,7 @@ abstract class clsPageLogin extends clsPageBasic {
 	if ($this->Success()) {
 	    // auth token checks out
 	    // check for duplicate username
-	    $tblUsers = $this->App()->Users();
+	    $tblUsers = $this->AppObject()->UserTable();
 	    $sUser = $this->LoginName();
 	    $ht .= $this->ChangePassword($this->EmailAddress(),$this->sPass,$this->sPassX);
 	    if (!$this->Success()) {	// if that didn't work...
@@ -877,9 +881,11 @@ abstract class clsPageLogin extends clsPageBasic {
     */
     private $doShowLogin;	// can be altered by subsidiary fx()
     protected function RenderUserAccess() {
-	$oSkin = $this->Skin();
-	$ht = $this->SectionHeader($this->Skin()->GetPageTitleString_html());
-	$oEmAuth = $this->Data()->EmailAuth();
+	$oSkin = $this->GetSkinObject();
+	// 2016-11-07 value of $ht is discarded a few lines down.
+	//$ht = $this->SectionHeader($oSkin->GetPageTitle());
+	// 2016-11-07 value of $oEmAuth is never used.
+	//$oEmAuth = $this->AppObject()->EmailAuth();
 	$this->doShowLogin = TRUE;	// By default, we'll still show the login form if not logged in
 	$isEmailAuth = FALSE;	// Assume this page is not an email authorization link...
 
@@ -949,8 +955,8 @@ abstract class clsPageLogin extends clsPageBasic {
     }
     protected function CreateAccount($sEmail) {
 	$out = NULL;
-	$oSkin = $this->Skin();
-	$tblUsers = $this->App()->Users();
+	$oSkin = $this->GetSkinObject();
+	$tblUsers = $this->AppObject()->UserTable();
 	$sUser = $this->LoginName();
 	$sPass = $this->sPass;
 	if (is_null($sUser)) {
@@ -978,8 +984,8 @@ abstract class clsPageLogin extends clsPageBasic {
 	    // display success message
 	    $out .= $oSkin->SuccessMessage('Account created -- welcome, <b>'.$sUser.'</b>!');
 	    // record user ID in session (so we're logged in)
-	    $idUser = $rcUser->KeyValue();
-	    $oSess = $this->App()->Session();
+	    $idUser = $rcUser->GetKeyValue();
+	    $oSess = $this->AppObject()->GetSessionRecord();
 	    $oSess->SaveUserID($idUser);
 	} // END account created
 	return $out;
@@ -987,11 +993,11 @@ abstract class clsPageLogin extends clsPageBasic {
     protected function ChangePassword($sEmail,$sPass,$sPassX) {
 	$out = NULL;
 	$ok = FALSE;
-	$oSkin = $this->Skin();
+	$oSkin = $this->GetSkinObject();
 	if ($sPass != $sPassX) {
 	    $out .= $oSkin->ErrorMessage('Passwords do not match. Please try again.');
 	} else {
-	    $tUsers = $this->App()->Users();
+	    $tUsers = $this->AppObject()->UserTable();
 	    $sUser = $this->LoginName();
 	    $rcUser = $tUsers->FindUser($sUser);
 	    if (is_null($rcUser)) {
@@ -1023,16 +1029,16 @@ abstract class clsPageLogin extends clsPageBasic {
     */
     public function SendPassReset_forAddr($sAddr,$sName) {
 	$sAddr_clean = filter_var($sAddr, FILTER_SANITIZE_EMAIL);
-	$oSkin = $this->App()->Skin();
+	$oSkin = $this->GetSkinObject();
 	if (filter_var($sAddr_clean, FILTER_VALIDATE_EMAIL)) {
 	    $sSubj = KS_TEXT_AUTH_EMAIL_SUBJ;
 	    $stMsgEmail = KS_TPLT_AUTH_EMAIL_TEXT;
 	    $stMsgWeb = KS_TPLT_AUTH_EMAIL_WEB;
 	    // generate and store the auth token:
-	    $tTokens = $this->App()->Data()->EmailAuth();
+	    $tTokens = $this->GetDatabase()->EmailAuth();
 	    $rc = $tTokens->MakeToken($sAddr);
 	    // calculate the authorization URL:
-	    $url = $this->AuthURL($rc->KeyValue(),$rc->Token());
+	    $url = $this->AuthURL($rc->GetKeyValue(),$rc->Token());
 
 	    // this template is used both for the email text and the web text
 	    $ar = array(
@@ -1068,12 +1074,12 @@ abstract class clsPageLogin extends clsPageBasic {
 	$id = $ar['id'];
 	$sToken = $ar['bin'];
 	$sAuth = $ar['auth'];
-	$tbl = $this->App()->Data()->EmailAuth();
+	$tbl = $this->GetDatabase()->EmailAuth();
 	$oToken = $tbl->FindToken($id,$sToken);
 
 	// -- look up email address (we'll need it later)
-	$rc = $tbl->GetItem($id);
-	$sEmail = $rc->Value('Email');
+	$rc = $tbl->GetRecord_forKey($id);
+	$sEmail = $rc->GetFieldValue('Email');
 
 	$ok = FALSE;
 	$sErr = NULL;	// error code string

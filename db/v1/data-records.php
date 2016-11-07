@@ -169,16 +169,7 @@ abstract class fcRecs_abstract {
 	}
 	return $this->Row[$iName];
     }
-    /* 2016-09-11 This seemed useful, but then I decided to split the calling methods into Get*() and Set*() instead.
-    // PURPOSE: Like ValueNz(), but can set value as well.
-    public function SetValueNz($sName,$v=NULL) {
-	if (is_null($v)) {
-	    return $this->ValueNz($sName);
-	} else {
-	    $this->SetValue($sName,$v);
-	}
-    }*/
-    
+
       //--read/write--//
       //++read-only++//
 
@@ -205,10 +196,10 @@ abstract class fcRecs_abstract {
 	    return $iDefault;
 	}
     }
-    
-    //--read-only--//
-    //++write-only++//
-    
+
+      //--read-only--//
+      //++write-only++//
+
     /*----
       ACTION: only sets the given values in the current row;
 	does not clear any missing values. Sets Touched array,
@@ -235,9 +226,9 @@ abstract class fcRecs_abstract {
 	    $this->TouchField($sKey);
 	}
     }
-    
-    //--write-only--//
-    
+
+      //--write-only--//
+
     // -- FIELD ACCESS -- //
     // ++ FIELD STATUS ++ //
 
@@ -245,9 +236,17 @@ abstract class fcRecs_abstract {
       HISTORY:
 	2011-02-09 created so we can test for field existence before trying to access
     */
-    public function HasValue($iName) {
-	if (is_array($this->Row)) {
-	    return array_key_exists($iName,$this->Row);
+    public function HasValue($sName) {
+	$ar = $this->Values();
+	if (is_array($ar)) {
+	    return array_key_exists($sName,$ar);
+	} else {
+	    return FALSE;
+	}
+    }
+    public function Value_isSet($sName) {
+	if ($this->HasValue($sName)) {
+	    return !is_null($this->Value($sName));
 	} else {
 	    return FALSE;
 	}
@@ -293,10 +292,10 @@ abstract class fcRecs_abstract {
 	}
 	return $ar;
     }
-    
+
     // -- FIELD CALCULATIONS -- //
     // ++ ACTIONS ++ //
-    
+
     /*----
       FUNCTION: Clear()
       ACTION: Clears Row[] of any leftover data
@@ -457,9 +456,11 @@ abstract class fcRecs_keyed_abstract extends fcRecs_abstract {
 	assert('is_string($sKeyName); /* TABLE: '.$this->Table->Name().' */');
 	return $sKeyName;
     }
+    
+/* 2016-10-23 This has all been replaced by trait ftSaveableRecord; keeping it as a cross-reference callers are mostly updated.
     /*----
       RETURNS: array of changes to save, in key=value form
-    */
+    * /
     protected function ChangeArray() {
 	$arTouch = $this->TouchedArray();
 	$arChg = NULL;
@@ -477,7 +478,7 @@ abstract class fcRecs_keyed_abstract extends fcRecs_abstract {
 	  were not being sanitize-and-quoted. (Now they are.)
 	2016-07-31 Removed the optional input array parameter to simplify things; now using ChangeArray();
 	  Overrides should call parent::UpdateArray(), but no longer need to merge with ChangeArray();
-    */
+    * /
     protected function UpdateArray() {
 	return $this->ChangeArray();
     }
@@ -487,7 +488,7 @@ abstract class fcRecs_keyed_abstract extends fcRecs_abstract {
       HISTORY:
 	2016-07-31 Removed the optional input array parameter to simplify things; now using ChangeArray();
 	  Overrides should call parent::InsertArray(), but no longer need to merge with ChangeArray();
-    */
+    * /
     protected function InsertArray() {
 	return $this->ChangeArray();
     }
@@ -497,7 +498,7 @@ abstract class fcRecs_keyed_abstract extends fcRecs_abstract {
 	  I specifically needed it to be public when loading up Customer Address records via either
 	  of two different methods. I *could* have written public SaveThis() and SaveThat() methods,
 	  but that would have increased the amount of special coding needed for This and That yet again.
-    */
+    * /
     public function Save() {
 	$out = NULL;
 	if ($this->IsNew()) {
@@ -525,6 +526,7 @@ abstract class fcRecs_keyed_abstract extends fcRecs_abstract {
 	}
 	return $out;
     }
+    */
     /*----
       ACTION:
 	If ID is set, saves data to the identified record in the database.
@@ -559,6 +561,8 @@ abstract class fcRecs_keyed_abstract extends fcRecs_abstract {
 	2010-11-28 SQL saved to table as well, for when we might be doing Insert() or Update()
 	  and need a single place to look up the SQL for whatever happened.
 	2013-07-17 Modified to handle SQL_forUpdate()/SQL_forUpdateMe() split.
+	2016-10-23 The $iWhere option is probably a poor duplicate for ftSaveableRecord functionality,
+	  but leaving it in for now. TODO: deprecate/remove $iWhere and SQL_forUpdate[Me]().
     */
     public function Update(array $arUpd,$iWhere=NULL) {
 	if (is_null($iWhere)) {
@@ -575,7 +579,7 @@ abstract class fcRecs_keyed_abstract extends fcRecs_abstract {
 	return $this->Indexer()->Make($iarSet);
     }
     /*-----
-      ACTION: Reloads only the current row unless $iFilt is set
+      ACTION: Reloads only the current row
       HISTORY:
 	2012-03-04 moved from clsRecs_key_single to clsRecs_keyed_abstract
 	2012-03-05 removed code referencing iFilt -- it is no longer in the arg list
@@ -593,10 +597,12 @@ abstract class fcRecs_keyed_abstract extends fcRecs_abstract {
 }
 /*=============
   NAME: clsDataSet_bare
-  DEPRECATED - USE clsRecs_key_single INSTEAD
+  DEPRECATED - USE fcRecs_key_single INSTEAD
   PURPOSE: base class for datasets, with single key
     Does not add field overloading. Field overloading seems to have been a bad idea anyway;
       Use Value() instead.
+  NOTE:
+    2016-10-23 I can't find clsDataSet_bare anywhere -- so if code can't find it either, just replace with fcRecs_key_single.
 */
 class fcRecs_key_single extends fcRecs_keyed_abstract {
     /*----
@@ -719,11 +725,12 @@ class fcRecs_key_single extends fcRecs_keyed_abstract {
 	2012-02-21 KeyValue() is now run through SQLValue() so it can handle non-numeric keys
     */
     public function SelfFilter() {
-	if (!is_object($this->Table)) {
-	    throw new exception('Table not set in class '.get_class($this));
+	if (!is_object($this->Table())) {
+	    throw new exception('Class '.get_class($this).' has no table-wrapper object.');
 	}
-	$strKeyName = $this->KeyName();
-	$sqlWhere = '`'.$strKeyName.'`='.$this->Table()->Engine()->SanitizeAndQuote($this->KeyValue());
+	$sKeyName = $this->KeyName();
+	$sqlID = $this->Table()->Engine()->SanitizeAndQuote($this->KeyValue());
+	$sqlWhere = "`$sKeyName`=$sqlID";
 	return $sqlWhere;
     }
     /*-----

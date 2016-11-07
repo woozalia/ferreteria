@@ -45,7 +45,7 @@ class acUserAccts extends clsUserAccts {
     public function MenuExec(array $arArgs=NULL) {
 	$this->arArgs = $arArgs;
 	$rcUser_base = $this->App()->User();
-	$rcUser = $this->GetItem($rcUser_base->KeyValue());
+	$rcUser = $this->GetItem($rcUser_base->GetKeyValue());
 	if ($rcUser->CanDo(KS_PERM_SEC_USER_VIEW)) {
 	    $out = $this->AdminListing();
 	} else {
@@ -63,10 +63,11 @@ class acUserAccts extends clsUserAccts {
 
     // -- DROP-IN API -- //
     // ++ APP FRAMEWORK ++ //
-
+/* 2016-10-31 this should be replaced by the app framework trait
     protected function App() {
 	return $this->Engine()->App();
     }
+*/
 
     // -- APP FRAMEWORK -- //
     // ++ WEB UI ++ //
@@ -229,7 +230,7 @@ __END__;
 	$arGrps = $oPage->ReqArgArray(KS_ACTION_USER_GROUP);
 	// $arGrps is formatted like $arGrps[ID] = 'on' for each checked box
 	$tbl = $this->Engine()->Make(KS_CLASS_UACCT_X_UGROUP);
-	$out = $tbl->SetUGroups($this->KeyValue(),$arGrps);
+	$out = $tbl->SetUGroups($this->GetKeyValue(),$arGrps);
 	return $out;
     }
 

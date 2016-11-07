@@ -23,11 +23,13 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     // ++ INFORMATION ++ //
 
     public function IsOkay() {
-    throw new exception('Working HERE');
+	return ($this->ErrorNumber() == 0);
     }
     public function ErrorNumber() {
+	return $this->NativeObject()->errno;
     }
     public function ErrorString() {
+	return $this->NativeObject()->error;
     }
     public function Sanitize($sSQL) {
 	return $this->NativeObject()->escape_string($sSQL);
@@ -63,36 +65,97 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     }
 
     // -- ACTIONS -- //
-    // ++ DATA RETRIEVAL ++ //
+    // ++ DATA R/W ++ //
 
-    public function Recordset($sSQL) {
+    public function ExecuteAction($sSQL) {
+	return $this->NativeObject()->query($sSQL);
+    }
+    public function FetchRecordset($sSQL,fcDataSource $tbl) {
 	$poRes = $this->NativeObject()->query($sSQL);	// returns a mysqli_result if successful
-	return $this->ProcessResultset($poRes);
+	return $this->ProcessResultset($poRes,$tbl,$sSQL);
     }
     /*----
-      INPUT: $poRes should be either a mysqli_result or boolean
+      INPUT:
+	$poRes should be either a Recordset wrapper object or boolean
+	$tbl is the Table wrapper object which should be used to instantiate the Recordset wrapper object.
+      RETURNS: Recordset wrapper
+	* If query successful, Recordset wrapper object will be linked to a Table wrapper object, and will include the query results.
+	* If query failed, Recordset wrapper object will have 0 rows.
     */
-    protected function ProcessResultset($poRes) {
+    protected function ProcessResultset($poRes,fcDataSource $tbl,$sql) {
+	$rcNew = $tbl->SpawnRecordset();		// spawn a blank Recordset wrapper object
 	if (is_object($poRes)) {
-	    // ASSUMED: if it's an object, it's a mysqli_result
-	    $sClass = $this->RecordsClassName();	// get class to use for Recordset
-	    $rcNew = new $sClass($this);		// create new Recordset object
-	    $rcNew->BlobValue('native',$poRes);		// store mysqli_result in Recordset object
-	    return $rcNew;
+	    $rcNew->SetDriverBlob($poRes);		// store mysqli_result in Recordset object
 	} else {
-	    return $poRes;	// TRUE for successful non-data-output query, FALSE if query failed
+	    $sErr = $this->ErrorString();
+	    $nErr = $this->ErrorNumber();
+	    echo "<b>SQL</b>: $sql<br>";
+	    echo "<b>DB Error</b>: $sErr<br>";
+	    throw new exception("Ferreteria/mysqli error: database query failed with error $nErr.");
+	    $rcNew->SetDriverBlob(NULL);		// no result to store
+	}
+	$rcNew->sql = $sql;	// for debugging
+	return $rcNew;
+    }
+
+    // -- DATA R/W -- //
+    // ++ RESULTS ++ //
+
+    public function CreatedID() {
+	return $this->NativeObject()->insert_id;
+    }
+    protected function RetrieveDriver(fcDataRecord $rs) {
+	$o = $rs->GetDriverBlob();
+	if (is_object($o)) {
+	    return $o;
+	} else {
+	    echo '<b>Driver blob</b>: '.fcArray::Render($o);
+	    throw new exception('Ferreteria/mysqli usage error: data operation was attempted on a record object whose driver blob is not an object.');
 	}
     }
-
-    // -- DATA RETRIEVAL -- //
-    // ++ DATA OPERATIONS ++ //
-
     public function Result_RowCount(fcDataRecord $rs) {
-	return $rs->BlobValue('native')->num_rows;
+	$native = $rs->GetDriverBlob();
+	if (is_null($native)) {
+	    return 0;
+	} else {
+	    return $native->num_rows;
+	}
     }
     public function Result_NextRow(fcDataRecord $rs) {
-    	return $rs->BlobValue('native')->fetch_assoc();
+	return $this->RetrieveDriver($rs)->fetch_assoc();
+    }
+    public function Result_Rewind(fcDataRecord $rs) {
+	return $this->RetrieveDriver($rs)->data_seek(0);
+    }
+    // for debugging
+    public function TestDriver(fcDataRecord $rs) {
+	$this->RetrieveDriver($rs);	// throws an error if not set
     }
 
-    // -- DATA OPERATIONS -- //
+    // -- RESULTS -- //
+    // ++ TRANSACTIONS ++ //
+    
+    /*
+      NOTE: mysqli supports named transactions and other types besides r/w, but I don't know if this is common.
+	Not supporting it for now, but that might be something to add later (optional arguments) if it is common and useful.
+    */
+    
+    public function TransactionOpen() {
+	$o = $this->NativeObject();
+	$o->autocommit(FALSE);	// turn off autocommit
+	$o->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
+    }
+    public function TransactionSave() {
+	$o = $this->NativeObject();
+	$o->commit();		// commit the transaction
+	$o->autocommit(TRUE);	// turn autocommit back on
+    }
+    public function TransactionKill() {
+	$o = $this->NativeObject();
+	$o->rollback();		// roll back the transaction
+	$o->autocommit(TRUE);	// turn autocommit back on
+    }
+
+    // -- TRANSACTIONS -- //
+
 }

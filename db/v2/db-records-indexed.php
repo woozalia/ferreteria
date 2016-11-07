@@ -1,4 +1,4 @@
 <?php
 
-abstract class fcRecords_indexed extends fcRecords {
+abstract class fcDataRecord_indexed extends fcDataRecord {
 }

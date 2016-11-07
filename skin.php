@@ -17,7 +17,7 @@ if (!defined('KHT_PAGE_DOCTYPE')) {
     define('KHT_PAGE_DOCTYPE','<!DOCTYPE HTML>');
 }
 
-abstract class clsSkin {
+abstract class fcSkin {
     protected $arPieces;	// the pieces
     protected $arPOrder;	// the order in which they appear
 
@@ -56,7 +56,7 @@ abstract class clsSkin {
 
 }
 
-abstract class clsSkin_basic extends clsSkin {
+abstract class fcSkin_basic extends fcSkin {
     /*----
       PURPOSE: this is where we set up the Pieces
     */
@@ -82,7 +82,7 @@ abstract class clsSkin_basic extends clsSkin {
     abstract public function SuccessMessage($sText);
 }
 
-abstract class clsSkin_standard extends clsSkin_basic {
+abstract class fcSkin_standard extends fcSkin_basic {
 
     // ++ ACTION ++ //
 
@@ -100,32 +100,31 @@ abstract class clsSkin_standard extends clsSkin_basic {
 
     // -- ACTION -- //
     // ++ FRAGMENT ACCESS METHODS ++ //
-
-    private $htTitle;	// how the page describes itself - may include HTML
+    
+      //++titles++//
+    
+    private $htTitle;	// how the page describes itself, displayed within the page - may include HTML
     public function SetPageTitle($htTitle) {
 	$this->htTitle = $htTitle;
     }
-    // TODO: This should not have to be public.
-    public function GetPageTitle() {
+    /*----
+      HISTORY:
+	2016-10-23 An undated note says this shouldn't have to be public, so I am optimistically protecting it
+	  since I'm already mucking everything else up to hell and gone...
+	  Calls to this should probably be replaced by calls to a rendering function (to be written).
+    */
+    protected function GetPageTitle() {
 	return $this->htTitle;
     }
-    
-    /* 2016-09-19 This shouldn't be necessary now that we have separate methods for the browser title.
-    // TODO: This should not have to be public.
-    public function GetPageTitleText() {
-	return strip_tags($this->GetPageTitleHTML());
-    } */
-    private $sSheet;
-    public function Sheet($sName=NULL) {
-	if (!is_null($sName)) {
-	    $this->sSheet = $sName;
-	}
-	return $this->sSheet;
-    }
     /*
-      RETURNS: title for browser to display if not explicitly set (typically: based on page title)
+      RETURNS: title for browser to display if not explicitly set
+      NOTES:
+      * This implementation returns the page title with HTML tags stripped out.
+      * Before overriding it, consider overriding GetBrowserTitle() instead.
     */
-    abstract protected function GetBrowserTitle_default();
+    protected function GetBrowserTitle_default() {
+	return strip_tags($this->GetPageTitle());
+    }
     /*----
       RETURNS: title for browser to display, based on page title
 	This lets skin authors have one format for browser title, another for meta-tag, etc.
@@ -140,6 +139,21 @@ abstract class clsSkin_standard extends clsSkin_basic {
     }
     public function SetBrowserTitle($s) {
 	$this->sBrowserTitle = $s;
+    }
+    
+      //--titles--//
+
+    /* 2016-09-19 This shouldn't be necessary now that we have separate methods for the browser title.
+    // TODO: This should not have to be public.
+    public function GetPageTitleText() {
+	return strip_tags($this->GetPageTitleHTML());
+    } */
+    private $sSheet;
+    public function Sheet($sName=NULL) {
+	if (!is_null($sName)) {
+	    $this->sSheet = $sName;
+	}
+	return $this->sSheet;
     }
 
     // -- ACCESS METHODS -- //

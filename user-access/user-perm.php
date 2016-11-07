@@ -27,7 +27,7 @@ class clsUserPerms extends clsTable {
 
     // -- BUSINESS LOGIC -- //
 }
-class clsUserPerm extends fcDataRecs {
+class clsUserPerm extends fcRecord_standard {
 
     // ++ FIELD ACCESS ++ //
 
@@ -45,9 +45,10 @@ class clsUserPerm extends fcDataRecs {
       RETURNS: The current recordset as an associative array, indexed by ID
     */
     public function AsArray() {
+	throw new exception("2016-10-28 Isn't there a base class function for this?");
 	$ar = array();
 	while ($this->NextRow()) {
-	    $id = $this->KeyValue();
+	    $id = $this->GetKeyValue();
 	    $ar[$id] = $this->Values();
 	}
 	return $ar;

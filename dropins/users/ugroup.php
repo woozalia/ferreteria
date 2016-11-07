@@ -124,7 +124,7 @@ class acUserGroup extends clsUserGroup {
 		$out .= $sSep;
 	    }
 	    $ht = $this->SelfLink($this->Name(),$this->Descr());
-	    if ($this->KeyValue() == ID_GROUP_USERS) {
+	    if ($this->GetKeyValue() == ID_GROUP_USERS) {
 		$ht = "($ht)";
 	    }
 	    $out .= $ht;
@@ -186,7 +186,7 @@ class acUserGroup extends clsUserGroup {
     protected function AdminLine_edit($sName=NULL,$bSel=NULL) {
 	$htID = $this->SelfLink();
 	if (!is_null($sName)) {
-	    $id = $this->KeyValue();
+	    $id = $this->GetKeyValue();
 	    $htID .= clsHTML::CheckBox($sName,$bSel,$id);
 	}
 	$out = $this->AdminLine_core($htID);
@@ -294,7 +294,7 @@ __END__;
 	$arPrms = $oPage->ReqArgArray(KS_ACTION_USER_PERMISSION);
 	// $arGrps is formatted like $arGrps[ID] = 'on' for each checked box
 	$tbl = $this->Engine()->Make(KS_CLASS_UGROUP_X_UPERM);
-	$tbl->SetUPerms($this->KeyValue(),$arPrms);
+	$tbl->SetUPerms($this->GetKeyValue(),$arPrms);
     }
     private $frmPage;
     protected function PageForm() {

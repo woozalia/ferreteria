@@ -119,7 +119,7 @@ class clsUserTokens extends clsTable {
 	// generate and store the auth token:
 	$rc = $this->MakeToken($sAddr);
 	// calculate the authorization URL:
-	$url = self::AuthURL($rc->KeyValue(),$rc->Token());
+	$url = self::AuthURL($rc->GetKeyValue(),$rc->Token());
 	// replace template variables:
 	$ar = array(
 	  'addr'	=> $sAddr,
@@ -142,7 +142,7 @@ class clsUserTokens extends clsTable {
 */
 
 }
-class clsUserToken extends clsDataSet {
+class clsUserToken extends fcRecord_standard {
     private $sToken;
 
     public function Token($iVal=NULL) {

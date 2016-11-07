@@ -121,7 +121,7 @@ class fcForm {
 	}
 	return $arOut;
     }
-    protected function FieldArray_toWrite() {
+    protected function FieldArray_toWrite_native() {
 	$ar = $this->FieldArray();
 	$arOut = NULL;
 	foreach ($ar as $key => $oField) {
@@ -131,6 +131,18 @@ class fcForm {
 	}
 	return $arOut;
     }
+    /* 2016-10-13 written but apparently unneeded
+    // RETURNS: SQL-formatted values to be written to the database
+    protected function FieldArray_toWrite_storage() {
+	$ar = $this->FieldArray();
+	$arOut = NULL;
+	foreach ($ar as $key => $oField) {
+	    if ($oField->ShouldWrite()) {
+		$arOut[$key] = $oField->StorageObject()->GetValue();
+	    }
+	}
+	return $arOut;
+    }*/
     // DEBUGGING
     public function DumpChanged($txt) {
 	$ar = $this->FieldArray_changed();
@@ -183,8 +195,9 @@ class fcForm {
 	return $this->arRec;
     }
     /*----
-      PURPOSE: set all passed values
+      PURPOSE: set record fields from all passed values
       INPUT: $arVals = array[field name, native-format value]
+      OUTPUT: Internal - record array, storage format (uncooked SQL)
       USAGE:
 	* when loading record from db into memory (unknown fields are discarded)
 	* when saving edited record from form into db
@@ -205,14 +218,18 @@ class fcForm {
 	    if (array_key_exists($key,$arFlds)) {
 		// ignore data fields for which there is no Field object
 		$oField = $arFlds[$key];
+		// set memory-field in native format
 		$oField->SetValue($val);
-		$rc->SetValue($key,$val);	// save to memory-record object also
+		// get storage format
+		$sStor = $oField->StorageObject()->GetValueRaw();
+		// save storage format to memory-record-object's field
+		$rc->SetValue($key,$sStor);
 	    }
 	}
     }
     /*----
       PURPOSE: retrieve all values in record (native format)
-      USAGE: called when the Form object is preparing a list of values to insert or update
+      USAGE: not sure; was being used incorrectly (2016-10-11)
       PUBLIC for vcCartDataManager.UpdateBlob() - maybe there's a better way?
     */
     public function RecordValues_asNative_get() {
@@ -220,6 +237,22 @@ class fcForm {
 	$arOut = NULL;
 	foreach ($arFlds as $key => $oField) {
 	    $arOut[$key] = $oField->GetValue();
+	}
+	return $arOut;
+    }
+    /*----
+      USAGE: When form data is being saved, this retrieves the SQL values to write
+      RETURNS: sanitized SQL ready to send
+      HISTORY:
+	2016-10-11 written
+	2016-10-17 deactivated because it seemed unnecessary
+	2016-10-18 reactivated for delivering *sanitized* SQL
+    */
+    public function RecordValues_asStorageSane_get() {
+	$arFlds = $this->FieldArray();
+	$arOut = NULL;
+	foreach ($arFlds as $key => $oField) {
+	    $arOut[$key] = $oField->StorageObject()->GetValueSane();
 	}
 	return $arOut;
     }
@@ -239,7 +272,7 @@ class fcForm {
 	before adding in overrides.
       NOTE that in this case "display" format is actually the format received via
 	HTTP (POST/GET) rather than how the data is actually displayed.
-	
+
 	We might later want to rename these routines from "Display*" to "Form*" or
 	  something similar. Renaming only the input converters (to something like
 	  "Post*") would just be confusing, though, since some of the methods
@@ -366,17 +399,17 @@ abstract class fcForm_keyed extends fcForm {
     }
     // -- CONFIGURATION -- //
     // ++ FORM PROCESSING ++ //
-    
+
     /*----
       RETURNS: entered value for the given field in the given record
       USAGE: External only.
-	
+
 	This is so we can check if certain values are being changed, in case we need
 	to trigger additional events when that happens.
-	
+
 	It will probably need to be developed further in order to handle weird value formats,
 	but we'll get to that when it happens.
-	
+
 	This currently also doesn't check for missing fields. TODO
       HISTORY:
 	2016-01-22 written
@@ -412,11 +445,16 @@ abstract class fcForm_keyed extends fcForm {
 	    foreach ($arForm as $sRowKey => $arPostRec) {
                 $this->Set_KeyString_toSave($sRowKey);	// the sql update key
 		foreach ($arCtrls as $sFieldKey => $oCtrl) {
-		    $oCtrl->ReceiveForm($arPostRec);
+		    $arConv = $oCtrl->ReceiveForm($arPostRec);
+		    //echo "RECEIVING [$sFieldKey]:".fcArray::Render($arConv);
+		    //echo 'CTRL->NATIVE: ['.$oCtrl->NativeObject()->GetValue().']<br>';
+		    //echo 'FIELD: ['.$this->FieldObject($sFieldKey)->GetValue().']<br><hr />';
 		}
-	    
+
 		// get native values from Controls
-		$arSet = $this->FieldArray_toWrite();
+		$arSet = $this->FieldArray_toWrite_native();
+		//echo 'arSet:'.fcArray::Render($arSet);
+		//die('END DEBUG READOUT');
 		// save native values to database (SaveRecord() will use Storage objects to convert)
 		$id = $this->SaveRecord($arSet);
 		// clear this record's values in case there's another record

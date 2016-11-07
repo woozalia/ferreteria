@@ -77,7 +77,7 @@ class acrAdminUserSession extends fcrUserSession {
     protected function AdminPage() {
 	$oPage = $this->Engine()->App()->Page();
 
-	$id = $this->KeyValue();
+	$id = $this->GetKeyValue();
 	$ftClient = $this->ClientString_admin();
 	$ftUser = $this->UserID();	// TODO: show username too
 	$ftCart = $this->CartID();

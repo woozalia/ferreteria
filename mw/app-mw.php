@@ -25,7 +25,7 @@ class clsApp_MW extends fcAppStandard {
 	return parent::Data($iObj);
     }
     */
-    public function GetMainDB() {
+    public function GetDatabase() {
 	return new fcDataConn_MW(wfGetDB(DB_SLAVE));
     }
 
@@ -48,15 +48,16 @@ class clsApp_MW extends fcAppStandard {
     // ++ CEMENTING ++ //
 
     private $oPage;
-    public function Page(clsPage $obj=NULL) {
-	if (!is_null($obj)) {
-	    if (!is_object($obj)) {
-		throw new exception('Passed a non-object to Page().');
-	    }
-	    $this->oPage = $obj;
-	    $obj->App($this);
-	    //$obj->Doc($oDoc);
-	} elseif (empty($this->oPage)) {
+    public function SetPageObject(clsPage $obj) {
+	if (!is_object($obj)) {
+	    throw new exception('Passed a non-object to Page().');
+	}
+	$this->oPage = $obj;
+	//$obj->App($this); 2016-11-05 no longer needed
+	//$obj->Doc($oDoc);
+    }
+    public function GetPageObject() {
+	if (empty($this->oPage)) {
 	    $this->oPage = $this->MWSpecialPage();
 	}
 	return $this->oPage;

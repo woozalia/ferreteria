@@ -58,11 +58,17 @@ $om = new clsModule(__FILE__, 'mysqli/data-result-mysqli.php');
   $om->AddClass('fcDataResult_MySQLi');
 
 // data-table
+$om = new clsModule(__FILE__, 'data-rec-savable.php');
+  $om->AddClass('ftSaveableRecord');
 $om = new clsModule(__FILE__, 'data-table.php');
   $om->AddClass('fcTable_abstract');
   $om->AddClass('fcTable');
   $om->AddClass('fcTable_keyed_abstract');
   $om->AddClass('fcTable_key_single');
+
+// db-SQL
+$om = new clsModule(__FILE__, 'data-sql-trait.php');
+  $om->AddClass('QueryableTable');
 
 // db-ui
 $om = new clsModule(__FILE__, 'db-ui.php');
@@ -70,8 +76,17 @@ $om = new clsModule(__FILE__, 'db-ui.php');
 
 // DEPENDENT CLASSES
 
+$om = new clsModule(__FILE__, 'events.php');
+  $om->AddClass('clsSysEvents');
+  $om->AddClass('clsSysEvents_abstract');
+  $om->AddClass('clsLogger_DataSet');
+
 $om = new clsModule(__FILE__, 'menu-data.php');
   $om->AddClass('fcDataTable_Menu');
   $om->AddClass('fcDataRecord_Menu');
   $om->AddClass('fcDataRecord_admin');
   $om->AddClass('ftLoggableRecord');
+
+$om = new clsModule(__FILE__, 'object-urls.php');
+  $om->AddClass('ftLinkableRecord');
+  $om->AddClass('ftLinkableTable');

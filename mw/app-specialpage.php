@@ -41,10 +41,8 @@ class SpecialPageApp extends SpecialPage {
 	$oPage = new $sClass;
 	$sClass = $this->AppClass();
 	$oApp = new $sClass;
-	$oApp->Page($oPage);		// connects App and Page
-	//$oApp->MWPageObject($this);	// connects App and SpecialPage
+	$oApp->SetPageObject($oPage);		// connects App and Page
 
-//	$vgPage = $this;
 	$vgUserName = $wgUser->getName();
 	$mwoTitleMe = $this->getTitle();
 

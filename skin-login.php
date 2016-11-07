@@ -2,7 +2,7 @@
 /*
   PURPOSE: Skin class that supports login controls
 */
-abstract class clsSkin_login extends clsSkin_standard {
+abstract class fcSkin_login extends fcSkin_standard {
     public function RenderLogin() {
 	return $this->RenderLoginForm();
     }

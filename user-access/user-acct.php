@@ -12,14 +12,24 @@
 /*%%%%
   PURPOSE: collectively handles all user records
 */
-class clsUserAccts extends clsTable {
+class clsUserAccts extends fcTable_keyed_single_standard {
 
+    // ++ CEMENTING ++ //
+    
+    protected function TableName() {
+	return KS_TABLE_USER_ACCOUNT;
+    }
+    protected function SingularName() {
+	return 'clsUserAcct';
+    }
+    
+    // -- CEMENTING -- //
     // ++ STATIC ++ //
 
     /*----
       PUBLIC so record-class can call it when resetting password
     */
-    public static function HashPass($iPass,$iSalt) {
+    static public function HashPass($iPass,$iSalt) {
 	$sToHash = $iSalt.$iPass;
 	$sHashed = hash('whirlpool',$sToHash,TRUE);
 	return $sHashed;
@@ -27,21 +37,11 @@ class clsUserAccts extends clsTable {
     /*----
       PUBLIC so record-class can call it when resetting or checking password
     */
-    public static function MakeSalt() {
+    static public function MakeSalt() {
 	return openssl_random_pseudo_bytes(128);
     }
 
     // -- STATIC -- //
-    // ++ SETUP ++ //
-
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->Name(KS_TABLE_USER_ACCOUNT);
-	  $this->KeyName('ID');
-	  $this->ClassSng('clsUserAcct');
-    }
-
-    // -- SETUP -- //
     // ++ BASIC ACTIONS ++ //
 
     /*----
@@ -83,12 +83,12 @@ class clsUserAccts extends clsTable {
     // ++ BUSINESS LOGIC ++ //
 
     protected function SQL_forUserName_filter($iName) {
-	return 'LOWER(UserName)='.$this->Engine()->SanitizeAndQuote(strtolower($iName));
+	return 'LOWER(UserName)='.$this->GetConnection()->Sanitize_andQuote(strtolower($iName));
     }
 
     public function FindUser($iName) {
 	$sqlFilt = $this->SQL_forUserName_filter($iName);
-	$rc = $this->GetData($sqlFilt);
+	$rc = $this->SelectRecords($sqlFilt);
 	$nRows = $rc->RowCount();
 	if ($nRows == 0) {
 	    $rc = NULL;
@@ -122,7 +122,7 @@ class clsUserAccts extends clsTable {
 /*%%%%
   PURPOSE: user management
 */
-class clsUserAcct extends fcDataRecs {
+class clsUserAcct extends fcRecord_standard {
     private $arPerm;	// cache of permissions for this user
 
     // ++ INITIALIZATION ++ //
@@ -143,7 +143,7 @@ class clsUserAcct extends fcDataRecs {
 	if (is_null($rcLogged)) {
 	    return FALSE;
 	} else {
-	    return ($rcLogged->KeyValue() == $this->KeyValue());
+	    return ($rcLogged->GetKeyValue() == $this->GetKeyValue());
 	}
     }
 
@@ -162,7 +162,7 @@ class clsUserAcct extends fcDataRecs {
 	}
     }
     public function EmailAddress() {
-	return $this->Value('EmailAddr');
+	return $this->GetFieldValue('EmailAddr');
     }
     public function SetPassword($sPass) {
 	if (empty($sPass)) {
@@ -206,10 +206,10 @@ class clsUserAcct extends fcDataRecs {
     // ++ DATA RECORDS ACCESS ++ //
 
     protected function UGroupRecords() {
-	return $this->XGroupTable()->UGroupRecords($this->KeyValue());
+	return $this->XGroupTable()->UGroupRecords($this->GetKeyValue());
     }
     protected function UPermRecords() {
-	$idAcct = $this->KeyValue();
+	$idAcct = $this->GetKeyValue();
 	if (empty($idAcct)) {
 	    throw new exception('Internal error: trying to look up permissions for null account ID.');
 	}
@@ -252,12 +252,12 @@ class clsUserAcct extends fcDataRecs {
 
     public function PassMatches($iPass) {
 	// get salt for this user
-	$sSalt = $this->Value('PassSalt');
+	$sSalt = $this->GetFieldValue('PassSalt');
 
 	// hash [stored salt]+[given pass]
-	$sThisHashed = $this->Table()->HashPass($sSalt,$iPass);
+	$sThisHashed = $this->GetTableWrapper()->HashPass($sSalt,$iPass);
 	// get stored hash
-	$sSavedHash = $this->Value('PassHash');
+	$sSavedHash = $this->GetFieldValue('PassHash');
 
 	// see if they match
 	$ok = ($sThisHashed == $sSavedHash);
@@ -277,7 +277,7 @@ class clsUserAcct extends fcDataRecs {
     */
     public function CanDo($sPerm) {
 	if (defined('ID_USER_ROOT')) {
-	    if ($this->KeyValue() == ID_USER_ROOT) {
+	    if ($this->GetKeyValue() == ID_USER_ROOT) {
 		return TRUE;
 	    }
 	}

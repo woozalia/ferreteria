@@ -13,23 +13,11 @@
     2010-11-14 finally renamed file from datamgr.php to cache.php
     2011-03-03 clsCacheFile (later renamed vcCacheFile)
     2016-09-25 updated some class names from "cls*" to "fc*"
+    2016-10-23 trying to update for db.v2
+    2016-10-28 Changed some instances of KeyValue() to GetKeyValue(), but I think I really need to wait for the errors to happen.
 */
 
-/*
-if (defined( '__DIR__' )) {
-  $fpThis = __DIR__;
-} else {
-  $fpThis = dirname(__FILE__);
-}
-*/
-/*
-if (!defined('LIBMGR')) {
-    require('libmgr.php');
-}
-clsLibMgr::Add('data',KFP_LIB.'/data.php',__FILE__,__LINE__);
-clsLibMgr::Load('data',__FILE__,__LINE__);
-*/
-/*=====
+/*::::
   PURPOSE: dead simple file-based cache for a small number of larger chunks of data
 */
 class fcCacheFile {
@@ -106,31 +94,6 @@ class fcCacheMgr {
     public function Engine() {
 	return $this->objDB;
     }
-    /*
-      2010-11-10 Why does this possibly retrieve more than one row? Shouldn't it use GetMgrItem()?
-    */
-/*
-    private function GetTableInfo($iFilt) {
-	$objDest = $this->Tables->GetMgrData($iFilt);
-	$objDest->NextRow();
-	assert('is_object($objDest)');
-	assert('is_object($objDest->Mgr())');
-	return $objDest;
-    }
-*/
-
-//    public function Update_byID($iTableID,$iCaller) {
-    /*
-	$objDest = $this->Tables->GetData('ID='.$iTableID);
-	$objDest->Mgr($this);
-    */
-/*
-	//$objDest = $this->GetTableInfo('ID='.$iTableID);
-	$objDest = $this->Tables->GetItem($iTableID);
-	$arOut = $this->Update_byObj($objDest,$iCaller);
-	return $arOut;
-    }
-*/
     public function UpdateTime_byName($iTableName) {
 	$tblUpd = $this->Tables->GetData('Name="'.$iTableName.'"');
 	$tblUpd->NextRow();	// load first (and only) data row
@@ -194,7 +157,7 @@ class fcCacheMgr {
     }
 */
     /*-----
-      ACTION: Return a list of source tables for the given table ID. as Flow records
+      ACTION: Return a list of source tables for the given table ID, as Flow records
     */
     public function Sources($iTable) {
 	// get flows that write to this table
@@ -268,7 +231,7 @@ abstract class fcMgrTable_single_key extends fcMgrTable {
 	return $objOut;
     }
 }
-class fcMgrData extends fcRecords_indexed {
+class fcMgrData extends fcDataRecord_indexed {
     protected $objMgr;
 
     public function Mgr(clsCacheMgr $iMgr=NULL) {
@@ -276,6 +239,9 @@ class fcMgrData extends fcRecords_indexed {
 	    $this->objMgr = $iMgr;
 	}
 	return $this->objMgr;
+    }
+    protected function TableClass() {
+	throw new exception('Does this class actually need a Table wrapper?');
     }
     /*----
       HISTORY:
@@ -292,6 +258,7 @@ class fcMgrData extends fcRecords_indexed {
 }
 class fcMgrData_single_key extends fcMgrData {
     public function KeyValue() {
+    throw new exception('2016-10-28 What is this even for?');
 	return $this->objIdx->KeyValue('ID');	// TO DO: generalize this
     }
 }
@@ -343,7 +310,7 @@ class fcCacheTable extends fcMgrData_single_key {
     */
     public function TargProcs() {
 	$tbl = $this->Table()->Mgr()->Flow;
-	return $tbl->TargProcs_forTable($this->KeyValue());
+	return $tbl->TargProcs_forTable($this->GetKeyValue());
     }
 
     // ACTION methods
@@ -379,8 +346,8 @@ class fcCacheTable extends fcMgrData_single_key {
 	    $out .= ', '.$htDest.'... ';
 
 	// get list of all updates for this table, with clearing functions first:
-	    assert($objDest->KeyValue());
-	    $idDest = $objDest->KeyValue();
+	    assert($objDest->GetKeyValue());
+	    $idDest = $objDest->GetKeyValue();
 	    $objFlow = $this->Mgr()->Flow->GetData_forDest($idDest);
 	    assert('is_object($objFlow)');
 	    if ($objFlow->hasRows()) {
@@ -397,7 +364,7 @@ class fcCacheTable extends fcMgrData_single_key {
 		    $objProc = $objFlow->ProcObj();
 		    $rsSrces = $objProc->Sources();	// get flows showing sources used by this proc
 
-		    $idProc = $objProc->KeyValue();
+		    $idProc = $objProc->GetKeyValue();
 		    $out .= '<li>Checking [<b>'.$objProc->Value('Name').'</b>](ID '.$objFlow->Value('ID_Proc').') - ';
 
 		    if ($rsSrces->HasRows()) {

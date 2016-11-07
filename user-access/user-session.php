@@ -11,30 +11,38 @@
 /*%%%%
   PURPOSE: Handles the table of user sessions
 */
-class fctUserSessions extends clsTable {
-    protected $SessKey;
-    private $sCookieVal;
-    private $rcSess;
+class fctUserSessions extends fcTable_keyed_single_standard {
+    use ftFrameworkAccess;
 
-    const TableName='user_session';
-
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->Name(self::TableName);
-	  $this->KeyName('ID');
-	  $this->ClassSng(KS_CLASS_USER_SESSION);
-	$this->rcSess = NULL;
-	$this->sCookieVal = NULL;
+    // ++ CEMENTING ++ //
+    
+    protected function TableName() {
+	return 'user_session';
     }
+    protected function SingularName() {
+	return KS_CLASS_USER_SESSION;
+    }
+    
+    // -- CEMENTING -- //
+    // ++ OVERRIDES ++ //
+    
+    protected function InitVars() {
+	$this->ClearSession();
+	$this->ClearCookieValue();
+    }
+
+    
     private function Create() {
-	$rcSess = $this->SpawnItem();
+	$rcSess = $this->SpawnRecordset();
 	$rcSess->InitNew();
 	$rcSess->Create();
 	return $rcSess;
     }
-    public function ClearSession() {
-	$this->rcSess = NULL;
-    }
+
+    // ++ COOKIE VALUE ++ //
+
+      //++remote++//
+    
     /*----
       ACTION: tosses the session cookie to the browser
       RETURNS: TRUE iff successful
@@ -47,10 +55,9 @@ class fctUserSessions extends clsTable {
 	  and end up creating multiple records for each new session.
 	  (It was creating 3 new records and using the last one.)
     */
-    protected function ThrowCookie($iSessKey) {
-	$this->SessKey = $iSessKey;
+    protected function ThrowCookie($sSessKey) {
+	$sVal = $sSessKey;
 	$sDomain = KS_COOKIE_DOMAIN;
-	$sVal = $this->SessKey;
 	//$ok = setcookie(KS_USER_SESSION_KEY,$sVal,0,'/',$sDomain);
 	$ok = setcookie(KS_USER_SESSION_KEY,$sVal,0,'/');
 	if ($ok) {
@@ -59,20 +66,40 @@ class fctUserSessions extends clsTable {
 	}
 	return $ok;
     }
+
+      //--remote--//
+      //++local++//
+
+    private $sCookieVal;
+    protected function ClearCookieValue() {
+	$this->sCookieVal = NULL;
+    }
     protected function CookieValue($sValue=NULL) {
 	if (!is_null($sValue)) {
 	    $this->sCookieVal = $sValue;
 	}
 	return $this->sCookieVal;
     }
-    public function CurrentRecord(fcrUserSession $rcSess=NULL) {
-	if (!is_null($rcSess)) {
-	    $this->rcSess = $rcSess;
-	}
+    
+      //--local--//
+
+    // -- COOKIE VALUE -- //
+    // ++ CURRENT RECORD ++ //
+    
+    private $rcSess;
+    public function ClearSession() {
+	$this->rcSess = NULL;
+    }
+    // 2016-10-31 PROTECTING until need for public access is known
+    protected function SetCurrentRecord(fcrUserSession $rcSess) {
+	$this->rcSess = $rcSess;
+    }
+    // 2016-10-31 PROTECTING until need for public access is known
+    protected function GetCurrentRecord() {
 	return $this->rcSess;
     }
     public function HasCurrentRecord() {
-	return !is_null($this->rcSess);
+	return !is_null($this->GetCurrentRecord());
     }
     /*----
       ACTION: returns a Session object for the current connection, whether or not one already exists
@@ -103,15 +130,15 @@ class fctUserSessions extends clsTable {
 	    // TODO: look up the ID and token in the session table
 
 	    if ($this->HasCurrentRecord()) {
-		$rcThis = $this->CurrentRecord();
-		$idThis = $rcThis->KeyValue();
+		$rcThis = $this->GetCurrentRecord();
+		$idThis = $rcThis->GetKeyValue();
 		if ($idThis == $idRecd) {
 		    $doNew = FALSE;
 		}
 	    }
 	    if ($doNew) {
-		$rcRecd = $this->GetItem($idRecd);
-		$this->CurrentRecord($rcRecd);
+		$rcRecd = $this->GetRecord_forKey($idRecd);
+		$this->SetCurrentRecord($rcRecd);
 		$rcThis = $rcRecd;
 	    }
 
@@ -121,14 +148,13 @@ class fctUserSessions extends clsTable {
 	if (!$okSession) {
 	  // no current/valid session, so make a new one:
 	    $rcThis = $this->Create();
-	    echo "DONEW: [$doNew]<br>";
 	    if ($doNew) {
-		clsApp::Me()->AddMessage('You have to add items to your cart before you can check out.');
+		$this->AppObject()->AddMessage('You have to add items to your cart before you can check out.');
 	    } else {
-		clsApp::Me()->AddMessage('Your existing session was dropped because your fingerprint changed.');
+		$this->AppObject()->AddMessage('Your existing session was dropped because your fingerprint changed.');
 	    }
 	  // add new record for the new session:
-	    $this->CurrentRecord($rcThis);
+	    $this->SetCurrentRecord($rcThis);
 	  // generate key from the new session:
 	    $sSessKey = $rcThis->SessKey();
 	    $ok = $this->ThrowCookie($sSessKey);
@@ -139,18 +165,40 @@ class fctUserSessions extends clsTable {
 	} else {
 	    //echo 'SESSION IS FINE, THANKS.<br>';
 	}
-	//echo 'RCTHIS SESSION MESSAGES: '.$rcThis->MessagesString().'<br>';
-	//die('CURRENT SESSION MESSAGES: '.$this->CurrentRecord()->MessagesString());
-	return $this->CurrentRecord();
+	return $this->GetCurrentRecord();
     }
+    /*----
+      ACTION: get the session record we *should* be using, based on current client specs
+      HISTORY:
+	2016-10-31 Adapted from fcApp::GetSessionRecord() -- couldn't figure out why it needed to be there,
+	  and needing to access recordset's GetTableWrapper() was a problem because that's protected now.
+    */
+    public function MakeActiveRecord() {
+	if (empty($this->rcSess)) {
+	    $this->rcSess = $this->GetCurrent();
+	}
+	if (!$this->rcSess->HasRows()) {
+	    //throw new exception('Internal error: Loaded Session recordset has no rows.');
+/* 2016-03-24 I'm guessing that this happens when there is a partial match between the browser cookie
+    and a Session record -- e.g. browser has gone to a new version, so has the cookie but the fingerprint
+    doesn't match. In that case, we should just end the Session and start over.
+*/
+	    $this->ClearSession();
+	    $this->rcSess = $this->GetCurrent();
+	}
+	return $this->rcSess;
+    }
+
+    
+    // -- CURRENT RECORD -- //
+
 }
 /*::::
   PURPOSE: Represents a single user session record
 */
-class fcrUserSession extends clsDataSet {
+class fcrUserSession extends fcRecord_standard {
     use ftVerbalObject;
 
-    private $rcClient;
     protected $rcUser;
 
     // ++ SETUP ++ //
@@ -161,11 +209,12 @@ class fcrUserSession extends clsDataSet {
     }
 */
     protected function InitVars() {
-	$this->rcClient = NULL;
+	$this->ClientRecord_clear();
 	$this->rcUser = NULL;
     }
     public function InitNew() {
-	$this->Values(array(
+	$this->ClearFields();
+	$this->SetFieldValues(array(
 	  'Token'	=> fcString::Random(31),
 	  'ID_Client'	=> NULL,
 	  'ID_User'	=> NULL,
@@ -188,30 +237,42 @@ class fcrUserSession extends clsDataSet {
     // ++ DATA TABLES ++ //
 
     protected function ClientTable($id=NULL) {
-	return $this->Engine()->Make($this->ClientsClass(),$id);
+	return $this->GetConnection()->MakeTableWrapper($this->ClientsClass(),$id);
     }
     protected function UserTable($id=NULL) {
-	return $this->Engine()->Make($this->UsersClass(),$id);
+	return $this->GetConnection()->MakeTableWrapper($this->UsersClass(),$id);
     }
 
     // -- DATA TABLES -- //
     // ++ STATUS/FIELD ACCESS ++ //
 
-    protected function ClientID($id=NULL) {
-	return $this->Value('ID_Client',$id);
+    protected function SetClientID($id) {
+	return $this->SetFieldValue('ID_Client',$id);
     }
-    public function UserID() {
-	return $this->Value('ID_User');
+    protected function GetClientID() {
+	return $this->GetFieldValue('ID_Client');
+    }
+    public function GetUserID() {
+	return $this->GetFieldValue('ID_User');
     }
     protected function Token() {
-	return $this->Value('Token');
+	return $this->GetFieldValue('Token');
     }
-    /*----
-      NOTE: I can't think of any circumstances under which $this->HasValue('ID_User') would be false.
+    public function UserIsLoggedIn() {
+	return $this->GetUserID() > 0;	// can be 0 or NULL if no user
+    }
+    /*---
+      NOTE: As of 2016-11-03, this will return the same result as UserIsLoggedIn() because
+	we use UserID > 0 as a way of detecting whether the user is logged in -- but that
+	might change. This function will always return a boolean which answers the question
+	"do we know the user's ID?". That might conceivably different if, say, we want to
+	access some non-sensitive information about the user such as layout preferences.
+	Some sites will recognize users in that sort of way even when they are logged out.
+	I'm not sure if this is good security practice, but it's a possibility which
+	should be allowed for in the API even if Ferreteria doesn't currently support it.
     */
-    public function HasUser() {
-	$idUser = $this->UserID();
-	return !empty($idUser);	// can be 0 or NULL if no user
+    public function UserIsKnown() {
+	return $this->GetUserID() > 0;	// for now, user ID is cleared from session when user is logged out
     }
     /*-----
       RETURNS: TRUE if the stored session credentials match current reality (browser's credentials)
@@ -237,7 +298,7 @@ class fcrUserSession extends clsDataSet {
 	if ($this->IsNew()) {
 	    throw new exception('Trying to generate a session key when session record has no ID.');
 	}
-	return $this->KeyValue().'-'.$this->Token();
+	return $this->GetKeyValue().'-'.$this->Token();
     }
 
     // -- STATUS/FIELD ACCESS -- //
@@ -249,25 +310,25 @@ class fcrUserSession extends clsDataSet {
     */
     protected function Make_ClientID() {
 	$rcCli = $this->ClientRecord_needed();
-	$this->ClientID($rcCli->KeyValue());
-	return $this->ClientID();
+	$this->SetClientID($rcCli->GetKeyValue());
+	return $this->GetClientID();
     }
     /*----
       ACTION: Create a new session record from the current memory data.
     */
     public function Create() {
-	$db = $this->Table()->Engine();
+	$db = $this->GetConnection();
 	$ar = array(
-	  'ID_Client'	=> $db->SanitizeAndQuote($this->Make_ClientID()),
-	  'ID_User'	=> $db->SanitizeAndQuote($this->UserID()),
-	  'Token'	=> $db->SanitizeAndQuote($this->Token()),
+	  'ID_Client'	=> $db->Sanitize_andQuote($this->Make_ClientID()),
+	  'ID_User'	=> $db->Sanitize_andQuote($this->GetUserID()),
+	  'Token'	=> $db->Sanitize_andQuote($this->Token()),
 	  'WhenCreated'	=> 'NOW()'
 	  );
-	$idNew = $this->Table()->Insert($ar);
+	$idNew = $this->GetTableWrapper()->Insert($ar);
 	if ($idNew === FALSE) {
 	    throw new exception('Could not create new Session record.');
 	}
-	$this->KeyValue($idNew);
+	$this->SetKeyValue($idNew);
 	$rcClient = $this->ClientRecord_needed();
 	if (!$rcClient->isNew()) {
 	    $rcClient->Stamp();
@@ -290,10 +351,11 @@ class fcrUserSession extends clsDataSet {
 	$arUpd = array('ID_User'=>'NULL');
 	$this->Update($arUpd);
     }
+    // TODO: convert this to use UpdateArray() and Save().
     public function SaveUserID($idUser) {
 	$ar = array('ID_User'=>$idUser);
 	$this->Update($ar);			// save user ID to database
-	$this->Value('ID_User',$idUser);	// update it in RAM as well
+	$this->SetFieldValue('ID_User',$idUser);	// update it in RAM as well
     }
 
     // -- ACTIONS -- //
@@ -303,7 +365,7 @@ class fcrUserSession extends clsDataSet {
       RETURNS: User's login name, or NULL if user not logged in
     */
     public function UserString() {
-	if ($this->HasUser()) {
+	if ($this->UserIsLoggedIn()) {
 	    return $this->UserRecord()->UserName();
 	} else {
 	    return NULL;
@@ -313,7 +375,7 @@ class fcrUserSession extends clsDataSet {
       RETURNS: User's email address, or NULL if user not logged in
     */
     public function UserEmailAddress() {
-	if ($this->HasUser()) {
+	if ($this->UserIsLoggedIn()) {
 	    return $this->UserRecord()->EmailAddress();
 	} else {
 	    return NULL;
@@ -323,6 +385,10 @@ class fcrUserSession extends clsDataSet {
     // -- CALCULATIONS -- //
     // ++ DATA RECORD ACCESS ++ //
 
+    private $rcClient;
+    protected function ClientRecord_clear() {
+	$this->rcClient = NULL;
+    }
     /*----
       HISTORY:
 	2014-09-18 Creating multiple ClientRecord() methods for different circumstances:
@@ -333,11 +399,14 @@ class fcrUserSession extends clsDataSet {
     */
     protected function ClientRecord_asSet() {
 	if (is_null($this->rcClient)) {
-	    $idCli = $this->ClientID();
+	    // if there's no client record, see if there's a client ID:
+	    $idCli = $this->GetClientID();
 	    if (!is_null($idCli)) {
+		// there's a client ID, so get the client record from that:
 		$this->rcClient = $this->ClientTable($idCli);
 	    }
 	}
+	// If nothing worked, then rcClient is NULL and we just return that.
 	return $this->rcClient;
     }
     protected function ClientRecord_current() {
@@ -351,13 +420,17 @@ class fcrUserSession extends clsDataSet {
     }
     protected function ClientRecord_needed() {
 // if the session's client record matches, then load the client record; otherwise create a new one:
-	$rcCli = $this->ClientRecord_current();
-	if (is_null($rcCli)) {
+	$rc = $this->ClientRecord_current();
+	if (is_null($rc)) {
+	    $rc = $this->ClientTable()->MakeRecord_forCRC();
+	    /* 2016-10-27 old code
 	    $tClients = $this->ClientTable();
-	    $this->rcClient = $tClients->SpawnItem();
+	    $this->rcClient = $tClients->SpawnRecordset();
 	    $this->rcClient->InitNew();
 	    $this->rcClient->Build();
-	    $this->ClientID($this->rcClient->KeyValue());
+	    */
+	    $this->rcClient = $rc;
+	    $this->SetClientID($rc->GetKeyValue());
 	}
 	return $this->rcClient;
     }
@@ -367,8 +440,8 @@ class fcrUserSession extends clsDataSet {
     public function UserRecord() {
 	if (is_null($this->rcUser)) {
 	    $tUser = $this->UserTable();
-	    if ($this->HasUser()) {
-		$this->rcUser = $tUser->GetItem($this->Value('ID_User'));
+	    if ($this->UserIsLoggedIn()) {
+		$this->rcUser = $tUser->GetRecord_forKey($this->GetUserID());
 	    } else {
 		$this->rcUser = NULL;
 	    }
@@ -381,7 +454,7 @@ class fcrUserSession extends clsDataSet {
 	if (is_null($oUser)) {
 	    $idNew = NULL;
 	} else {
-	    $idNew = $oUser->KeyValue();
+	    $idNew = $oUser->GetKeyValue();
 	}
 	if (is_null($this->rcUser)) {
 	    $doChg = TRUE;
@@ -413,7 +486,7 @@ class fcrUserSession extends clsDataSet {
 
 	    // we are SETTING the user
 	    $doChg = FALSE;
-	    $idNew = $oUser->KeyValue();
+	    $idNew = $oUser->GetKeyValue();
 	    if (is_null($this->objUser)) {
 		$doChg = TRUE;
 	    } else {
@@ -433,7 +506,7 @@ class fcrUserSession extends clsDataSet {
 	    // we are trying to RETRIEVE the user
 	    if (empty($this->objUser)) {
 		$tUser = $this->UserTable();
-		if ($this->HasUser()) {
+		if ($this->UserIsLoggedIn()) {
 		    $this->objUser = $tUser->GetItem($this->Value('ID_User'));
 		} else {
 		    $this->objUser = NULL;

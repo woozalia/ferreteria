@@ -31,10 +31,19 @@ abstract class fcTable_abstract {
     static public function _SQL_forUpdate($iTblName, array $iSet,$iWhere) {
 	$sqlSet = '';
 	foreach($iSet as $key=>$val) {
-	    if ($sqlSet != '') {
-		$sqlSet .= ',';
+	    if (is_scalar($val)) {
+		if ($sqlSet != '') {
+		    $sqlSet .= ',';
+		}
+		$sqlSet .= ' `'.$key.'`='.$val;
+	    } else {
+		throw new exception('Ferreteria parameter error: value for "'
+		  .$key
+		  .'" is "'
+		  .gettype($val)
+		  .'", which is not a scalar type.'
+		  );
 	    }
-	    $sqlSet .= ' `'.$key.'`='.$val;
 	}
 
 	return "UPDATE `$iTblName` SET$sqlSet WHERE $iWhere";
@@ -329,7 +338,7 @@ abstract class fcTable_abstract {
     }
 }
 /*=============
-  NAME: clsTable_keyed_abstract
+  NAME: fcRecs_keyed_abstract
   PURPOSE: adds abstract methods for dealing with keys
 */
 abstract class fcTable_keyed_abstract extends fcTable_abstract {

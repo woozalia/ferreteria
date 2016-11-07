@@ -6,16 +6,15 @@
   HISTORY:
     2015-09-24 extracted clsDatabase_UserAuth from app.php to here (app-user.php)
     2016-10-01 Attempting to convert to db.v2
+    2016-10-31 more converting to db.v2
 */
 
 /*%%%%
   PURPOSE: Database Factory which includes tables for basic user authorization
 */
 class fcDBOF_UserAuth extends fcDBOFactory {
-
-//    private $objApp;
     public function App(clsApp $iApp=NULL) {
-	throw new exception('db->App() is deprecated -- call {app class}::Me() instead.');
+	throw new exception('db->App() is deprecated -- call {app class}::Me() or $this->AppObject() instead.');
 	if (!is_null($iApp)) {
 	    $this->objApp = $iApp;
 	}

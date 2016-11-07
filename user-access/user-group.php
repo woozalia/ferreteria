@@ -26,7 +26,7 @@ class clsUserGroups extends clsTable {
 
     // -- BUSINESS LOGIC -- //
 }
-class clsUserGroup extends fcDataRecs {
+class clsUserGroup extends fcRecord_standard {
 
     // ++ FIELD ACCESS ++ //
 
@@ -49,16 +49,17 @@ class clsUserGroup extends fcDataRecs {
     // ++ DATA RECORDS ACCESS ++ //
 
     protected function UPermRecords() {
-	return $this->XPermTable()->UPermRecords($this->KeyValue());
+	return $this->XPermTable()->UPermRecords($this->GetKeyValue());
     }
 
     /*----
       RETURNS: The current recordset as an associative array, indexed by ID
     */
     public function AsArray() {
+	throw new exception("2016-10-28 Isn't there a base class function for this?");
 	$ar = array();
 	while ($this->NextRow()) {
-	    $id = $this->KeyValue();
+	    $id = $this->GetKeyValue();
 	    $ar[$id] = $this->Values();
 	}
 	return $ar;

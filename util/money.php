@@ -6,6 +6,7 @@
     2013-12-17 Created for DataCurr()
     2016-01-18 Same() method added
     2016-02-01 Renaming clsMoney -> fcMoney, with clsMoney as a deprecated alias
+    2016-10-23 Format_withSymbol_asHTML()
 */
 
 class fcMoney {
@@ -17,10 +18,10 @@ class fcMoney {
 	// until PHP 5.6 is more ubiquitous, we have to fake powers of ten:
 	//$fRez = 10 ** (self::$nDigits);
 	$fRez = '1' . str_repeat('0',self::$nDigits);
-	
+
 	$ni1 = (int)($nAmt1 * $fRez);
 	$ni2 = (int)($nAmt2 * $fRez);
-	
+
 	return $ni1 == $ni2;
     }
 
@@ -97,8 +98,23 @@ class fcMoney {
 	    return $sSymbol.$sNumFmt;
 	}
     }
-
+    // TODO: positive and negative formatting should be more flexible
+    static public function Format_withSymbol_asHTML($nAmt,$sSymbol='$',$sPlus='') {
+	if (is_null($nAmt)) {
+	    return NULL;
+	} else {
+	    // format numerically
+	    $sNumFmt = sprintf("%01.2f",abs($nAmt));
+	    // prefix with sign
+	    if ($nAmt < 0) {
+		// native formatting adds minus sign automatically, so just add markup for CSS
+		$htNumFmt = "<span class=money-amount><span class=money-negative><span class=number-sign>-</span>$sNumFmt</span></span>";
+	    } else {
+		$htNumFmt = "<span class=money-amount><span class=money-positive><span class=number-sign>$sPlus</span>$sNumFmt</span></span>";
+	    }
+	    return "<span class=money><span class=money-symbol>$sSymbol</span>$htNumFmt</span>";
+	}
+    }
     // -- FORMATTING -- //
-
 }
 class clsMoney extends fcMoney {}	// deprecated

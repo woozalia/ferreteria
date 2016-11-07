@@ -95,7 +95,7 @@ __END__;
     protected function AdminLine_edit($sName=NULL,$bSel=NULL) {
 	$htID = $this->AdminLink();
 	if (!is_null($sName)) {
-	    $id = $this->KeyValue();
+	    $id = $this->GetKeyValue();
 	    $htID .= clsHTML::CheckBox($sName,$bSel,$id);
 	}
 
@@ -187,7 +187,7 @@ __END__;
     public function AdminLine($sName=NULL,$bSel=NULL) {
 	$htID = $this->SelfLink();
 	if (!is_null($sName)) {
-	    $id = $this->KeyValue();
+	    $id = $this->GetKeyValue();
 	    $htID .= clsHTML::CheckBox($sName,$bSel,$id);
 	}
 	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));

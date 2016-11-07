@@ -4,6 +4,8 @@
   HISTORY:
     2014-12-27 split from smw-base.php
     2015-03-14 forked from data-mw.php (renamed db-conn-mw.php); rewriting for Ferreteria db v2
+    2016-10-24 This will probably need to be heavily updated.
+      For example, FetchRecordset() needs to have a Table wrapper object for the 2nd argument.
 */
 
 /*%%%%
@@ -73,7 +75,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     // -- CONVENTIONS -- //
     // ++ DATA RETRIEVAL ++ //
 
-    public function Recordset($sSQL) {
+    public function FetchRecordset($sSQL) {
 
 	$mwoRe = $this->MWDB()->query($sSQL);	// $mwoRe is a ResultWrapper http://svn.wikimedia.org/doc/classResultWrapper.html
 	$poRes = $mwoRe->result;

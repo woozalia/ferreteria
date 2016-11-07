@@ -72,7 +72,7 @@ abstract class fcDatabase_abstract {
     // -- SETUP -- //
     // ++ OBJECTS ++ //
 
-    protected function EngineClass() {
+    protected function EngineObject() {
 	$cls = KS_DEFAULT_ENGINE;
 	return new $cls;
     }
@@ -82,7 +82,7 @@ abstract class fcDatabase_abstract {
 	    $this->oEng = $iEngine;
 	} else {
 	    if (!isset($this->oEng)) {
-		$this->oEng = $this->EngineClass();
+		$this->oEng = $this->EngineObject();
 	    }
 	}
 	return $this->oEng;

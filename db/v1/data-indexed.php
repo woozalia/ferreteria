@@ -8,7 +8,7 @@
   NAME: clsTable_indexed
   PURPOSE: handles indexes via a helper object
 */
-class clsTable_indexed extends clsTable_keyed_abstract {
+abstract class clsTable_indexed extends fcRecs_keyed_abstract {
     protected $objIdx;
 
     /*----
@@ -64,7 +64,7 @@ class clsTable_indexed extends clsTable_keyed_abstract {
 /*=============
   NAME: clsRecs_indexed
 */
-class clsRecs_indexed extends clsRecs_keyed_abstract {
+abstract class clsRecs_indexed extends fcRecs_keyed_abstract {
     protected $objIdx;
 
     // BOILERPLATE BEGINS

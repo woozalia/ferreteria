@@ -3,6 +3,7 @@
   PURPOSE: wrapper class for accessing MediaWiki property tables
   HISTORY:
     2015-09-28 Extracted from W3TPL.php
+    2016-10-24 This will probably need to be heavily updated.
 */
 
 /*%%%%
@@ -77,7 +78,7 @@ class clsContentProps {
     public function LoadVal($sKey=NULL) {
 	$sql = $this->GetLoadSQL($sKey);
 	try {
-	    $rs = $this->Database()->Recordset($sql);
+	    $rs = $this->Database()->FetchRecordset($sql);
 	} catch (Exception $e) {
 	    $txt = "W3TPL got a db error searching for property [$iKey] - ''".$dbr->lastError()."'' - from this SQL:\n* ".$sql;
 	    W3AddEcho('<div class="previewnote">'.$txt.'</div>');	// what is the *proper* class for error msgs?

@@ -140,7 +140,7 @@ abstract class clsMenuItem extends clsMenuNode {
 	if (is_null($sPerm)) {
 	    // in this context, NULL permission means all users are authorized
 	    $this->isAuth = TRUE;	// node has been authorized
-	} elseif (clsApp::Me()->UserKnown()) {
+	} elseif (clsApp::Me()->UserIsLoggedIn()) {
 	    if (clsApp::Me()->User()->CanDo($sPerm)) {
 		// this item has been authorized for access
 		$this->isAuth = TRUE;	// node has been authorized
