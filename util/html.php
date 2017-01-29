@@ -24,7 +24,11 @@ class fcHTML {
 	$htAttr = '';
 	if (is_array($iarAttr)) {
 	    foreach ($iarAttr as $key => $val) {
-		$htAttr .= ' '.$key.'="'.$val.'"';
+		if (is_scalar($val)) {
+		    $htAttr .= ' '.$key.'="'.$val.'"';
+		} else {
+		    throw new fcDebugException("Ferreteria Usage Error: Array value for [$key] is not a scalar. Type=".gettype($val));
+		}
 	    }
 	}
 	return $htAttr;

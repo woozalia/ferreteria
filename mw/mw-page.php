@@ -6,9 +6,11 @@
     class, rather than descending from it... or maybe Page and App should both have pointers to the SpecialPage, so that they can more easily provide wrapper methods for their respective functionalities.
   HISTORY:
     2015-07-23 started
+    2017-01-16 need to see just how badly this needs to be rewritten - making it a base class
 */
 
-class fcPage_MW extends clsPage {
+//class fcPage_MW extends clsPage {
+class fcPage_MW {
 
     // ++ INFORMATION ++ //
 

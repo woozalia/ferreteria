@@ -19,7 +19,6 @@ class fcForm {
     use ftVerbalObject;
 
     private $sName;
-//    private $arCtrls;   // list of Control objects
     private $arFlds;	// list of Field objects
 
     // ++ SETUP ++ //
@@ -28,8 +27,7 @@ class fcForm {
 	$this->NameString($sName);
 	$this->InitVars();
     }
-    protected function InitVars() {
-    }
+    protected function InitVars() {}
 
     // -- SETUP -- //
     // ++ CONFIG ++ //
@@ -55,12 +53,6 @@ class fcForm {
 	return $arCtrls;
     }
     public function GetControlObject($sName) {
-// 2016-08-09 old version
-//	if (array_key_exists($sName,$this->arCtrls)) {
-//	    return $this->arCtrls[$sName];
-//	} else {
-//	    throw new exception('Attempting to retrieve unknown form field "'.$sName.'".');
-//	}
 	return $this->FieldObject($sName)->ControlObject();
     }
     /*----
@@ -81,10 +73,6 @@ class fcForm {
 	    throw new exception('Attempting to retrieve unknown form field "'.$sName.'".');
 	}
     }
-    /*
-    protected function ControlExists($sName) {
-	return array_key_exists($sName,$this->arCtrls);
-    }//*/
 
     // -- CONTROLS -- //
     // ++ FIELDS ++ //
@@ -146,28 +134,10 @@ class fcForm {
     // DEBUGGING
     public function DumpChanged($txt) {
 	$ar = $this->FieldArray_changed();
-	echo "CHANGED FIELDS ($txt):".clsArray::Render($ar);
+	echo "CHANGED FIELDS ($txt):".fcArray::Render($ar);
     }
 
     // -- FIELDS -- //
-    // ++ ACTIONS ++ //
-
-    public function AddField(fcFormField $oField, fcFormControl $oCtrl) {
-	throw new exception('Who calls this?');	// 2016-04-10 nobody, so far...
-	// should probably rewrite something
-
-	// get the control's name, for indexing
-	$sName = $oField->NameString();
-	// add objects to local lists:
-	$this->ControlObject($sName,$oCtrl);
-	$this->FieldObject($sName,$oField);
-	// point the control at its associated field
-	$oCtrl->FieldObject($oField);
-	// point the control at this form
-	$oCtrl->FormObject($this);
-    }
-
-    // -- ACTIONS -- //
     // ++ DATA STORAGE ++ //
 
     /*----
@@ -177,17 +147,12 @@ class fcForm {
 	return $this->FieldObject($sField)->ValueNative($val);
     }
     /*----
-      PURPOSE: allows explicitly setting NULL values.
-    */
-    /* 2016-02-04 This no longer works. Call ->FieldObject($sField)->SetValue($val)
-    public function SetRecordValue($sField,$val) {
-        $this->FieldObject($sField)->SetValueNative($val);
-    }*/
-    /*----
       PURPOSE: set or retrieve all values in record (native format)
       DEPRECATED
+      CALLED BY RecordValues_asSQL(), which is also deprecated
     */
     protected function RecordValues_asNative(array $arVals=NULL) {
+	// 2017-01-17 no apparent need yet
         throw new exception('Who calls this?');	// probably call RecordValues_asNative_get() instead
 	if (!is_null($arVals)) {
 	    $this->arRec = $arVals;
@@ -213,7 +178,7 @@ class fcForm {
     */
     protected function RecordValues_asNative_set(array $arVals=NULL) {
 	$arFlds = $this->FieldArray();
-	$rc = $this->RecordsObject();
+	$rc = $this->GetRecordsObject();
 	foreach ($arVals as $key => $val) {
 	    if (array_key_exists($key,$arFlds)) {
 		// ignore data fields for which there is no Field object
@@ -223,7 +188,7 @@ class fcForm {
 		// get storage format
 		$sStor = $oField->StorageObject()->GetValueRaw();
 		// save storage format to memory-record-object's field
-		$rc->SetValue($key,$sStor);
+		$rc->SetFieldValue($key,$sStor);
 	    }
 	}
     }
@@ -242,17 +207,21 @@ class fcForm {
     }
     /*----
       USAGE: When form data is being saved, this retrieves the SQL values to write
+      NOTE: Only returns the fields which have been modified ($oField->IsChanged()).
       RETURNS: sanitized SQL ready to send
       HISTORY:
 	2016-10-11 written
 	2016-10-17 deactivated because it seemed unnecessary
 	2016-10-18 reactivated for delivering *sanitized* SQL
+	2017-01-17 only return modified fields -- else unedited fields get overwritten with NULL
     */
     public function RecordValues_asStorageSane_get() {
 	$arFlds = $this->FieldArray();
 	$arOut = NULL;
 	foreach ($arFlds as $key => $oField) {
-	    $arOut[$key] = $oField->StorageObject()->GetValueSane();
+	    if ($oField->IsChanged()) {
+		$arOut[$key] = $oField->StorageObject()->GetValueSane();
+	    }
 	}
 	return $arOut;
     }
@@ -300,12 +269,13 @@ class fcForm {
 	  ...and then determined that the caller was probably going about this wrong,
 	    so restored the exception throw.
     */
+    /* 2017-01-17 Does not seem to be used.
     public function NewValues(array $arVals) {
         throw new exception('If anyone is calling this, they should probably be setting defaults via each Field object.');
 	foreach ($arVals as $key => $val) {
 	    $this->FieldObject($key)->SetDefaultNative($val);
 	}
-    }
+    }*/
     /*----
       RULE: Call this to initialize the form to default new values
 	UNLESS field has been explicitly edited.

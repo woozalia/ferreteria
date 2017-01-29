@@ -3,14 +3,17 @@
   PURPOSE: classes for handling user authorization tokens
   HISTORY:
     2013-11-27 extracted from user.php
+    2016-11-18 revising for db.v2 and for changes to table
+      now supports more than one type of auth
+      meaning of types must be defined by caller
 */
 
-/*%%%%
+/*::::
   PURPOSE: manages emailed authorization tokens
 */
-class clsUserTokens extends clsTable {
+class fcUserTokens extends fcTable_keyed_single_standard {
 
-    // STATIC
+    // ++ STATIC ++ //
 
     private static function MakeHash($sVal,$sSalt) {
 	$sToHash = $sSalt.$sVal;
@@ -18,53 +21,59 @@ class clsUserTokens extends clsTable {
 	return $sHash;
     }
 
-    // / STATIC
-    // DYNAMIC
+    // -- STATIC -- //
+    // ++ SETUP ++ //
 
+    // 2017-01-08 This will need rewriting
     public function __construct($iDB) {
 	parent::__construct($iDB);
 	  $this->Name('user_tokens');
 	  $this->KeyName('ID');
-	  $this->ClassSng('clsUserToken');
+	  $this->ClassSng('fcUserToken');
     }
-    public function MakeToken($sEmail) {
+    
+    // -- SETUP -- //
+
+    /*----
+      ACTION: Ensure that a token record exists for the given type and entity values
+      RETURNS: single record for matching or created token
+    */
+    public function MakeToken($nType,$sEntity) {
+	$db = $this->GetConnection();
+    
 	$isStrong = NULL;
 	$nHashLen = 32;
 	$sToken = openssl_random_pseudo_bytes($nHashLen,$isStrong);
 	if (!$isStrong) {
-	    $this->Engine()->LogEvent(__FILE__.' line '.__LINE__,NULL,'Could not use strong encryption for token.','WENC',TRUE,FALSE);
+	    throw fcSilentException("Could not use strong encryption for token. Type=$nType, $sEntity=[$sEntity]");
 	}
 	$sSalt = openssl_random_pseudo_bytes($nHashLen);
 	// save the salt and hashed token
-/*
-	$sToHash = $sSalt.$sToken;
-	$sHash = hash('whirlpool',$sToHash,TRUE);
-*/
 	$sHash = self::MakeHash($sToken,$sSalt);
-
 	$ar = array(
-	  'TokenHash'	=> SQLValue($sHash),
-	  'TokenSalt'	=> SQLValue($sSalt),
+	  'TokenHash'	=> $db->Sanitize_andQuote($sHash),
+	  'TokenSalt'	=> $db->Sanitize_andQuote($sSalt),
 	  'WhenExp'	=> 'NOW() + INTERVAL 1 HOUR'	// expires in 1 hour
 	  );
 
-	// -- check to see if there's already a hash for this email address
-	$sqlEmail = SQLValue($sEmail);
-	$sqlFilt = 'Email='.$sqlEmail;
-	$rc = $this->GetData($sqlFilt);
+	// -- check to see if there's already a hash for this entity
+	$sqlEntity = $db->Sanitize_andQuote($sEntity);
+	$sqlFilt = "(Type=$nType) AND (Entity=$sqlEntity)";
+	$rc = $this->SelectRecords($sqlFilt);
 	if ($rc->HasRows()) {
 	    $rc->NextRow();	// load the record
 	    $rc->Update($ar);
 	} else {
-	    $ar['Email'] = $sqlEmail;
+	    $ar['Type'] = $nType;
+	    $ar['Entity'] = $sqlEntity;
 	    $id = $this->Insert($ar);
 	    if ($id === FALSE) {
-		echo 'SQL='.$this->sqlExec.'<br>';
+		echo 'SQL='.$this->sql.'<br>';
 		throw new exception('<b>Internal error</b>: could not create token record.');
 	    }
-	    $rc = $this->GetItem($id);
+	    $rc = $this->GetRecord_forKey($id);
 	}
-	$rc->Token($sToken);	// caller may need this, but it shouldn't be stored
+	$rc->SetToken($sToken);	// caller may need this, but it shouldn't be stored
 	return $rc;
     }
     /*----
@@ -74,20 +83,19 @@ class clsUserTokens extends clsTable {
       RETURNS: token object if a matching token was found; NULL otherwise
     */
     public function FindToken($idToken,$sToken) {
-	//$sqlFilt = '(ID_Email='.$idEmail.') AND (WhenExp > NOW())';
-	$sqlFilt = 'ID='.$idToken;
-	$rc = $this->GetData($sqlFilt);
+	$rc = $this->GetRecord_forKey($idToken);
 	if ($rc->HasRows()) {
 	    $rc->NextRow();	// assume there's only 1 row, and load it
-	    $sSalt = $rc->Value('TokenSalt');
-	    $sHash = self::MakeHash($sToken,$sSalt);
-	    if ($sHash == $rc->Value('TokenHash')) {
+	    if ($rc->HashMatches($sToken)) {
 		return $rc;
+	    } else {
+		$this->SetError_TokenMismatch();
 	    }
 	} else {
-	    // no tokens for that email - fail
-	    return NULL;
+	    $this->SetError_TokenNotFound();
 	}
+	// no matching token found
+	return NULL;
     }
     /*----
       ACTION: Delete all expired tokens
@@ -100,8 +108,8 @@ class clsUserTokens extends clsTable {
 	reset their password?
     */
     protected function CleanTokens() {
-	$sql = 'DELETE FROM '.$this->Name().' WHERE WhenExp < NOW()';
-	$this->Engine()->Exec($sql);
+	$sql = 'DELETE FROM '.$this->TableName_Cooked().' WHERE WhenExp < NOW()';
+	$this->GetConnection()->ExecuteAction($sql);
     }
     /*----
       ACTION: Send a password reset request to the given address.
@@ -142,15 +150,34 @@ class clsUserTokens extends clsTable {
 */
 
 }
-class clsUserToken extends fcRecord_standard {
-    private $sToken;
+class fcUserToken extends fcRecord_standard {
+    
+    // ++ AUX FIELDS ++ //
 
-    public function Token($iVal=NULL) {
-	if (!is_null($iVal)) {
-	    $this->sToken = $iVal;
-	}
+    private $sToken;
+    public function SetToken($sVal) {
+	$this->sToken = $sVal;
+    }
+    public function GetToken() {
 	return $this->sToken;
     }
+    
+    // -- AUX FIELDS -- //
+    // ++ FIELD VALUES ++ //
+    
+    protected function GetTokenSalt() {
+	return $this->GetFieldValue('TokenSalt');
+    }
+    protected function GetTokenHash() {
+	return $this->GetFieldValue('TokenHash');
+    }
+    protected function GetTokenType() {
+	return $this->GetFieldValue('Type');
+    }
+    
+    // -- FIELD VALUES -- //
+    // ++ FIELD CALCULATIONS ++ //
+    
     /*----
       RETURNS: TRUE iff expiration date has not passed
     */
@@ -159,6 +186,15 @@ class clsUserToken extends fcRecord_standard {
 	$dtExp = strtotime($sExp);	// there's got to be a better function for this
 	return ($dtExp > time());
     }
+    public function HashMatches($sToken) {
+	$sSalt = $this->GetTokenSalt();
+	$sHash = self::MakeHash($sToken,$sSalt);
+	return ($sHash == $this->GetTokenHash());
+    }
+
+    // -- FIELD CALCULATIONS -- //
+    // ++ WRITE DATA ++ //
+    
     /*----
       ACTION: update the token's expiration date
     */
@@ -166,4 +202,6 @@ class clsUserToken extends fcRecord_standard {
 	$ar = array('WhenExp'	=> 'NOW() + INTERVAL 1 HOUR');	// expires in 1 hour
 	$this->Update($ar);
     }
+
+    // -- WRITE DATA -- //
 }

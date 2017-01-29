@@ -4,20 +4,24 @@
   HISTORY:
     2013-12-19 started
 */
-class clsUserGroups extends clsTable {
-    private $arData;
+class fctUserGroups extends fcTable_keyed_single_standard {
 
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->Name(KS_TABLE_USER_GROUP);
-	  $this->KeyName('ID');
-	  $this->ClassSng('clsUserGroup');
-	$this->arData = NULL;
+    // ++ SETUP ++ //
+
+    protected function TableName() {
+	return KS_TABLE_USER_GROUP;
     }
+    protected function SingularName() {
+	return KS_CLASS_USER_GROUP;
+    }
+
+    // -- SETUP -- //
     // ++ BUSINESS LOGIC ++ //
 
+    private $arData;
     public function AsArray() {
-	if (is_null($this->arData)) {
+	throw new exception('2017-01-14 Get a recordset of ALL records and then call $rs->asKeyedArray().');
+	if (empty($this->arData)) {
 	    $rs = $this->GetData();
 	    $this->arData = $rs->AsArray();
 	}
@@ -25,37 +29,47 @@ class clsUserGroups extends clsTable {
     }
 
     // -- BUSINESS LOGIC -- //
+
 }
-class clsUserGroup extends fcRecord_standard {
+class fcrUserGroup extends fcRecord_standard {
 
-    // ++ FIELD ACCESS ++ //
+    // ++ FIELD VALUES ++ //
 
-    public function Name() {
-	return $this->Value('Name');
+    public function NameString() {
+	return $this->GetFieldValue('Name');
     }
     public function Descr() {
-	return $this->Value('Descr');
+	throw new exception('2017-01-27 Call UsageText() instead.');
+    }
+    public function UsageText() {
+	return $this->GetFieldValue('Descr');
     }
 
-    // -- FIELD ACCESS -- //
-    // ++ DATA TABLE ACCESS ++ //
+    // -- FIELD VALUES -- //
+    // ++ CLASSES ++ //
+    
+    protected function XPermitsClass() {
+	return KS_CLASS_UPERMITS_FOR_UGROUP;
+    }
+    
+    // -- CLASSES -- //
+    // ++ TABLES ++ //
 
     protected function XPermTable() {
-	$tbl = $this->Engine()->Make(KS_CLASS_UGROUP_X_UPERM);
-	return $tbl;
+	return $this->GetConnection()->MakeTableWrapper($this->XPermitsClass());
     }
 
-    // -- DATA TABLE ACCESS -- //
-    // ++ DATA RECORDS ACCESS ++ //
+    // -- TABLES -- //
+    // ++ RECORDS ++ //
 
     protected function UPermRecords() {
 	return $this->XPermTable()->UPermRecords($this->GetKeyValue());
     }
-
     /*----
       RETURNS: The current recordset as an associative array, indexed by ID
     */
     public function AsArray() {
+	throw new exception('2017-01-14 Call $this->asKeyedArray() instead.');
 	throw new exception("2016-10-28 Isn't there a base class function for this?");
 	$ar = array();
 	while ($this->NextRow()) {
@@ -65,5 +79,5 @@ class clsUserGroup extends fcRecord_standard {
 	return $ar;
     }
 
-    // -- DATA RECORDS ACCESS -- //
+    // -- RECORDS -- //
 }

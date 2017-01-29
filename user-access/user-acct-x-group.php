@@ -3,28 +3,25 @@
   PURPOSE: handles assignments of user accounts to security groups
   HISTORY:
     2013-12-19 started
+    2017-01-27 rewriting to work with Ferreteria changes
 */
-class clsUAcct_x_UGroup extends clsTable_abstract {
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->Name('user_x_ugroup');
-    }
+class fctUGroups_for_UAcct extends fcTable_wSource {
 
-    // ++ CLASS NAMES ++ //
-
+    // ++ CLASSES ++ //
+    
     protected function GroupsClass() {
-	return 'clsUserGroups';
+	return KS_CLASS_USER_GROUPS;
     }
 
-    // -- CLASS NAMES -- //
-    // ++ DATA TABLE ACCESS ++ //
+    // -- CLASSES -- //
+    // ++ TABLES ++ //
 
     protected function GroupTable() {
-	return $this->Engine()->Make($this->GroupsClass());
+	return $this->GetConnection()->MakeTableWrapper($this->GroupsClass());
     }
 
-    // -- DATA TABLE ACCESS -- //
-    // ++ DATA RECORD ACCESS ++ //
+    // -- TABLES -- //
+    // ++ RECORDS ++ //
 
     /*----
       RETURN: Records for all groups to which the given user belongs
@@ -42,12 +39,13 @@ class clsUAcct_x_UGroup extends clsTable_abstract {
 	  .' FROM '.KS_TABLE_USER_GROUP.' AS ug'
 	  .' WHERE ID='.ID_GROUP_USERS;
 	}
-	$rs = $this->DataSQL($sql,KS_CLASS_ADMIN_USER_GROUP);
-	$rs->Table($this->GroupTable());
+	$rs = $this->GroupTable()->FetchRecords($sql);
+	//$rs = $this->FetchRecords($sql);
+	//$rs->Table($this->GroupTable());
 	return $rs;
     }
 
-    // -- DATA RECORD ACCESS -- //
+    // -- RECORDS -- //
     // ++ ACTIONS ++ //
 
     /*----
@@ -56,9 +54,11 @@ class clsUAcct_x_UGroup extends clsTable_abstract {
 	arGrps[id] = (arbitrary value) : user should be assigned to group 'id'
     */
     public function SetUGroups($idAcct, array $arGrps=NULL) {
+	throw new exception('2017-01-28 This will need updating.');
 	$this->Engine()->TransactionOpen();
 	// first, delete any existing assignments:
-	$sql = 'DELETE FROM '.$this->NameSQL().' WHERE ID_User='.$idAcct;
+	$sql = 'DELETE FROM '.$this->NameSQL().' WHERE ID_Acct='.$idAcct;
+	$this->sql = $sql;
 	$ok = $this->Engine()->Exec($sql);
 
 	// next, add any specified by the form:
@@ -69,8 +69,8 @@ class clsUAcct_x_UGroup extends clsTable_abstract {
 	    foreach ($arGrps as $idGrp => $on) {
 		$htG .= ' '.$idGrp;
 		$this->Insert(array(
-		  'ID_User'=>$idAcct,
-		  'ID_UGrp'=>$idGrp
+		  'ID_Acct'=>$idAcct,
+		  'ID_Group'=>$idGrp
 		  )
 		);
 	    }

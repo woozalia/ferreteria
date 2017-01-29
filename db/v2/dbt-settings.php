@@ -121,7 +121,7 @@ class fcSettingsTable_standard extends fcSettingsTable_logged {
     protected function SingularName() {
 	return 'fcSettingRecord';
     }
-    public function KeyName() {
+    public function GetKeyName() {
 	return 'Name';
     }
     public function GetActionKey() {

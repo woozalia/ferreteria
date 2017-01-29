@@ -2,15 +2,16 @@
 /*
   HISTORY:
     2014-04-02 Created clsURL from methods in clsHTTP
+    2016-11-20 Renamed clsURL to fcURL.
 */
 
-class clsURL {
+class fcURL {
     static public function FromArray(array $arArgs=NULL,$sSep=KS_CHAR_URL_ASSIGN) {
 	$fpArgs = NULL;
 	foreach ($arArgs as $key => $val) {
 	    if ($val === TRUE) {
 		$sPart = $key;
-	    } elseif ($val === FALSE) {
+	    } elseif (($val === FALSE) || is_null($val)) {
 		$sPart = NULL;
 	    } else {
 		$sPart = $key.$sSep.$val;
@@ -94,7 +95,7 @@ echo "PARSED:<pre>".print_r($arURI,TRUE).'</pre>';
 	    throw new exception('ParsePath() was handed something other than a string for the path.');
 	}
 	$fp = fcString::GetBefore($sPath,'?');	// remove query, if any
-	$fp = trim($fp,$sPathSep);			// remove beginning/ending path separators
+	$fp = trim($fp,$sPathSep);		// remove beginning/ending path separators
 	$arPath = explode($sPathSep,$fp);
 	foreach ($arPath as $fn) {
 	    $arFrag = explode($sArgSep,$fn);	// argument separator

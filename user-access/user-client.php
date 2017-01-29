@@ -1,25 +1,18 @@
 <?php
 
 class clsUserClients extends fcTable_keyed_single_standard {
-//    const TableName='user_client';
-/* 2016-10-27 reorganized
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->Name(self::TableName);
-	  $this->KeyName('ID');
-	  $this->ClassSng('clsUserClient');
-    }
-*/    
-    // ++ CEMENTING ++ //
+    // ++ SETUP ++ //
     
+    // CEMENT
     protected function TableName() {
 	return 'user_client';
     }
+    // CEMENT
     protected function SingularName() {
 	return 'clsUserClient';
     }
 
-    // -- CEMENTING -- //
+    // -- SETUP -- //
     // ++ ENVIRONMENT ++ //
 
     static protected function ActiveCRC() {

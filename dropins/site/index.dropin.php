@@ -1,8 +1,9 @@
 <?php
 /*
-  PURPOSE: VbzCart drop-in descriptor for site management
+  PURPOSE: drop-in descriptor for site management
   HISTORY:
     2014-02-24 started
+    2016-12-05 this was moved back into Ferreteria awhile ago; renaming accordingly
 */
 
 // CONSTANTS
@@ -12,17 +13,27 @@ define('KS_PAGE_KEY_DROPINS',	'dropins');
 
 // -- class names
 
-define('KS_CLASS_SITE_DROPIN_MANAGER',	'VCM_DropIn_Manager');
-define('KS_CLASS_SITE_DROPIN_MODULE',	'VCI_DropIn_Module');
+define('KS_CLASS_SITE_DROPIN_MANAGER',	'fcaDropInManager');
+define('KS_CLASS_SITE_DROPIN_MODULE',	'fcaDropInModule');
 
 // MENU
 
-$om = new clsMenuFolder($oRoot,'*site','Site','Site Management','site configuration and management');
+$om = $oRoot->SetNode(new fcMenuFolder('Site'));
+
+  $omi = $om->SetNode(new fcDropinLink(KS_PAGE_KEY_DROPINS,'Dropins','manage drop-in modules'));
+    $omi->SetPageTitle('Drop-in Modules');
+    $omi->SetActionClass(KS_CLASS_SITE_DROPIN_MANAGER);
+    //$omi->SetRequiredPrivilege(KS_PERM_SITE_VIEW_CONFIG);
+    $omi->SetRequiredPrivilege(NULL);	// debugging
+
+/* 2016-12-11 old dropin version
+$om = new fcMenuFolder($oRoot,'*site','Site','Site Management','site configuration and management');
   $om->NeedPermission(KS_PERM_SITE_VIEW_CONFIG);
   //$om->NeedPermission(NULL);
-  $omi = new clsMenuLink($om,KS_PAGE_KEY_DROPINS,'Dropins','Drop-in Modules','manage drop-in modules');
+  $omi = new fcMenuLink($om,KS_PAGE_KEY_DROPINS,'Dropins','Drop-in Modules','manage drop-in modules');
     $omi->Controller(KS_CLASS_SITE_DROPIN_MANAGER);
     $omi->NeedPermission(KS_PERM_SITE_VIEW_CONFIG);
+*/
 
 // MODULE SPEC ARRAY
 
@@ -36,5 +47,4 @@ $arDropin = array(
     'dropin.php'		=> array(KS_CLASS_SITE_DROPIN_MANAGER),
      ),
   'menu'	=> $om,
-  //'permit'	=> array('admin'),	// groups who are allowed access
   );

@@ -7,6 +7,7 @@
     2015-09-06 moving methods into traits
         ftLoggableRecordset
     2016-10-23 adapting from db.v1 (events.php) to db.v2
+    2017-01-15 some class renaming
 */
 
 // event argument names
@@ -25,13 +26,19 @@ define('KS_EVENT_ARG_IS_SEVERE'		,'severe');
 
 /*::::
   REQUIRES: object must implement EventTable()
-    This is implemented in both ftLoggableTable and ftLoggableRecord.
+    This is required by both ftLoggableTable and ftLoggableRecord.
 */
 trait ftLoggableObject {
 
     public function EventListing() {
-	return $this->EventTable()->EventListing();
+	$tEv = $this->EventTable();
+	if (method_exists($tEv,'EventListing')) {
+	    return $tEv->EventListing();
+	} else {
+	    throw new exception('Ferreteria usage error: you need to be using the admin UI (dropin) descendant of the event table class which defines EventListing(). The event table class received from EventTable() was '.get_class($tEv).'.');
+	}
     }
+    abstract protected function EventTable();
 }
 /*::::
   REQUIRES: nothing yet
@@ -70,20 +77,113 @@ trait ftLoggableRecord {
 	$arArgs[fcrEvent::KF_MOD_INDEX] = $this->GetKeyValue();
 	return $this->EventTable()->CreateEvent($arArgs,$arEdits);
     }
+    protected function EventTable() {
+	return $this->GetConnection()->MakeTableWrapper($this->SystemEventsClass());
+    }
+    abstract protected function SystemEventsClass();
 }
 
-abstract class fctEvents extends fcTable_keyed_single_standard {
+abstract class fctEvents_base extends fcTable_keyed_single_standard {
 
-    // ++ CEMENTING ++ //
+    // ++ CLASSES ++ //
 
+    // CEMENT
     protected function SingularName() {
 	return 'fcrEvent';
     }
 
-    // -- CEMENTING -- //
-    // ++ EXPECTED FX ++ //
-    
+    // -- CLASSES -- //
+    // ++ CONFIG ++ //
+
+    /*----
+      PURPOSE: defines the set of event-field aliases used by the current event-logging table
+      RETURNS: array[alias] => table fieldname
+      NEW
+    */
     abstract protected function FieldNameArray();
+    
+    // -- CONFIG -- //
+    // ++ CALCULATIONS ++ //
+
+    /*-----
+      RETURNS: event arguments translated into field names for use in Insert()
+      PUBLIC so records-type can use it to Finish events
+      NOTE: This is the method which ultimately determines what the list of values is.
+      INPUT: Array containing zero or more elements whose keys match the keys of self::arArgFields,
+	which descendant classes must define.
+      HISTORY:
+	2016-03-13 'params' argument is now automatically serialized if it isn't a string
+	2016-10-23 adapting from db.v1 (CalcSQL())
+	2016-10-24 changed event name definition from static array to function
+    */
+    public function FigureSQL_forArgs(array $arArgs) {
+	$arIns = NULL;
+	$db = $this->GetConnection();
+	$arFNames = $this->FieldNameArray();
+	foreach ($arArgs as $key=>$val) {
+	    if (array_key_exists($key,$arFNames)) {
+		$sqlKey = $arFNames[$key];
+		if ($key == 'params') {
+		    if (!is_string($val)) {
+			$val = serialize($val);
+		    }
+		}
+		$sqlVal = $db->Sanitize_andQuote($val);
+	    } else {
+		throw new exception('Unrecognized event argument "'.$key.'".');
+	    }
+	    $arIns[$sqlKey] = $sqlVal;
+	}
+	return $arIns;
+    }
+    /*----
+      PURPOSE: builds a string briefly describing the current user
+      TODO: this should fetch the current *system* user when in CLI mode
+      HISTORY:
+	2016-10-31 This was using lack of App object to detect CLI mode, but actually there should still be an App object in CLI mode.
+	  The App object itself should probably have a flag for that.
+    */
+    protected function UserString() {
+	$rcUser = vcApp::Me()->GetUserRecord();
+	if (is_null($rcUser)) {
+	    $out = '(n/a)';
+	} else {
+	    $sUser = $rcUser->UserName();
+	    $nUser = $rcUser->GetKeyValue();
+	    $out = "$sUser (#$nUser)";
+	}
+	return $out;
+    }
+
+    // -- CALCULATIONS -- //
+    // ++ RECORDS ++ //
+
+    /*----
+      RETURNS: dataset consisting of events related to the specific DatSet object given
+      USED BY: Local Catalog Item event listing, at least
+      HISTORY:
+	2017-01-15 adapting from db.v1
+    */
+    public function EventRecords($sTableKey=NULL,$idTableRow=NULL,$bDebug=FALSE) {
+	$arFilt = NULL;
+	if (!is_null($sTableKey)) {
+	    $arFilt[] = 'ModType="'.$sTableKey.'"';
+	}
+	if (!is_null($idTableRow)) {
+	    $arFilt[] = 'ModIndex='.$idTableRow;
+	}
+	if (!$bDebug) {
+	    $arFilt[] = 'NOT isDebug';
+	}
+	$of = new fcSQLt_Filt('AND',$arFilt);
+	$sqlFilt = $of->RenderValue();	// don't include the 'WHERE'
+	
+	return $this->SelectRecords($sqlFilt);
+    }
+
+    // -- RECORDS -- //
+    // ++ ACTION ++ //
+    
     /*----
       INPUT:
 	$arArgs = Array containing any of several possible elements as defined by clsSysEvents
@@ -117,59 +217,12 @@ abstract class fctEvents extends fcTable_keyed_single_standard {
 	    }
 	}
     }
-    /*-----
-      RETURNS: event arguments translated into field names for use in Insert()
-      PUBLIC so records-type can use it to Finish events
-      NOTE: This is the method which ultimately determines what the list of values is.
-      INPUT: Array containing zero or more elements whose keys match the keys of self::arArgFields,
-	which descendant classes must define.
-      HISTORY:
-	2016-03-13 'params' argument is now automatically serialized if it isn't a string
-	2016-10-23 adapting from db.v1 (CalcSQL())
-	2016-10-24 changed event name definition from static array to function
-    */
-    public function FigureSQL_forArgs(array $arArgs) {
-	$arIns = NULL;
-	$db = $this->GetConnection();
-	$arFNames = $this->FieldNameArray();
-	foreach ($arArgs as $key=>$val) {
-	    if (array_key_exists($key,$arFNames)) {
-		$sqlKey = $arFNames[$key];
-		if ($key == 'params') {
-		    if (!is_string($val)) {
-			$val = serialize($val);
-		    }
-		}
-		$sqlVal = $db->Sanitize_andQuote($val);
-	    } else {
-		throw new exception('Unrecognized event argument "'.$key.'".');
-	    }
-	    $arIns[$sqlKey] = $sqlVal;
-	}
-	return $arIns;
-    }
-    /*----
-      TODO: this should fetch the current *system* user when in CLI mode
-      HISTORY:
-	2016-10-31 This was using lack of App object to detect CLI mode, but actually there should still be an App object in CLI mode.
-    */
-    protected function UserString() {
-	$oUser = vcApp::Me()->GetUserRecord();
-	if (is_null($oUser)) {
-	    $out = '(n/a)';
-	} else {
-	    $sUser = $oUser->UserName();
-	    $nUser = $oUser->GetKeyValue();
-	    $out = "$sUser (#$nUser)";
-	}
-	return $out;
-    }
-
-    // -- EXPECTED FX -- //
+    
+    // -- ACTION -- //
 
 }
 // PURPOSE: This type will always be the singular type for fctEvents, regardless of what may change inside it.
-abstract class fcrEvent_abstract extends fcRecord_standard {
+abstract class fcrEvent_base extends fcRecord_standard {
 
     // ++ CALLABLE API ++ //
 
@@ -183,7 +236,7 @@ abstract class fcrEvent_abstract extends fcRecord_standard {
     
     // -- CALLABLE API -- //
 }
-class fcrEvent extends fcrEvent_abstract {
+class fcrEvent extends fcrEvent_base {
 
     // Fieldname Konstants:
     const KF_DESCR_START	= 'descr';
@@ -198,9 +251,9 @@ class fcrEvent extends fcrEvent_abstract {
     const KF_IS_SEVERE	= 'severe';
 }
 // PURPOSE: This just provides some reasonable cementing of the abstract functions.
-class fctEvents_standard extends fctEvents {
+class fctEvents extends fctEvents_base {
 
-    // ++ CEMENTING ++ //
+    // ++ CEMENT ++ //
 
     protected function TableName() {
 	return 'event_log';
@@ -220,7 +273,6 @@ class fctEvents_standard extends fctEvents {
 	  );
     }
     
-    // -- CEMENTING -- //
+    // -- CEMENT -- //
 
 }
-

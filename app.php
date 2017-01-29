@@ -12,9 +12,8 @@
 define('KWP_FERRETERIA_DOC','http://htyp.org/User:Woozle/Ferreteria');
 define('KWP_FERRETERIA_DOC_ERRORS',KWP_FERRETERIA_DOC.'/errors');
 
-/*%%%%
-  CLASS: clsApp
-  PURPOSE: base class -- container for the application
+/*::::
+  PURPOSE: application framework base class -- container for the application
   FUTURE: For now, we're assuming a single database per application.
     This could be changed in the future by having a multiple-db App class and moving some
     of fcApp's methods into a single-db App class, and/or supporting one or more separate DBs for users and sessions.
@@ -22,38 +21,136 @@ define('KWP_FERRETERIA_DOC_ERRORS',KWP_FERRETERIA_DOC.'/errors');
 abstract class fcApp {
     use ftVerbalObject;
 
+    // ++ SETUP ++ //
+    
     static protected $me;
     static public function Me(fcApp $oApp=NULL) {
 	if (!is_null($oApp)) {
 	    self::$me = $oApp;
 	}
+	if (!isset(self::$me)) {
+	    throw new exception('Ferreteria usage error: attempting to access App object before it has been set.');
+	}
 	return self::$me;
     }
     public function __construct() {
-	self::Me($this);			// there can be only one
+	self::Me($this);	// there can be only one
     }
+    
+    // -- SETUP -- //
+    // ++ ACTION ++ //
+    
     abstract public function Go();
-    abstract public function SetPageObject(clsPage $oPage);
-    abstract public function GetPageObject();
+    abstract public function AddContentString($s);
+    
+    // -- ACTION -- //
+    // ++ OBJECTS ++ //
+
     abstract public function GetDatabase();
-    abstract public function SessionTable();	// should probably be GetSessionTable()
+    public function GetSessionTable() {
+	$db = $this->GetDatabase();
+	$sClass = $this->GetSessionsClass();
+	return $db->MakeTableWrapper($sClass);
+    }
     abstract public function GetSessionRecord();
     abstract public function GetUserRecord();
-}
-abstract class fcAppStandard extends fcApp {
     private $oPage;
-    private $oSkin;
+    public function GetPageObject() {
+	if (empty($this->oPage)) {
+	    $sClass = $this->GetPageClass();
+	    $this->oPage = new $sClass();
+	}
+	return $this->oPage;
+    }
+    private $oKiosk;
+    public function GetKioskObject() {
+	if (empty($this->oKiosk)) {
+	    $sClass = $this->GetKioskClass();
+	    $this->oKiosk = new $sClass();
+	}
+	return $this->oKiosk;
+    }
+    private $oHdrMenu;
+    public function GetHeaderMenu() {
+	if (empty($this->oHdrMenu)) {
+	    $this->oHdrMenu = $this->GetPageObject()->GetElement_HeaderMenu();
+	}
+	return $this->oHdrMenu;
+    }
+    private $oDropinMgr;
+    public function GetDropinManager() {
+	if (!isset($this->oDropinMgr)) {
+	    $sClass = $this->GetDropinManagerClass();
+	    // not a sourced table
+	    //$db = $this->GetDatabase();
+	    //return $db->MakeTableWrapper($sClass);
+	    $this->oDropinMgr = new $sClass;
+	}
+	return $this->oDropinMgr;
+    }
+    
+    // -- OBJECTS -- //
+    // ++ CLASSES ++ //
+    
+    abstract protected function GetSessionsClass();
+    abstract protected function GetPageClass();
+    abstract protected function GetKioskClass();
+    abstract protected function GetDropinManagerClass();
+
+    // -- CLASSES -- //
+    // ++ INFORMATION ++ //
+    
+    abstract public function UserIsLoggedIn();
+
+    // -- INFORMATION -- //
+}
+/*::::
+  ABSTRACT: n/i - GetDatabase(), GetPageClass(), GetKioskClass()
+*/
+abstract class fcAppStandard extends fcApp {
 
     // ++ MAIN ++ //
 
     public function Go() {
+	try {
+	    $this->Main();
+	} catch(fcExceptionBase $e) {
+	    $e->React();
+	} catch(exception $e) {
+	    $code = $e->getCode();
+	    $sNative = ($code==0)?'':"<b>Native exception $code</b> caught:";
+	    echo '<html><head><title>'
+	      .KS_SITE_SHORT
+	      .' error</title></head>'
+	      .$sNative
+	      .'<ul>'
+	      .'<li><b>Error message</b>: '.$e->getMessage().'</li>'
+	      .'<li><b>Thrown in</b> '.$e->getFile().' <b>line</b> '.$e->getLine()
+	      .'<li><b>Stack trace</b>:'.nl2br($e->getTraceAsString()).'</li>'
+	      .'</ul>'
+	      .'</html>'
+	      ;
+	    // TO DO: generate an email as well
+	}
+    }
+    public function ReportSimpleError($s) {
+	$this->DoEmail_fromAdmin_Auto(
+	  KS_TEXT_EMAIL_ADDR_ERROR,
+	  KS_TEXT_EMAIL_NAME_ERROR,
+	  'Silent Internal Error',$s);
+	// TODO: log it also?
+    }
+    protected function Main() {
 	$db = $this->GetDatabase();
 	$db->Open();
 	if ($db->isOkay()) {
-	    $this->GetPageObject()->DoPage();
+	    $oPage = $this->GetPageObject();
+	    $oPage->DoBuilding();
+	    $oPage->DoFiguring();
+	    $oPage->DoOutput();
 	    $db->Shut();
 	} else {
-	    throw new exception('Could not open the database.');
+	    throw new fcDebugException('Ferreteria Config Error: Could not open the database.');
 	}
     }
 
@@ -74,30 +171,29 @@ abstract class fcAppStandard extends fcApp {
     // -- PROFILING -- //
     // ++ CLASS NAMES ++ //
 
-    protected function SessionsClass() {
-	return KS_CLASS_USER_SESSIONS;
+    protected function GetSessionsClass() {
+	return 'fctUserSessions';
     }
-    protected function UsersClass() {
-	return 'clsUserAccts';
+    protected function GetUsersClass() {
+	return 'fctUserAccts_admin';
     }
-    protected function EventsClass() {
+    protected function GetEventsClass() {
 	return 'fctEvents_standard';
+    }
+    protected function GetDropinManagerClass() {
+	return 'fcDropInManager';
     }
 
     // -- CLASS NAMES -- //
     // ++ TABLES ++ //
 
-    public function SessionTable() {
-	$db = $this->GetDatabase();
-	return $db->MakeTableWrapper($this->SessionsClass());
-    }
     public function UserTable($id=NULL) {
 	$db = $this->GetDatabase();
-	return $db->MakeTableWrapper($this->UsersClass(),$id);
+	return $db->MakeTableWrapper($this->GetUsersClass(),$id);
     }
     public function EventTable($id=NULL) {
 	$db = $this->GetDatabase();
-	return $db->MakeTableWrapper($this->EventsClass(),$id);
+	return $db->MakeTableWrapper($this->GetEventsClass(),$id);
     }
 
     // -- TABLES -- //
@@ -105,20 +201,7 @@ abstract class fcAppStandard extends fcApp {
 
 //    private $rcSess;
     public function GetSessionRecord() {
-	return $this->SessionTable()->MakeActiveRecord();
-    /* 2016-10-30 old code
-	if (empty($this->rcSess)) {
-	    $tSess = $this->SessionTable();
-	    $this->rcSess = $tSess->GetCurrent();
-	} else {
-	    $tSess = $this->rcSess->GetTableWrapper();
-	}
-	if (!$this->rcSess->HasRows()) {
-
-	    $tSess->ClearSession();
-	    $this->rcSess = $tSess->GetCurrent();
-	}
-	return $this->rcSess; */
+	return $this->GetSessionTable()->MakeActiveRecord();
     }
     private $rcUser;
     public function GetUserRecord() {
@@ -129,31 +212,16 @@ abstract class fcAppStandard extends fcApp {
     }
 
     // -- RECORDS -- //
-    // ++ FRAMEWORK OBJECTS ++ //
+    // ++ STATUS ++ //
 
-    public function SetPageObject(clsPage $oPage) {
-	$this->oPage = $oPage;
-	//$oPage->App($this);
-    }
-    public function GetPageObject() {
-	return $this->oPage;
-    }
-    /* 2016-10-23 Still trying to figure out if these are needed....
-    protected function GetDataFactory() {
-	return new fcDatabase($this->DataConnectionSpec());
-    }
-    abstract protected function DataConnectionSpec();
+    /*----
+      RETURNS: TRUE iff the user is logged in
     */
-    /*
-    private $oData;
-    public function Data(clsDatabase_abstract $iObj=NULL) {
-	if (!is_null($iObj)) {
-	    $this->oData = $iObj;
-	}
-	return $this->oData;
-    }*/
-    
-    // -- FRAMEWORK OBJECTS -- //
+    public function UserIsLoggedIn() {
+	return $this->GetSessionRecord()->UserIsLoggedIn();
+    }
+
+    // -- STATUS -- //
     // ++ FIELD CALCULATIONS ++ //
 
     /*----
@@ -167,12 +235,6 @@ abstract class fcAppStandard extends fcApp {
 	} else {
 	    return NULL;
 	}
-    }
-    /*----
-      RETURNS: TRUE iff the user is logged in
-    */
-    public function UserIsLoggedIn() {
-	return $this->GetSessionRecord()->UserIsLoggedIn();
     }
     /*----
       RETURNS: User login string, or NULL if user not logged in
@@ -189,6 +251,15 @@ abstract class fcAppStandard extends fcApp {
     }
 
     // -- FIELD CALCULATIONS -- //
+    // ++ ACTION ++ //
+    
+    // CEMENT
+    public function AddContentString($s) {
+	$oPage = $this->GetPageObject();
+	$oPage->GetElement_PageContent()->AddText($s);
+    }
+
+    // -- ACTION -- //
     // ++ EMAIL ++ //
 
     protected function EmailAddr_FROM($sTag) {
@@ -201,7 +272,7 @@ abstract class fcAppStandard extends fcApp {
       ACTION: send an automatic email (i.e. not a message from an actual person)
       USAGE: called from clsEmailAuth::SendPassReset_forAddr()
     */
-    public function DoEmail_Auto($sToAddr,$sToName,$sSubj,$sMsg) {
+    public function DoEmail_fromAdminAuto_OLD($sToAddr,$sToName,$sSubj,$sMsg) {
 	if (empty($sToName)) {
 	    $sAddrToFull = $sToAddr;
 	} else {
@@ -209,6 +280,31 @@ abstract class fcAppStandard extends fcApp {
 	}
 
 	$sHdr = 'From: '.$this->EmailAddr_FROM(date('Y'));
+	$ok = mail($sAddrToFull,$sSubj,$sMsg,$sHdr);
+	return $ok;
+    }
+    /*----
+      ACTION: send an automatic administrative email
+      USAGE: called from vcPageAdmin::SendEmail_forLoginSuccess()
+    */
+    public function DoEmail_fromAdmin_Auto($sToAddr,$sToName,$sSubj,$sMsg) {
+	if ($this->UserIsLoggedIn()) {
+	    $rcUser = $this->GetUserRecord();
+	    $sTag = 'user-'.$rcUser->GetKeyValue();
+	} else {
+	    $sTag = date('Y');
+	}
+
+	$oTplt = new clsStringTemplate_array(KS_TPLT_OPEN,KS_TPLT_SHUT,array('tag'=>$sTag));
+
+	$sAddrFrom = $oTplt->Replace(KS_TPLT_EMAIL_ADDR_ADMIN);
+	if (empty($sToName)) {
+	    $sAddrToFull = $sToAddr;
+	} else {
+	    $sAddrToFull = $sToName.' <'.$sToAddr.'>';
+	}
+
+	$sHdr = 'From: '.$sAddrFrom;
 	$ok = mail($sAddrToFull,$sSubj,$sMsg,$sHdr);
 	return $ok;
     }
@@ -226,13 +322,10 @@ abstract class fcAppStandard extends fcApp {
 */
 trait ftFrameworkAccess {
     protected function AppObject() {
-	return vcApp::Me();
+	return fcApp::Me();
     }
     protected function PageObject() {
 	return $this->AppObject()->GetPageObject();
-    }
-    protected function SkinObject() {
-	return $this->AppObject()->GetPageObject()->GetSkinObject();
     }
     protected function DatabaseObject() {
 	return $this->AppObject()->GetDatabase();

@@ -3,17 +3,18 @@
   PURPOSE: user access control classes: security groups
   HISTORY:
     2013-12-19 started
+    2017-01-04 This is going to need some updating to work with the Ferreteria revisions.
 */
-class acUserGroups extends clsUserGroups {
+class acUserGroups extends fctUserGroups {
     use ftLinkableTable;
 
-    private $arData;
-
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->ClassSng(KS_CLASS_ADMIN_USER_GROUP);
-	  $this->ActionKey(KS_ACTION_USER_GROUP);
-	$this->arData = NULL;
+    // OVERRIDE
+    protected function SingularName() {
+	return KS_CLASS_ADMIN_USER_GROUP;
+    }
+    // CEMENT
+    public function GetActionKey() {
+	return KS_ACTION_USER_GROUP;
     }
 
     // ++ DROP-IN API ++ //
@@ -21,16 +22,15 @@ class acUserGroups extends clsUserGroups {
     /*----
       PURPOSE: execution method called by dropin menu
     */
-    public function MenuExec(array $arArgs=NULL) {
-	$this->arArgs = $arArgs;
-	$out = $this->AdminListing();
-	return $out;
+    public function MenuExec() {
+	return $this->AdminListing();
     }
 
     // -- DROP-IN API -- //
     // ++ ADMIN INTERFACE ++ //
 
     protected function AdminListing() {
+	throw new exception('2017-01-28 This will need some updating.');
 	$rs = $this->GetData();
 
 	// set up header action-links
@@ -58,15 +58,13 @@ class acUserGroups extends clsUserGroups {
 
     // -- ADMIN INTERFACE -- //
 }
-class acUserGroup extends clsUserGroup {
+class acUserGroup extends fcrUserGroup {
+    use ftLinkableRecord;
 
     // ++ DATA TABLE ACCESS ++ //
 
-    protected function XPermTable() {
-	$tbl = parent::XPermTable();
-	$tbl->ClassName_Perms(KS_CLASS_ADMIN_USER_PERMISSIONS);
-	$tbl->ClassName_Perm(KS_CLASS_ADMIN_USER_PERMISSION);
-	return $tbl;
+    protected function XPermitsClass() {
+	return KS_CLASS_ADMIN_UPERMITS_FOR_UGROUP;
     }
 
     // -- DATA TABLE ACCESS -- //
@@ -123,7 +121,7 @@ class acUserGroup extends clsUserGroup {
 	    if (!is_null($out)) {
 		$out .= $sSep;
 	    }
-	    $ht = $this->SelfLink($this->Name(),$this->Descr());
+	    $ht = $this->SelfLink($this->NameString(),$this->UsageText());
 	    if ($this->GetKeyValue() == ID_GROUP_USERS) {
 		$ht = "($ht)";
 	    }
@@ -143,21 +141,22 @@ class acUserGroup extends clsUserGroup {
 	control class, but let's save that for later.)
     */
     public function RenderEditableList($sName=NULL) {
-	$tbl = $this->Table;
+	$tbl = $this->GetTableWrapper();
 	if (is_null($sName)) {
 	    $sName = KS_ACTION_USER_GROUP;
 	}
 
 	// build arrays
-	$arCur = $this->AsArray();
-	$arAll = $tbl->AsArray();
+	$rsAll = $tbl->SelectRecords();	// get ALL records
+	$arCur = $this->asKeyedArray();
+	$arAll = $rsAll->asKeyedArray();
 	if (count($arAll) > 0) {
 
 	    $ht = "\n<table class=listing>"
 	      .static::AdminLine_header();
 	    foreach ($arAll as $id => $row) {
 		$isActive = array_key_exists($id,$arCur);
-		$this->Values($row);
+		$this->SetFieldValues($row);
 		$ht .= $this->AdminLine_edit($sName,$isActive);
 	    }
 	    $ht .= "\n</table>"
@@ -171,13 +170,6 @@ class acUserGroup extends clsUserGroup {
     // -- RENDER UI COMPONENTS -- //
     // ++ ADMIN INTERFACE ++ //
 
-/*
-    protected function AdminLine_static() {
-	$htID = $this->AdminLink();
-	$out = $this->AdminLine_core($htID);
-	return $out;
-    }
-    */
     /*----
       RENDERS: edit control for the current Group
       INPUT: if sName is not NULL, a checkbox will be included with each row.
@@ -187,13 +179,13 @@ class acUserGroup extends clsUserGroup {
 	$htID = $this->SelfLink();
 	if (!is_null($sName)) {
 	    $id = $this->GetKeyValue();
-	    $htID .= clsHTML::CheckBox($sName,$bSel,$id);
+	    $htID .= fcHTML::CheckBox($sName,$bSel,$id);
 	}
 	$out = $this->AdminLine_core($htID);
 
-	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));
-	$htDescr = fcString::EncodeForHTML($this->ValueNz('Descr'));
-	$htWhen = $this->ValueNz('WhenCreated');
+	$htName = fcString::EncodeForHTML($this->GetFieldValueNz('Name'));
+	$htDescr = fcString::EncodeForHTML($this->GetFieldValueNz('Descr'));
+	$htWhen = $this->GetFieldValueNz('WhenCreated');
 
 	$out = <<<__END__
   <tr>
@@ -207,9 +199,9 @@ __END__;
 	return $out;
     }
     protected function AdminLine_core($htID) {
-	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));
-	$htDescr = fcString::EncodeForHTML($this->ValueNz('Descr'));
-	$htWhen = $this->ValueNz('WhenCreated');
+	$htName = fcString::EncodeForHTML($this->GetFieldValueNz('Name'));
+	$htDescr = fcString::EncodeForHTML($this->GetFieldValueNz('Descr'));
+	$htWhen = $this->GetFieldValueNz('WhenCreated');
 
 	$out = <<<__END__
   <tr>
@@ -223,32 +215,40 @@ __END__;
 	return $out;
     }
     protected function AdminPage() {
-	$oPage = $this->Engine()->App()->Page();
+	$oPathInput = fcApp::Me()->GetKioskObject()->GetInputObject();
+	$oFormInput = fcHTTP::Request();
+
 	$out = NULL;
 
 	// saving edits to the record?
-	$doSave = $oPage->ReqArgBool('btnSave');
+	$doSave = $oFormInput->GetBool('btnSave');
 	if ($doSave) {
 	    $out = $this->AdminSave();
 	}
 
 	// saving changes to the permission assignments?
-	$doSave = $oPage->ReqArgBool(acUserPerm::BTN_SAVE);
+	$doSave = $oFormInput->GetBool(fcrAdminUserPermit::BTN_SAVE);
 	if ($doSave) {
 	    $this->AdminPage_SavePerms();
 	    // return to the list form after saving
-	    $urlReturn = $oPage->SelfURL(array('edit.prm'=>FALSE),TRUE);
-	    clsHTTP::Redirect($urlReturn);
+	    $this->SelfRedirect();
+	    /* 2017-01-26 old code -- new code *should* automatically remove edit.prm...
+	    $urlReturn = $this->SelfURL(array('edit.prm'=>FALSE),TRUE);
+	    clsHTTP::Redirect($urlReturn); */
 	}
 
 	// set up header action-links
-	$arPage = $oPage->PathArgs();
+	$oMenu = fcApp::Me()->GetHeaderMenu();
+	  $oMenu->SetNode($ol = new fcMenuOptionLink('edit','do',NULL,'cancel','edit this supplier'));
+	    $ol->SetBasePath($this->SelfURL());
+	
+	/* 2017-01-26 old
 	$arActs = array(
 	  new clsActionLink_option($arPage,'edit')
 	  );
-	$oPage->PageHeaderWidgets($arActs);
+	$oPage->PageHeaderWidgets($arActs);*/
 
-	$doEdit = $oPage->PathArg('edit') || $this->IsNew();
+	$doEdit = $oPathInput->GetBool('edit') || $this->IsNew();
 
 	// prepare the form
 
@@ -261,7 +261,6 @@ __END__;
 	$oTplt = $this->PageTemplate();
 	$arCtrls = $frmEdit->RenderControls($doEdit);
 	  // custom vars
-	  $arCtrls['ID'] = $this->SelfLink();
 	  if ($this->IsNew()) {
 	      $arCtrls['ID'] = 'n/a';
 	      $arCtrls['WhenCreated'] = '<i>not yet</i>';
@@ -290,10 +289,9 @@ __END__;
 	return $out;
     }
     protected function AdminPage_SavePerms() {
-	$oPage = $this->Engine()->App()->Page();
-	$arPrms = $oPage->ReqArgArray(KS_ACTION_USER_PERMISSION);
+	$oFormInput = fcApp::Me()->GetKioskObject()->GetInputObject()->GetArray(KS_ACTION_USER_PERMISSION);
 	// $arGrps is formatted like $arGrps[ID] = 'on' for each checked box
-	$tbl = $this->Engine()->Make(KS_CLASS_UGROUP_X_UPERM);
+	$tbl = $this->GetConnection()->MakeTableWrapper(KS_CLASS_UPERMITS_FOR_UGROUP);
 	$tbl->SetUPerms($this->GetKeyValue(),$arPrms);
     }
     private $frmPage;
@@ -339,8 +337,26 @@ __END__;
 	if ($this->IsNew()) {
 	    return NULL;	// new record - no permissions yet
 	}
-	$oPage = $this->Engine()->App()->Page();
+	//$oPage = $this->Engine()->App()->Page();
 
+	// set up header action-links
+	$sName = $this->NameString();
+	$oMenu = fcApp::Me()->GetHeaderMenu();
+	  $oMenu->SetNode($ol = new fcMenuOptionLink(
+	    'edit.prm',			// $sLinkKey
+	    'do',				// $sGroupKey=NULL
+	    'edit',				// $sDispOff=NULL
+	    NULL,				// $sDispOn=NULL
+	    "edit permissions for $sName"	// $sPopup=NULL
+	    ));
+	    $ol->SetBasePath($this->SelfURL());
+	    $doEdit = $ol->GetIsSelected();
+
+	// set up section and menu
+	$oHdr = new fcSectionHeader('Permissions',$oMenu);
+	$out = $oHdr->Render();
+	    
+	/* 2017-01-27 old
 	// set up header action-links
 	$arPath = $oPage->PathArgs();
 	$arActs = array(
@@ -350,9 +366,9 @@ __END__;
 	$out = $oPage->ActionHeader('Permissions',$arActs);
 
 	$doEdit = $oPage->PathArg('edit.prm');
+	*/
 
 	$rs = $this->UPermRecords();
-
 	if ($doEdit) {
 	    $out .= $rs->RenderEditableList();
 	} else {

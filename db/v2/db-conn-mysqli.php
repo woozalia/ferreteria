@@ -16,7 +16,11 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	if (!is_null($oConn)) {
 	    $this->oNative = $oConn;
 	}
-	return $this->oNative;
+	if (is_object($this->oNative)) {
+	    return $this->oNative;
+	} else {
+	    throw new exception('Trying to retrieve native db object, but it is not set.');
+	}
     }
 
     // -- CONFIGURATION FIELDS -- //
@@ -68,10 +72,12 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     // ++ DATA R/W ++ //
 
     public function ExecuteAction($sSQL) {
+	$this->sql = $sSQL;
 	return $this->NativeObject()->query($sSQL);
     }
     public function FetchRecordset($sSQL,fcDataSource $tbl) {
 	$poRes = $this->NativeObject()->query($sSQL);	// returns a mysqli_result if successful
+	$this->sql = $sSQL;
 	return $this->ProcessResultset($poRes,$tbl,$sSQL);
     }
     /*----

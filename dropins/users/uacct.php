@@ -6,22 +6,24 @@
     2015-06-09 renamed to disentangle from VbzCart
       VCM_UserAccts -> scUserAccts
       VC_UserAcct -> scUserAcct
-      scUserAccts descends from: was clsVbzUserTable, now clsUserAccts
-      scUserAcct descends from: was clsVbzUserRec, now clsUserAcct
+      fctUserAccts_admin (then scUserAccts) now descends from ftcUserAccts (was clsVbzUserTable) 
+      fcrUserAcct_admin (then scUserAcct) now descends from frcUserAcct (was clsVbzUserRec)
+    2017-01-27 adjustments to work with Ferreteria revisions
 
   FAMILY:
-    * scUserAccts <- clsUserAccts (user-access)
-    * scUserAcct <- clsUserAcct (user-access)
+    * fctUserAccts_admin <- fctUserAccts (user-access)
+    * fcrUserAcct_admin <- fcrUserAcct (user-access)
 */
-class acUserAccts extends clsUserAccts {
+class fctUserAccts_admin extends fctUserAccts {
     use ftLinkableTable;
 
     // ++ SETUP ++ //
 
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->ClassSng(KS_CLASS_ADMIN_USER_ACCOUNT);
-	  $this->ActionKey(KS_ACTION_USER_ACCOUNT);
+    protected function SingularName() {
+	return KS_CLASS_ADMIN_USER_ACCOUNT;
+    }
+    public function GetActionKey() {
+	return KS_ACTION_USER_ACCOUNT;
     }
 
     // -- SETUP -- //
@@ -44,8 +46,8 @@ class acUserAccts extends clsUserAccts {
     */
     public function MenuExec(array $arArgs=NULL) {
 	$this->arArgs = $arArgs;
-	$rcUser_base = $this->App()->User();
-	$rcUser = $this->GetItem($rcUser_base->GetKeyValue());
+	$rcUser_base = fcApp::Me()->GetUserRecord();
+	$rcUser = $this->GetRecord_forKey($rcUser_base->GetKeyValue());
 	if ($rcUser->CanDo(KS_PERM_SEC_USER_VIEW)) {
 	    $out = $this->AdminListing();
 	} else {
@@ -73,7 +75,7 @@ class acUserAccts extends clsUserAccts {
     // ++ WEB UI ++ //
 
     protected function AdminListing() {
-	$rs = $this->GetData();
+	$rs = $this->SelectRecords();
 	$arCols = array(
 	  'ID'		=> 'ID',
 	  'UserName'	=> 'Login',
@@ -95,26 +97,35 @@ class acUserAccts extends clsUserAccts {
 
     // -- WEB UI -- //
 }
-class acUserAcct extends clsUserAcct {
+class fcrUserAcct_admin extends fcrUserAcct {
+    use ftShowableRecord;
+    use ftSaveableRecord;
 
-    // ++ CLASS NAMES ++ //
+    // ++ CLASSES ++ //
 
     protected function XGroupClass() {
-	return KS_CLASS_ADMIN_UACCT_X_UGROUP;
+	return KS_CLASS_ADMIN_UGROUPS_FOR_UACCT;
     }
 
+    // -- CLASSES -- //
+    // ++ TABLES ++ //
+
+    protected function XGroupTable() {
+    	return $this->GetConnection()->MakeTableWrapper($this->XGroupClass());
+    }
+
+    // -- TABLES -- //
     // ++ DROP-IN API ++ //
 
     /*----
       PURPOSE: execution method called by dropin menu
     */
-    public function MenuExec(array $arArgs=NULL) {
-	$oApp = $this->Engine()->App();
-	$rcUser = $oApp->User();
+    public function MenuExec() {
+	$rcUser = fcApp::Me()->GetUserRecord();
 	if ($rcUser->CanDo(KS_PERM_SEC_USER_EDIT) || $this->IsLoggedIn()) {
 	    $out = $this->AdminPage();
 	} else {
-	    $out = NULL;	// user doesn't have permission; don't tell them how close they are to hacking us
+	    $out = NULL;	// user doesn't have permission (TODO: tell them they don't have permission)
 	}
 	return $out;
     }
@@ -134,14 +145,14 @@ class acUserAcct extends clsUserAcct {
 	    $val = $this->GroupList();
 	    break;
 	  default:
-	    $val = $this->Value($sField);
+	    $val = $this->GetFieldValue($sField);
 	}
 	return "<td>$val</td>";
     }
     protected function GroupList() {
-	$rcGrps = $this->UGroupRecords();
-	if ($rcGrps->HasRows()) {
-	    $out = $rcGrps->RenderInlineList();
+	$rsGrps = $this->UGroupRecords();
+	if ($rsGrps->HasRows()) {
+	    $out = $rsGrps->RenderInlineList();
 	} else {
 	    $out = '<i>(none)</i>';
 	}
@@ -149,9 +160,9 @@ class acUserAcct extends clsUserAcct {
     }
     public function AdminLine() {
 	$htID = $this->AdminLink();
-	$htLogin = fcString::EncodeForHTML($this->Value('UserName'));
-	$htName = fcString::EncodeForHTML($this->Value('FullName'));
-	$htWhen = $this->Value('WhenCreated');
+	$htLogin = fcString::EncodeForHTML($this->GetFieldValue('UserName'));
+	$htName = fcString::EncodeForHTML($this->GetFieldValue('FullName'));
+	$htWhen = $this->GetFieldValue('WhenCreated');
 	$htGrps = $this->GroupList();
 
 	$out = <<<__END__
@@ -168,30 +179,35 @@ __END__;
 	return $out;
     }
     protected function AdminPage() {
-	$oPage = $this->Engine()->App()->Page();
+	$oPathInput = fcApp::Me()->GetKioskObject()->GetInputObject();
+	$oFormInput = fcHTTP::Request();
 
 	// saving changes to the user record?
-	$doSave = $oPage->ReqArgBool('btnSave');
+	$doSave = $oFormInput->GetBool('btnSave');
 	if ($doSave) {
 	    $this->PageForm()->Save();
 	    $this->SelfRedirect();
 	}
 
 	// saving changes to the group assignments?
-	$doSave = $oPage->ReqArgBool('btnSaveGrps');
+	$doSave = $oFormInput->GetBool('btnSaveGrps');
 	if ($doSave) {
 	    $out = $this->AdminPage_SaveGroups();
 	    $this->SelfRedirect(NULL,$out);
 	}
 
 	// set up header action-links
-	//clsActionLink_option::UseRelativeURL_default(TRUE);	// use relative URLs
+	// v3
+	$oMenu = fcApp::Me()->GetHeaderMenu();
+	  $oMenu->SetNode(new fcMenuOptionLink('edit'));
+	
+	/* v2
 	$arActs = array(
 	  new clsActionLink_option(array(),'edit')
 	  );
-	$oPage->PageHeaderWidgets($arActs);
+	$oPage->PageHeaderWidgets($arActs); */
 
-	$doEdit = $oPage->PathArg('edit');
+	$doEdit = $oPathInput->GetBool('edit');
 
 	// prepare the form
 
@@ -205,6 +221,7 @@ __END__;
 	$arCtrls = $frmEdit->RenderControls($doEdit);
 	  // custom vars
 	  $arCtrls['ID'] = $this->SelfLink();
+	  $arCtrls['!Groups'] = $this->AdminGroups();
 
 	// render the form
 	$oTplt->VariableValues($arCtrls);
@@ -220,16 +237,15 @@ __END__;
 	    $htFormFtr = NULL;
 	}
 
-	$out = $htFormHdr.$htForm.$htFormBtn.$htFormFtr
-	  .$this->AdminGroups()
-	  ;
+	$out = $htFormHdr.$htForm.$htFormBtn.$htFormFtr;
 	return $out;
     }
     protected function AdminPage_SaveGroups() {
-	$oPage = $this->Engine()->App()->Page();
-	$arGrps = $oPage->ReqArgArray(KS_ACTION_USER_GROUP);
+	$oFormInput = fcHTTP::Request();
+	$arGrps = $oFormInput->GetArray(KS_ACTION_USER_GROUP);
 	// $arGrps is formatted like $arGrps[ID] = 'on' for each checked box
-	$tbl = $this->Engine()->Make(KS_CLASS_UACCT_X_UGROUP);
+	// we could actually use the non-admin version here, but why not reuse a class we're already using:
+	$tbl = $this->XUGroupsTable();
 	$out = $tbl->SetUGroups($this->GetKeyValue(),$arGrps);
 	return $out;
     }
@@ -240,7 +256,7 @@ __END__;
 	    $oForm = new fcForm_DB($this);
 
 	      $oField = new fcFormField_Num($oForm,'ID');
-		$oField->OkToWrite(FALSE);	// never update this field in the db
+		$oField->StorageObject()->Writable(FALSE);	// never update this field in the db
 		$oCtrl = new fcFormControl_HTML_Hidden($oField,array());
 
 	      $oField = new fcFormField_Text($oForm,'UserName');
@@ -261,11 +277,12 @@ __END__;
     protected function PageTemplate() {
 	if (empty($this->tpPage)) {
 	    $sTplt = <<<__END__
-<table>
-  <tr><td align=right><b>ID</b>:</td><td>{{ID}}</td></tr>
-  <tr><td align=right><b>Login</b>:</td><td>{{UserName}}</td></tr>
-  <tr><td align=right><b>Full Name</b>:</td><td>{{FullName}}</td></tr>
-  <tr><td align=right><b>Created</b>:</td><td>{{WhenCreated}}</td></tr>
+<table class=listing>
+  <tr class=odd><td align=right><b>ID</b>:</td><td>{{ID}}</td></tr>
+  <tr class=even><td align=right><b>Login</b>:</td><td>{{UserName}}</td></tr>
+  <tr class=odd><td align=right><b>Full Name</b>:</td><td>{{FullName}}</td></tr>
+  <tr class=even><td align=right><b>Groups</b>:</td><td>{{!Groups}}</td></tr>
+  <tr class=odd><td align=right><b>Created</b>:</td><td>{{WhenCreated}}</td></tr>
 </table>
 __END__;
 	    $this->tpPage = new fcTemplate_array('{{','}}',$sTplt);
@@ -273,68 +290,59 @@ __END__;
 	return $this->tpPage;
     }
     protected function AdminGroups() {
-	$oPage = $this->Engine()->App()->Page();
-
-	// set up header action-links
-	$arActs = array(
-	  // (array $iarData,$iLinkKey,$iGroupKey=NULL,$iDispOff=NULL,$iDispOn=NULL,$iDescr=NULL)
-	  new clsActionLink_option(array(),'edit.grp',NULL,'edit')
-	  );
-
+	$oApp = fcApp::Me();
+	$oPage = $oApp->GetPageObject();
+	
 	if ($this->IsNew()) {
 	    // don't display or edit groups if user is new -- there can't be any yet
-	    $out .= '<i>(new user - no groups)</i>';
+	    $oApp->AddContentString('<i>(new user - no groups)</i>');
+	    $oPage->SetPageTitle('New User');
 	} else {
-	    $out = $oPage->ActionHeader('Groups',$arActs);
-	    $doEdit = $oPage->PathArg('edit.grp');
+	    // page title
+	    $sName = $this->UserName();
+	    $id = $this->GetKeyValue();
+	    $oPage->SetPageTitle("User &ldquo;$sName&rdquo; (ID=$id)");
+	    
+	    /* 2017-01-14 actually, we don't need a section-header, but this code currently works:
+	    // section-header
+	    $oMenu = $oPage->GetElement_HeaderMenu();
+	      // (sLinkKey,sGroupKey=NULL,sDispOff=NULL,sDispOn=NULL,sPopup=NULL)
+	      $oMenu->SetNode(new fcMenuOptionLink('edit.grp',NULL,'edit'));
+	    $oHdr = new fcSectionHeader('Groups',$oMenu);
+	    $oPage->AddImmediateRender($oHdr);	// render the section header
+	    
+	    // What we *do* want is an edit link for the groups -- and we can use the same menu link objects for that, below.
+	    
+	    */
+	    	    
+	    //$out = $oPage->ActionHeader('Groups',$arActs);
+	    
+	    $oInput = $oApp->GetKioskObject()->GetInputObject();
+	    $doEdit = $oInput->GetBool('edit.grp');
 	    $rs = $this->UGroupRecords();
 	    if ($doEdit) {
-		$out .= "\n<form method=post>"
+		$out =
+		  "\n<form method=post>"
 		  .$rs->RenderEditableList()
-		  ."\n</form>";
+		  ."\n</form>"
 		  ;
 	    } else {
+		// 2017-01-14 What we *do* want is an edit link for the groups.
+		//$oMenu = $oPage->GetElement_HeaderMenu();	// this puts it in the title header
+		$oMenu = new fcHeaderMenu();
+		  // (sLinkKey,sGroupKey=NULL,sDispOff=NULL,sDispOn=NULL,sPopup=NULL)
+		  $oMenu->SetNode(new fcMenuOptionLink('edit.grp',NULL,'edit'));
+		  
 		if ($rs->HasRows()) {
-		    $out .= $rs->RenderInlineList();
+		    $out = $rs->RenderInlineList();
 		} else {
-		    $out .= '<i>(none)</i>';
+		    $out = '<i>(none)</i>';
 		}
+		$out .= ' : ['.$oMenu->Render().']';
 	    }
+	    return $out;
 	}
-	return $out;
     }
-    /*----
-      ACTION: show customer profiles for the current user
-    */
-/*    protected function RenderAddresses() {
-	$oApp = $this->Engine()->App();
-	$oPage = $oApp->Page();
-	$out = $oPage->ActionHeader('Addresses')
-	  .'<center>'.$this->RenderCustomers().'</center>';
-	$idLogin = $oApp->User()->KeyValue();
-	$idView = $this->KeyValue();
-	if ($idLogin == $idView) {
-	    $oSkin = $oPage->Skin();
-	    $out .= '<hr>'
-	    // option to add more emails
-	      .'If you have previously placed orders using other email addresses to which you currently have access, you may claim ownership of those orders here.<br>'
-	      .$oSkin->RenderForm_Email_RequestAdd();
-	}
-	return $out;
-    }
-    */
-    /*----
-      ACTION: render HTML to show all customer profiles for this user
-    */
-/*    protected function RenderCustomers() {
-	$id = $this->KeyValue();
-	$tCust = $this->CustomerTable();
-	$rc = $tCust->GetRecs_forUser($id);
-	//$ht = $rc->Render_asTable();
-	$arF = $rc->ColumnsArray();
-	$ht = $rc->AdminRows($arF);
-	return $ht;
-    }
-*/
+
     // -- ADMIN INTERFACE -- //
 }

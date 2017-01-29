@@ -3,6 +3,7 @@
   PURPOSE: MediaWiki SpecialPage descendant designed for Ferreteria applications
   HISTORY:
     2015-05-08 split off from menu.php
+    2017-01-16 partially updated for latest massive Ferreteria revisions -- just so Special:SpecialPages will load.
 */
 
 // TODO: possibly this should be a static class property or something
@@ -12,7 +13,7 @@ if (!defined('KS_CHAR_URL_ASSIGN')) {
 define('KS_CHARACTER_ENCODING','UTF-8');
 // ^ this is a kluge; there ought to be some way to detect the MW installation's actual charset
 
-/* ####
+/* ::::
   FUTURE: This could eventually be split into a general page-type and one
     which uses page/id for most pages
     Also, the different RichText classes are now dependent on their creator
@@ -37,11 +38,17 @@ class SpecialPageApp extends SpecialPage {
 	parent::__construct($iName);
 	self::Me($this);			// there can be only one
 
+	/* 2017-01-16 The Old Way
 	$sClass = $this->PageClass();
 	$oPage = new $sClass;
 	$sClass = $this->AppClass();
 	$oApp = new $sClass;
 	$oApp->SetPageObject($oPage);		// connects App and Page
+	*/
+	
+	$sClass = $this->AppClass();
+	$oApp = new $sClass;
+	// The New Way: App class creates its own Page object
 
 	$vgUserName = $wgUser->getName();
 	$mwoTitleMe = $this->getTitle();

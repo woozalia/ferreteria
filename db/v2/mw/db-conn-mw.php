@@ -75,9 +75,9 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     // -- CONVENTIONS -- //
     // ++ DATA RETRIEVAL ++ //
 
-    public function FetchRecordset($sSQL) {
+    public function FetchRecordset($sql,fcDataSource $tbl) {
 
-	$mwoRe = $this->MWDB()->query($sSQL);	// $mwoRe is a ResultWrapper http://svn.wikimedia.org/doc/classResultWrapper.html
+	$mwoRe = $this->MWDB()->query($sql);	// $mwoRe is a ResultWrapper http://svn.wikimedia.org/doc/classResultWrapper.html
 	$poRes = $mwoRe->result;
 
 	/*
@@ -94,7 +94,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
 	    throw new exception('MediaWiki query failed. SQL: '.$sSQL);
 	}*/
 
-	return $this->ProcessResultset($poRes);
+	return $this->ProcessResultset($poRes,$tbl,$sql);
     }
 
     // -- DATA RETRIEVAL -- //

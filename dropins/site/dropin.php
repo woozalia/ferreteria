@@ -1,75 +1,71 @@
 <?php
 /*
-  FILE: dropins/site/dropin.php -- VbzCart drop-in module for managing drop-in modules
+  FILE: dropins/site/dropin.php -- drop-in module for viewing loaded drop-in modules
+    Basically, these are the admin UI versions of the drop-in manager and module classes.
   HISTORY:
     2014-02-24 started
+    2016-12-05 this was moved back into Ferreteria awhile ago; renaming accordingly
+    2017-01-03 A bit of class reorganization is required. We need to have two separate table classes - one for the loading, and one for the admin UI.
+      This one should just grab data from the singleton loader-version.
+      Tentatively, the recordset admin class can be descended from the recordset loading class as before.
 */
-class VCM_DropIn_Manager extends clsDropInManager {
+class fcaDropInManager extends fcDataTable_array {
 
-    // // ++ STATIC ++ // //
-
-    static protected function ItemClass() {
-	return KS_CLASS_SITE_DROPIN_MODULE;
-    }
-    /*----
-      ACTION: Converts all drop-in objects to admin class (VC_DropIns)
-    */
-    protected static function ConvertToAdmin() {
-	$arOld = self::ModuleArray();
-	$arNew = NULL;
-	foreach ($arOld as $sName => $oOld) {
-	    $oNew = self::SpawnItem($oOld->SpecArray());
-	    $arNew[$oNew->Name()] = $oNew;
-	}
-	self::ModuleArray($arNew);
+    // OVERRIDE
+    protected function SingularName() {
+	return 'fcaDropInModule';
     }
 
-    // // -- STATIC -- // //
-    // ++ SETUP ++ //
-
-/*
-    public function __construct(clsDatabase_abstract $db,array $arSpec=array()) {	// needed for menu-based initialization
-	parent::__construct($arSpec);
-    }
-*/
-    public function __construct(clsDatabase_abstract $db) {
-    }
-
-    // -- SETUP -- //
     // ++ DROP-IN API ++ //
 
     /*----
       PURPOSE: execution method called by dropin menu
     */
-    public function MenuExec(array $arArgs=NULL) {
-	$this->arArgs = $arArgs;
-	self::ConvertToAdmin();
-	$out = $this->AdminPage();
-	return $out;
+    public function MenuExec() {
+	return $this->AdminPage();
     }
 
     // -- DROP-IN API -- //
-    // ++ ADMIN API ++ //
+    // ++ ADMIN UI ++ //
 
     protected function AdminPage() {
-	$arMods = static::ModuleArray();
-	$out = "\n<table class=listing>";
-	foreach ($arMods as $sName => $oMod) {
-	    $out .=
-	      "\n  <tr>"
-	      .$oMod->AdminRow()
-	      ."\n</tr>";
-	}
-	$out .= "\n</table>";
-	return $out;
+	$tbl = fcApp::Me()->GetDropinTable();
+	$this->SetAllRows($tbl->GetAllRows());	// copy data from loader-table to admin-table
+	$rs = $this->GetAllRecords();		// copy data from admin-table to admin-recordset
+	return $rs->AdminRows();		// render the dropin list
     }
 
-    // -- ADMIN API -- //
+    // -- ADMIN IU -- //
 }
 
-class VCI_DropIn_Module extends clsDropInModule {
+class fcaDropInModule extends fcDropInModule {
+
     /*----
-      PUBLIC because it is called from a parent object
+      PUBLIC because it is called from the Table wrapper object
+    */
+    public function AdminRows() {
+	$nRows = $this->RowCount();
+	if ($nRows > 0) {
+	    $out = "$nRows dropin".fcString::Pluralize($nRows)
+	      ."\n<table class=listing>"
+	      ;
+	    $this->RewindRows();
+	    
+	    while ($this->NextRow()) {
+		$out .=
+		  "\n  <tr>"
+		  .$this->AdminRow()
+		  ."\n</tr>"
+		  ;
+	    }
+	    $out .= "\n</table>";
+	} else {
+	    $out = 'Apparently there are no dropins currently available.';
+	}
+	return $out;
+    }
+    /*----
+      PUBLIC because it is called from the Table wrapper object
     */
     public function AdminRow() {
 	$sName = $this->Name();
@@ -85,5 +81,4 @@ class VCI_DropIn_Module extends clsDropInModule {
 	return $out;
     }
 
-    // -- ADMIN API -- //
 }

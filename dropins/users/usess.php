@@ -4,17 +4,20 @@
   HISTORY:
     2010-10-17 created
 */
-class actAdminUserSessions extends fctUserSessions {
+class fctAdminUserSessions extends fctUserSessions {
     use ftLinkableTable;
 
     // ++ SETUP ++ //
-
+/*
     public function __construct($iDB) {
 	parent::__construct($iDB);
 	  $this->ClassSng(KS_CLASS_ADMIN_USER_SESSION);
 	  $this->ActionKey(KS_ACTION_USER_SESSION);
+    } */
+    protected function GetActionKey() {
+	return KS_PAGE_KEY_SESSION;
     }
-
+    
     // -- SETUP -- //
     // ++ DROP-IN API ++ //
 
@@ -29,14 +32,7 @@ class actAdminUserSessions extends fctUserSessions {
 }
 class acrAdminUserSession extends fcrUserSession {
     use ftLinkableRecord;
-/*
-    // ++ BOILERPLATE ++ //
 
-    public function AdminLink($iText=NULL,$iPopup=NULL,array $iarArgs=NULL) {
-	return clsMenuData_helper_standard::_AdminLink($this,$iText,$iPopup,$iarArgs);
-    }
-
-    // -- BOILERPLATE -- // */
     // ++ DROP-IN API ++ //
 
     /*----

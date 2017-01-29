@@ -4,17 +4,18 @@
   HISTORY:
     2013-12-29 started
 */
-class acUserPerms extends clsUserPerms {
+class fctAdminUserPermits extends fctUserPerms {
     use ftLinkableTable;
-    private $arData;
 
     // ++ SETUP ++ //
 
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->ClassSng(KS_CLASS_ADMIN_USER_PERMISSION);
-	  $this->ActionKey(KS_ACTION_USER_PERMISSION);
-	$this->arData = NULL;
+    // OVERRIDE
+    protected function SingularName() {
+	return KS_CLASS_ADMIN_USER_PERMISSION;
+    }
+    // CEMENT
+    public function GetActionKey() {
+	return KS_ACTION_USER_PERMISSION;
     }
 
     // -- SETUP -- //
@@ -23,10 +24,8 @@ class acUserPerms extends clsUserPerms {
     /*----
       PURPOSE: execution method called by dropin menu
     */
-    public function MenuExec(array $arArgs=NULL) {
-	$this->arArgs = $arArgs;
-	$out = $this->AdminListing();
-	return $out;
+    public function MenuExec() {
+	return $this->AdminListing();
     }
 
     // -- DROP-IN API -- //
@@ -58,7 +57,8 @@ class acUserPerms extends clsUserPerms {
 
     // -- ADMIN INTERFACE -- //
 }
-class acUserPerm extends clsUserPerm {
+class fcrAdminUserPermit extends fcrUserPermit {
+    use ftLinkableRecord;
 
     // ++ STATIC ++ //
 
@@ -188,11 +188,11 @@ __END__;
 	$htID = $this->SelfLink();
 	if (!is_null($sName)) {
 	    $id = $this->GetKeyValue();
-	    $htID .= clsHTML::CheckBox($sName,$bSel,$id);
+	    $htID .= fcHTML::CheckBox($sName,$bSel,$id);
 	}
-	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));
-	$htDescr = fcString::EncodeForHTML($this->ValueNz('Descr'));
-	$htWhen = $this->ValueNz('WhenCreated');
+	$htName = fcString::EncodeForHTML($this->GetFieldValueNz('Name'));
+	$htDescr = fcString::EncodeForHTML($this->GetFieldValueNz('Descr'));
+	$htWhen = $this->GetFieldValueNz('WhenCreated');
 
 	$out = <<<__END__
   <tr>
@@ -206,6 +206,7 @@ __END__;
 	return $out;
     }
     protected function AdminPage() {
+	throw new exception('2017-01-28 This is going to need some updating.');
 	$oPage = $this->Engine()->App()->Page();
 
 	$doSave = $oPage->ReqArgBool(self::BTN_SAVE);

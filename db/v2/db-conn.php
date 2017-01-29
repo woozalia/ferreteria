@@ -147,16 +147,29 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
 	} else {
 	    // that class of Table has not yet been created
 	    if (class_exists($sTableClass)) {
-		// create & cache it
-		$t = new $sTableClass($this);
-		if ($t instanceof fcDataSource) {
-		    $this->arTables[$sTableClass] = $t;
+		// attempt to create & cache it
+		$ok = FALSE;
+		$ksRequiredParent = 'fcTableBase';
+		if (is_subclass_of($sTableClass,$ksRequiredParent)) {
+		    $t = new $sTableClass($this);
+		    if ($t->HasFeature(fcTableBase::KS_FEATURE_CONNECTION)) {
+			$this->arTables[$sTableClass] = $t;
+			$ok = TRUE;
+		    } else {
+			$sErr = "Requested table class '$sTableClass' lacks the CONNECTION feature, which is needed here.";
+		    }
 		} else {
-		    throw new exception('Requested class "'.$sTableClass.'" is not a descendant of fcDataSource.');
+		    $sErr = "Requested class '$sTableClass' is not a descendant of $ksRequiredParent.";
+		}
+		if (!$ok) {
+		    $arParents = class_parents($sTableClass);
+		    echo "Parentage of <b>$sTableClass</b>:".fcArray::RenderList($arParents,' &larr; ');
+		    throw new exception($sErr);
 		}
 	    } else {
+		$tst = new $sTableClass($this);	// debugging
 		// no code found for that class
-		throw new exception('Unknown table wrapper class "'.$sTableClass.'" requested.');
+		throw new exception("Trying to wrap table with unknown class '$sTableClass'. (Maybe the appropriate library module has not been requested?)");
 	    }
 	}
 	if (is_null($id)) {

@@ -21,9 +21,7 @@ abstract class fcFormField {
     public function __construct(fcForm $oForm, $sName) {
 	$this->NameString($sName);	// set name before connecting to form
 	$this->FormObject($oForm);	// connect to form
-	//$this->SQL_forBlank('NULL');	// default SQL value
 	$this->vDefault = NULL;		// default native value
-	//$this->OkToWrite(TRUE);		// default: writeable field
     }
 
     // -- SETUP -- //

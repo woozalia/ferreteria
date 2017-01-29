@@ -3,31 +3,36 @@
   PURPOSE: user access control classes: available security permissions
   HISTORY:
     2013-12-29 started
+    2017-01-04 This will need some updating to work with Ferreteria revisions.
 */
-class clsUserPerms extends clsTable {
-    private $arData;
+class fctUserPerms extends fcTable_keyed_single_standard {
 
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->Name(KS_TABLE_USER_PERMISSION);
-	  $this->KeyName('ID');
-	  $this->ClassSng('clsUserPerm');
-	$this->arData = NULL;
+    // ++ SETUP ++ //
+    
+    protected function TableName() {
+	return KS_TABLE_USER_PERMISSION;
+    }
+    protected function SingularName() {
+	return KS_CLASS_USER_PERMISSION;
     }
 
-    // ++ BUSINESS LOGIC ++ //
+    // -- SETUP -- //
+    // ++ ARRAYS ++ //
 
+    private $arData;
     public function AsArray() {
-	if (is_null($this->arData)) {
+	throw new exception('2017-01-27 Does anything actually call this? Use FetchRows_asKeyedArray() instead.');
+	if (empty($this->arData)) {
 	    $rs = $this->GetData();
 	    $this->arData = $rs->AsArray();
 	}
 	return $this->arData;
     }
 
-    // -- BUSINESS LOGIC -- //
+    // -- ARRAYS -- //
+
 }
-class clsUserPerm extends fcRecord_standard {
+class fcrUserPermit extends fcRecord_standard {
 
     // ++ FIELD ACCESS ++ //
 

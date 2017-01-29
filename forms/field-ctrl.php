@@ -209,7 +209,7 @@ class fcFormControl_HTML extends fcFormControl {
 		// this field is editable, but the form isn't sending it:
 		$arOut['absent'] = TRUE;
 		$arOut['blank'] = NULL;
-		$sMsg = "Form error: Key [$sName] not found in post data: ".clsArray::Render($arData);
+		$sMsg = "Form error: Key [$sName] not found in post data: ".fcArray::Render($arData);
 		$this->FormObject()->AddMessage($sMsg);
 		// for debugging:
 		//echo $sMsg;
@@ -370,7 +370,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
     // ++ OPTIONS ++ //
 
     private $rs;
-    public function Records(clsRecs_keyed_abstract $rs=NULL) {
+    public function Records(fcRecord_keyed_single $rs=NULL) {
         if (!is_null($rs)) {
             $this->rs = $rs;
         }
@@ -439,7 +439,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	    } elseif ($rs->hasRows()) {
 		while ($rs->NextRow()) {
 		    $id = $rs->GetKeyValue();
-		    $arRecs[$id] = $rs->Values();
+		    $arRecs[$id] = $rs->GetFieldValues();
 		}
 		$this->arRecs = $arRecs;
 	    }
@@ -455,7 +455,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	    } else {
 		$rs = $this->Records();
 		foreach ($arRecs as $id => $arRow) {
-		    $rs->Values($arRow);
+		    $rs->SetFieldValues($arRow);
 		    $oChoice = new fcDropChoice($id,$rs->ListItem_Text());
 		    $this->arRecChc[$id] = $oChoice;
 		}
@@ -464,7 +464,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	return $this->arRecChc;
     }
     protected function Choices() {
-	$arOut = clsArray::Merge($this->ExtraChoices(),$this->RecordChoices());
+	$arOut = fcArray::Merge($this->ExtraChoices(),$this->RecordChoices());
 	return $arOut;
     }
 
@@ -480,7 +480,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 
 	// first look in the extras, because it's faster
 	$arExtra = $this->ExtraChoices();
-	if (clsArray::Exists($arExtra,$vCurr)) {
+	if (fcArray::Exists($arExtra,$vCurr)) {
 	    $arChoice = $arExtra[$vCurr];
 	    $out = $arChoice->RenderText();
 	} else {
@@ -491,7 +491,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 		// There are no records to refer to, so just dump the value:
 		$out = "<span title='no records found for lookup'>($vCurr)</span>";
 	    } else {
-		$arRec = clsArray::Nz($arRecs,$vCurr);
+		$arRec = fcArray::Nz($arRecs,$vCurr);
 		if (is_null($arRec)) {
 		    if (is_null($vCurr)) {
 			$out = $this->NullDataString();
@@ -501,7 +501,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 		} else {
 		    $rs = $this->Records();	// get a copy of the recordset object
 		    if (method_exists($rs,'ListItem_Link')) {
-			$rs->Values($arRec);	// give it the row we want to display
+			$rs->SetFieldValues($arRec);	// give it the row we want to display
 			$out = $rs->ListItem_Link();
 		    } else {
 			throw new exception(get_class($rs).'::ListItem_Link() needs to be defined.');

@@ -4,32 +4,55 @@
   HISTORY:
     2013-11-28 started
     2014-12-27 split into two classes (one for each drop-in, and one for the drop-in manager)
+    2017-01-01 classes now descend from fcDataSource and fcSourcedDataRow
 */
 
 define('KS_DROPIN_FIELD_FEATURES','features');
 
-class clsDropInManager {
-    private static $oMenu;		// menu root
-    private static $arMods = array();	// modules scanned
-    private static $arFeat = array();	// features loaded
+class fcDropInManager extends fcDataTable_array {
 
+    // ++ STATIC ++ //
+    
+    // METHOD: Goes through App object-factory so we don't get more than one, even when created by the Engine.
+    static public function Me() {
+	return fcApp::Me()->GetDropinManager();
+    }
+
+    // -- STATIC -- //
+    // ++ CEMENT ++ //
+    
+    protected function SingularName() {
+	return 'fcDropInModule';
+    }
+
+    // -- CEMENT -- //
+    // ++ MODULES ++ //
+    
+    protected function SetModule(fcDropInModule $oMod) {
+	$this->SetRow($oMod->Name(),$oMod->GetFieldValues());
+    }
+    // PUBLIC because outside callers sometimes need to know if a module exists or not
+    public function HasModule($sName) {
+	if ($this->RowCount() == 0) {
+	    throw new exception('Ferreteria usage error: attempting to query dropin modules before scanning dropin folders.');
+	}
+	return $this->HasRow($sName);
+    }
+    
+    // -- MODULES -- //
     // ++ BASIC OPERATIONS ++ //
-
-    static protected function ItemClass() {
-	return 'clsDropInModule';
-    }
-    static protected function SpawnItem(array $arIndex) {
-	$sCls = static::ItemClass();
-	return new $sCls($arIndex);
-    }
+    
     /*----
       ACTION: scans the given folder and adds any drop-in modules found
     */
-    static public function ScanDropins($fsFolder,clsMenuItem $oMenu) {
-	self::$oMenu = $oMenu;
+    static public function ScanDropins($fsFolder,fcTreeNode $oMenu) {
 	if (!file_exists($fsFolder)) {
 	    throw new exception('Dropins folder "'.$fsFolder.'" does not exist.');
 	}
+	$oMgr = self::Me();
+	$oMgr->CheckFolders($fsFolder,$oMenu);
+    }
+    protected function CheckFolders($fsFolder,fcTreeNode $oMenu) {
 	$poDir = dir($fsFolder);
 	$ar = NULL;
 	while (FALSE !== ($fnFile = $poDir->read())) {
@@ -38,7 +61,6 @@ class clsDropInManager {
 		if (is_dir($fs)) {
 		    // save in an array so we can sort before loading
 		    $ar[$fnFile] = $fs;
-		    //self::CheckFolder($fs);
 		}
 	    }
 	}
@@ -47,40 +69,57 @@ class clsDropInManager {
 	}
 	ksort($ar);
 	foreach ($ar as $fn => $fs) {
-	    self::CheckFolder($fs);
+	    $this->CheckFolder($fs,$oMenu);
 	}
     }
-    static protected function CheckFolder($fsFolder) {
+    protected function CheckFolder($fsFolder,fcTreeNode $oMenu) {
 	$fsIndex = $fsFolder.'/'.KFN_DROPIN_INDEX;
 	if (is_file($fsIndex)) {
-	    clsModule::BasePath($fsFolder.'/');
-	    $od = self::ProcessIndex($fsIndex);
-	    self::$arMods[$od->Name()] = $od;
+	    fcCodeModule::BasePath($fsFolder.'/');
+	    $od = $this->ProcessIndex($fsIndex,$oMenu);
+	    $this->SetModule($od);
 	}
     }
-    static protected function ProcessIndex($fsIndex) {
+    
+    protected function ProcessIndex($fsIndex,fcTreeNode $oMenu) {
 	// set up environment
-	$oRoot = self::$oMenu;
-	//$oPaint = $oRoot->PainterObject();
 
-	require($fsIndex);	// load the module index
-	$od = self::SpawnItem($arDropin);	// create object for specs
-	$om = $od->MenuObj();
-	if (is_object($om)) {	// if there is a menu node...
-	    self::$oMenu->NodeAdd($om);	// ...add it to the menu
+	$oRoot = $oMenu;			// the module index expects this
+
+	// INPUT: $oRoot
+	require($fsIndex);			// load the module index
+	// OUTPUT: $arDropin
+
+	$od = $this->SpawnRecordset();
+	$od->SetSpecs($arDropin);		// create dropin object to hold module's specs
+	
+	/* 2017-01-01 This is completely redundant.
+	$om = $od->MenuObject();		// check dropin object for a menu
+	if (is_object($om)) {			// if there is one...
+	    $oMenu->SetNode($om);			// ...add it to the top-level menu
 	}
+	*/
+	/* 2017-01-01 Decided to discontinue support for "feature" tracking. It doesn't really make sense.
 	if (array_key_exists(KS_DROPIN_FIELD_FEATURES,$arDropin)) {
 	    $arAdd = $arDropin[KS_DROPIN_FIELD_FEATURES];
 	    self::$arFeat = array_merge(self::$arFeat,$arAdd);
-	}
-	$od->RegisterClasses();
+	}*/
+	//$od->RegisterClasses();	// 2017-01-01 Done inside module class now.
 	return $od;
     }
+    static public function IsReady($sName) {
+	throw new exception('2017-01-01 static::IsReady() is deprecated; call object->HasModule() instead.');
+    }
+    /* 2017-01-01 This is kind of useless.
+    static public function AreModulesLoaded() {
+	return count(self::$arMods) > 0;
+    }*/
     /*----
       RETURNS: TRUE iff the named drop-in module is available for use
-      TODO: Rename to ModuleLoaded()
     */
-    static public function IsReady($sName) {
+    static public function IsModuleLoaded($sName) {
+	throw new exception('2017-01-01 static::IsModuleLoaded() is deprecated; call object->HasModule() instead.');
+	
 	$isOk = FALSE;
 	if (array_key_exists($sName,self::$arMods)) {
 	    if (is_object(self::$arMods[$sName])) {
@@ -89,65 +128,43 @@ class clsDropInManager {
 	}
 	return $isOk;
     }
-    static public function AreModulesLoaded() {
-	return count(self::$arMods) > 0;
-    }
-    static public function ModuleLoaded($sName) {
-	return self::IsReady($sName);
-    }
-    static public function FeatureLoaded($sName) {
-	$ok = in_array($sName,self::$arFeat);
-	return $ok;
-    }
 
     // -- BASIC OPERATIONS -- //
-    // ++ ADMIN API ++ //
-
-    static protected function ModuleArray(array $ar=NULL) {
-	if (!is_null($ar)) {
-	    self::$arMods = $ar;
-	}
-	return self::$arMods;
-    }
-
-    // -- ADMIN API -- //
 }
 
-class clsDropInModule {
-    private $arSpec;
-    /*----
-      INPUT: array of module specifications
-	[name]: short name for module
-	[descr]: one-line description
-	[version]: version number (can be non-numeric)
-	[date]: release date in YYYY/MM/DD format
-	[URL]: URL for more information about the module
-    */
-    public function __construct(array $arSpec) {
-	$this->arSpec = $arSpec;
+/*::::
+  FIELDS:
+    [name]: short name for module
+    [descr]: one-line description
+    [version]: version number (can be non-numeric)
+    [date]: release date in YYYY/MM/DD format
+    [URL]: URL for more information about the module
+*/
+class fcDropInModule extends fcDataRow_array {
+
+    // ++ FIELD ARRAY ++ //
+    
+    // NOTE: Load specs array and do any additional per-module processing.
+    public function SetSpecs(array $arSpecs) {
+	$this->SetFieldValues($arSpecs);
+	$this->RegisterClasses();
     }
-    public function SpecArray() {
-	return $this->arSpec;
-    }
+
+    // ++ FIELD VALUES ++ //
+
     public function Name() {
-	return $this->arSpec['name'];
+	return $this->GetFieldValue('name');
     }
     protected function ClassArray() {
-	return $this->arSpec['classes'];
+	return $this->GetFieldValue('classes');
     }
     /*----
-      PUBLIC because Manager calls it
+      ACTION: register any classes defined within the dropin.
     */
-    public function MenuObj() {
-	return $this->arSpec['menu'];
-    }
-    /*----
-      PUBLIC because Manager calls it
-    */
-    public function RegisterClasses() {
+    protected function RegisterClasses() {
 	$arCls = $this->ClassArray();
 	foreach ($arCls as $sFile => $sClasses) {
-	    $om = new clsModule(__FILE__, $sFile);
+	    $om = new fcCodeModule(__FILE__, $sFile);
 	    if (is_array($sClasses)) {
 		// value is an array of class names for file $sFile
 		foreach ($sClasses as $sClass) {
@@ -160,6 +177,7 @@ class clsDropInModule {
 	}
     }
 
+    // -- FIELD VALUES -- //
     // ++ UTILITY FUNCTIONS ++ //
 
     static protected function ClassList($vClasses,$sSep=' ') {

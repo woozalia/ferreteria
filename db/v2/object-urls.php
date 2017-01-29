@@ -75,7 +75,7 @@ trait ftLinkableTable {
     // PUBLIC so Link Builder can use it
     public function SelfLink_idArray() {
         return 	array(
-	  'page' =>   $this->ActionKey()
+	  'page' =>   $this->GetActionKey()
 	  );
     }
 
@@ -94,29 +94,34 @@ trait ftLinkableRecord {
     // PUBLIC so Link Builder can use it
     public function SelfLink_idArray() {
 	$arThis = array(
-	  'id'	=> $this->KeyString()
+	  'id'	=> $this->GetKeyString()
 	  );
-	$tbl = $this->Table();
+	$tbl = $this->GetTableWrapper();
 	if (!method_exists($tbl,'SelfArray')) {
 	    $sMsg = 'The table class "'.get_class($tbl).'" needs to use the ftLinkableTable trait'
 	      .' so that the recordset class "'.get_class($this).'" can use self-linking features.';
 	    throw new exception($sMsg);
 	}
-	$arAll = $this->GetTableWrapper()->SelfArray($arThis);
+	$arAll = $tbl->SelfArray($arThis);
         return $arAll;
     }
     /*----
-      PURPOSE: r/w access method for the ID value to use for new record ID links
-      OVERRIDEABLE
-      RULES:
-	* If set to an empty string, no link will be generated
+      PURPOSE: ID value to use for new record ID links
+	Okay to override (might be necessary for non-numeric keys).
     */
     public function SelfLink_NewKey() {
 	return KS_NEW_REC;
     }
 
     // -- CONFIGURATION -- //
+    // ++ INFORMATION ++ //
 
+    // NOTE: This is actually only used by the Form class
+    public function GetActionKey() {
+	return $this->GetTableWrapper()->GetActionKey();
+    }
+
+    // -- INFORMATION -- //
 }
 
 abstract class fcLinkBuilder {
@@ -128,13 +133,6 @@ abstract class fcLinkBuilder {
     abstract protected function KeyString();
 
     // -- ABSTRACT METHODS -- //
-    // ++ INTERNAL INFORMATION ++ //
-
-    protected function BaseURL_rel() {
-	return clsApp::Me()->Page()->BaseURL_rel();
-    }
-
-    // -- INTERNAL INFORMATION -- //
     // ++ API ++ //
 
     /*----
@@ -144,7 +142,7 @@ abstract class fcLinkBuilder {
     */
     public function LinkArray(array $arAdd=NULL) {
 	$arBase = $this->IdentityValues();
-	$arAll = clsArray::Merge($arBase,$arAdd);	// add/override defaults
+	$arAll = fcArray::Merge($arBase,$arAdd);	// add/override defaults
 	return $arAll;
     }
     /*----
@@ -159,9 +157,9 @@ abstract class fcLinkBuilder {
     */
     public function LinkURL(array $arAdd=NULL) {
 	$arLink = $this->LinkArray($arAdd);
-	$urlAdd = clsURL::FromArray($arLink);
-	$urlBase = $this->BaseURL_rel();
-	return $urlBase.$urlAdd;
+	$urlAdd = fcURL::FromArray($arLink);
+	$urlBase = fcApp::Me()->GetKioskObject()->GetBasePath();
+	return $urlBase.'/'.$urlAdd;
     }
     /*----
       RETURNS: complete tag for link
@@ -174,7 +172,7 @@ abstract class fcLinkBuilder {
     public function LinkHTML($sText=NULL,$sPopup=NULL,array $arAdd=NULL,array $arAttr=NULL) {
 	$url = $this->LinkURL($arAdd);
 	$sText = is_null($sText)?($this->KeyString()):$sText;
-	$out = clsHTML::BuildLink($url,$sText,$sPopup,$arAttr);
+	$out = fcHTML::BuildLink($url,$sText,$sPopup,$arAttr);
 	return $out;
     }
     /*----
@@ -183,10 +181,10 @@ abstract class fcLinkBuilder {
     public function LinkRedirect($sText=NULL,array $arAdd=NULL) {
 	// TODO: finish adapting this
 
-	clsHTTP::DisplayOnReturn($sText);
+	fcHTTP::DisplayOnReturn($sText);
 	$url = $this->LinkURL($arAdd);
-	echo 'REDIRECTING to '.$url.' and saving the following text:<br>'.$sText;
-	clsHTTP::Redirect($url,array(),FALSE,HTTP_REDIRECT_POST);
+	echo 'REDIRECTING to '.$url.' and saving the following text:<br>'.$sText;	// for debugging
+	fcHTTP::Redirect($url,array(),FALSE,HTTP_REDIRECT_POST);
 	die();	// don't do any more work (including accidentally erasing the cookie)
     }
 
@@ -194,12 +192,11 @@ abstract class fcLinkBuilder {
 }
 
 class fcLinkBuilder_table extends fcLinkBuilder {
-    private $tbl;
 
     // ++ SETUP ++ //
 
-    public function __construct(clsTable_abstract $tbl) {
-        $this->tbl = $tbl;
+    public function __construct(fcTable_keyed $tbl) {
+        $this->SetTableWrapper($tbl);
     }
 
     // -- SETUP -- //
@@ -214,10 +211,11 @@ class fcLinkBuilder_table extends fcLinkBuilder {
     // -- STATIC METHODS -- //
     // ++ LOCAL FIELD ACCESS ++ //
 
-    protected function Table(clsTable_abstract $tbl=NULL) {
-	if (!is_null($tbl)) {
-	    $this->tbl = $tbl;
-	}
+    private $tbl;
+    protected function SetTableWrapper(fcTable_keyed $tbl) {
+	$this->tbl = $tbl;
+    }
+    protected function GetTableWrapper() {
 	return $this->tbl;
     }
 
@@ -225,22 +223,20 @@ class fcLinkBuilder_table extends fcLinkBuilder {
     // ++ CEMENTING ++ //
 
     protected function IdentityValues() {
-	return $this->Table()->SelfLink_idArray();
+	return $this->GetTableWrapper()->SelfLink_idArray();
     }
     protected function KeyString() {
-	return $this->Table()->ActionKey();	// not sure if this is the most useful response
+	return $this->GetTableWrapper()->ActionKey();	// not sure if this is the most useful response
     }
 
     // -- CEMENTING -- //
 }
 
-/*%%%%
+/*::::
   PURPOSE: approximately replaces clsMenuData_helper and offspring
 */
 class fcLinkBuilder_records extends fcLinkBuilder {
     private $rs;
-    private $strNewTxt;
-    private $strNewKey;
 
     // ++ SETUP/CONFIG ++ //
 /*
@@ -249,7 +245,7 @@ class fcLinkBuilder_records extends fcLinkBuilder {
 	$this->sNewKey = '';
     }*/
 
-    public function __construct(clsRecs_keyed_abstract $rcThis) {
+    public function __construct(fcRecord_keyed $rcThis) {
         $this->rs = $rcThis;
     }
 
@@ -271,7 +267,7 @@ class fcLinkBuilder_records extends fcLinkBuilder {
 	return $this->Recs()->SelfLink_idArray();
     }
     protected function KeyString() {
-	return $this->Recs()->KeyString();
+	return $this->Recs()->GetKeyString();
     }
 
     // -- CEMENTING -- //
