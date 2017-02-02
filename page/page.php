@@ -420,6 +420,20 @@ abstract class fcPageContent extends fcpeSimple {
     }
     
     // -- RECORDS -- //
+    // ++ THRUPUT ++ //
+    
+    /*----
+      PURPOSE: Adds a string to the main content.
+	If the page is redirected before rendering, the content will be saved with the Session record
+	and displayed after the redirect.
+    */
+    protected function AddString($s) {
+	$sSaved = $this->GetValue();
+	$sSaved .= $s;
+	$this->SetValue($sSaved);
+    }
+    
+    // -- THRUPUT -- //
     // ++ OUTPUT ++ //
 
     /*----
@@ -437,7 +451,7 @@ abstract class fcPageContent extends fcpeSimple {
     }
     protected function RenderStashed() {
 	$rcSess = $this->GetSessionRecord();
-	$out = $rcSess->PullStashValue('ferreteria','page contents');
+	$out = $rcSess->PullStashValue('page contents');
 	$rcSess->Save();
 	return $out;
     }
@@ -452,13 +466,50 @@ abstract class fcPageContent extends fcpeSimple {
 	$rcSess = $this->GetSessionRecord();
 
 	// debugging
-	$rcSess->SetStashValue('ferreteria','page contents',$s);
+	$rcSess->SetStashValue('page contents',$s);
 	$rcSess->Save();	// write to persistent storage
 	
 	// now actually redirect
 	$url = fcApp::Me()->GetKioskObject()->GetBasePath();	// until we can come up with something more fine-tuned
 	fcHTTP::Redirect($url);
 	die();	// stop doing stuff; we're redirecting
+    }
+}
+trait ftContentMessages {
+    private function AddStatusMessage($sMsg,$nType) {
+	switch ($nType) {
+	  case 1:
+	    $sType = 'error';
+	    $urlIcon = KWP_ICON_ALERT;
+	    break;
+	  case 2:
+	    $sType = 'warning';
+	    $urlIcon = KWP_ICON_WARN;
+	    break;
+	  case 3:
+	    $sType = 'success';
+	    $urlIcon = KWP_ICON_OKAY;
+	    break;
+	  default:
+	    throw new exception('Ferreteria internal error: Unknown message type.');
+	}
+	$ht = '<center>'
+	  ."<div class=message><table class='$sType-message'>"
+	  ."<tr><td valign=middle><img src='$urlIcon' alt=alert title='$sType message indicator' /></td>"
+	  ."<td valign=middle>$sMsg</td>"
+	  .'</tr></table></div>'
+	  .'</center>'
+	  ;
+	$this->AddString($ht);
+    }
+    public function AddErrorMessage($s) {
+	$this->AddStatusMessage($s,1);
+    }
+    public function AddWarningMessage($s) {
+	$this->AddStatusMessage($s,2);
+    }
+    public function AddSuccessMessage($s) {
+	$this->AddStatusMessage($s,3);
     }
 }
 abstract class fcTag_body extends fcContainerTag {

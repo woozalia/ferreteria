@@ -414,6 +414,17 @@ class fcrUserSession extends fcRecord_standard {
 	    $this->SaveUserID($idNew);
 	}
     }
+    protected function ClearUserRecord() {
+	$this->rcUser = NULL;
+    }
+    private $rcUserFailed;
+    protected function SetFailedUserRecord(fcrUserAcct $rcUser) {
+	$this->ClearUserRecord();
+	$this->rcUserFailed = $rcUser;
+    }
+    public function GetFailedUserRecord() {
+	return $this->rcUserFailed;
+    }
     /* 2017-01-16 old version
     // TODO: is this ever *supposed* to be called with oUser=NULL? If so, why? Document.
     public function SetUserRecord(fcrUserAcct $oUser=NULL) {
@@ -522,25 +533,28 @@ class fcrUserSession extends fcRecord_standard {
 	    $this->DeleteField('Stash');
 	}
     }
-    public function SetStashValue($sApp,$sName,$sValue) {
+    public function SetStashValue($sName,$sValue) {
 	$arStash = $this->FetchStash();
+	$sApp = fcApp::Me()->GetAppKeyString();
 	$arStash[$sApp][$sName] = $sValue;
 	$this->StoreStash($arStash);
     }
-    public function GetStashValue($sApp,$sName) {
+    public function GetStashValue($sName) {
 	$arStash = $this->FetchStash();
+	$sApp = fcApp::Me()->GetAppKeyString();
 	$arAppStash = fcArray::Nz($arStash,$sApp);
 	$sValue = fcArray::Nz($arAppStash,$sName);
 	return $sValue;
     }
     // ACTION: retrieve the value from the stash and remove it
-    public function PullStashValue($sApp,$sName) {
-	$sValue = $this->GetStashValue($sApp,$sName);
-	$this->ClearStashValue($sApp,$sName);
+    public function PullStashValue($sName) {
+	$sValue = $this->GetStashValue($sName);
+	$this->ClearStashValue($sName);
 	return $sValue;
     }
     // ACTION: delete the given value from the stash
-    protected function ClearStashValue($sApp,$sName) {
+    protected function ClearStashValue($sName) {
+	$sApp = fcApp::Me()->GetAppKeyString();
 	$arStash = $this->FetchStash();
 	unset($arStash[$sApp][$sName]);
 	$this->StoreStash($arStash);
@@ -691,7 +705,17 @@ class fcrUserSession extends fcRecord_standard {
     public function UserLogin($sUser,$sPass) {
 	$tUsers = $this->UserTable();
 	$rcUser = $tUsers->Login($sUser,$sPass);
-	$this->SetUserRecord($rcUser);		// set user for this session
+	if ($tUsers->DidSucceed()) {
+	    // set user for this session
+	    $this->SetUserRecord($rcUser);
+	} else {
+	    // login failure -- clear any existing user (security precaution), save info about attempted user
+	    if (is_null($rcUser)) {
+		$this->ClearUserRecord();
+	    } else {
+		$this->SetFailedUserRecord($rcUser);
+	    }
+	}
     }
     /*----
       ACTION: Logs the current user out. (Clears ID_Acct in session record.)
@@ -713,9 +737,5 @@ class fcrUserSession extends fcRecord_standard {
     }
 
     // -- ACTIONS -- //
-    // ++ CALCULATIONS ++ //
-
-
-    // -- CALCULATIONS -- //
 
 }

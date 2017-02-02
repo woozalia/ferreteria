@@ -75,5 +75,18 @@ abstract class fcPage_login extends fcPage_standard {
     public function GetElement_LoginWidget() {
 	return $this->GetTagNode_body()->GetElement_LoginWidget();
     }
+    /*----
+      NOTE: These messages *conceivably* could be of use in a non-login app,
+	but that seems like a thing to do when the need actually arises.
+    */
+    public function AddErrorMessage($s) {
+	$this->GetElement_PageContent()->AddErrorMessage($s);
+    }
+    public function AddWarningMessage($s) {
+	$this->GetElement_PageContent()->AddWarningMessage($s);
+    }
+    public function AddSuccessMessage($s) {
+	$this->GetElement_PageContent()->AddSuccessMessage($s);
+    }
     
 }

@@ -17,7 +17,7 @@ abstract class fcMenuKiosk {
 	such as in a ?query
     */
     public function MakeURLFromString($sPath) {
-	return $this->GetBasePath().'/'.$sPath;
+	return $this->GetBasePath().$sPath;
     }
     /*----
       RETURNS: The string from which all input arguments may be parsed

@@ -155,6 +155,13 @@ abstract class fcAppStandard extends fcApp {
     }
 
     // -- MAIN -- //
+    // ++ CONFIGURATION ++ //
+    
+    public function GetAppKeyString() {
+	return KS_APP_KEY;
+    }
+    
+    // -- CONFIGURATION -- //
     // ++ PROFILING ++ //
     
     private $fltStart;

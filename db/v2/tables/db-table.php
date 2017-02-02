@@ -4,19 +4,16 @@
   HISTORY:
     2016-11-07 added fcDataSource so that query-table-types wouldn't need to return a table name
     2017-01-01 renamed fcDataSource to fcConnectedData, created new base class called fcDataSource that doesn't require a Connection
-  TODO:
-    Having a Connection and being able to spawn Recordsets should probably both be traits.
-      Most descendants want both, but some want Connection without Recordset, and some (e.g. array types) are the opposite.
-      The following structure seems like a good idea:
-	trait ftSource_forTable
-	trait ftRecords_forTable
-	trait ftName_forTable (just for coding clarity)
-	class fcTable_wSource_wRecords (alias fcDataTable)
-	class fcTable_wSource
-	class fcTable_wRecords
-	...and probably replace uses of fcDataSource with fcTable_wRecords
-	...although actually, I found a better way to do what I thought I needed to do, so maybe the existing structure is fine.
-	  (WITINTD: be able to pull up either of two possible recordset types from the same X table)
+    2017-01-28
+      Decided that having a Connection and being able to spawn Recordsets should both be traits.
+	Most descendants want both, but some want Connection without Recordset, and some (e.g. array types) are the opposite.
+	Implemented the following class structure:
+	  trait ftSource_forTable
+	  trait ftRecords_forTable
+	  trait ftName_forTable (just for coding clarity)
+	  class fcTable_wSource_wRecords (alias fcDataTable)
+	  class fcTable_wSource
+	  class fcTable_wRecords
 	  
 	TODO: replace fcDataSource with fcTable_wRecords
 	TODO: replace fcConnectedData with fcTable_wSource_wRecords
@@ -27,10 +24,6 @@
     ...although it really doesn't do much itself.
 */
 class fcTableBase {
-    // feature names
-    const KS_FEATURE_CONNECTION = 'src';
-    const KS_FEATURE_RECORDS = 'rec';
-    const KS_FEATURE_TABLENAME = 'name';
     
     public function __construct() {
 	$this->InitVars();
@@ -40,38 +33,25 @@ class fcTableBase {
       PURPOSE: entirely to aid in API usage
 	i.e. so Ferreteria can tell you if you're trying to use the wrong class
     */
-    public function HasFeature($s) { return FALSE; }	// no features here
 }
 /*::::
   PURPOSE: fcDataSource + this = table with db connection
   REQUIREMENT: class constructor should include same argument as TraitConstructor()
     and by default should call TraitConstructor(), unless you are doing something different.
- */
+*/
 trait ftSource_forTable {
     
     public $sql;	// for debugging
 
-    // ++ SETUP ++ //
-
-    private function TraitConstructor(fcDataConn $oConn) {
-	$this->InitVars();
-	$this->SetConnection($oConn);
-    }
-
-    // -- SETUP -- //
     // ++ CONFIGURATION ++ //
 
-      // connection object
-    private $oConn;
-    protected function SetConnection(fcDataConn $oConn=NULL) {
-	$this->oConn = $oConn;
-    }
-    // PUBLIC so Recordset wrapper object can access it
+    /*----
+      PUBLIC so Recordset wrapper object can access it
+      NOTE: To access a table in some other database, create a descendant type
+	which gets its connection differently.
+    */
     public function GetConnection() {
-	return $this->oConn;
-    }
-    public function HasFeature($s) {
-	return ($s == self::KS_FEATURE_CONNECTION) || parent::HasFeature($s);
+	return fcApp::Me()->GetDatabase();
     }
 
     // -- CONFIGURATION -- //
@@ -88,9 +68,6 @@ trait ftSource_forTable {
   PURPOSE: fcDataSource + this = table which can pull up recordsets
 */
 trait ftRecords_forTable {
-     public function HasFeature($s) {
-	return ($s == self::KS_FEATURE_RECORDS) || parent::HasFeature($s);
-    }
    // name for singular class
     abstract protected function SingularName();
     // NOTE: 2016-11-06 Maybe this should be renamed SpawnRecordsWrapper().
@@ -106,9 +83,6 @@ trait ftName_forTable {
 
     // ++ CONFIGURATION ++ //
     
-    public function HasFeature($s) {
-	return ($s == self::KS_FEATURE_TABLENAME) || parent::HasFeature($s);
-    }
     // name of database table for which this class is a wrapper
     abstract protected function TableName();
     // PUBLIC because sometimes you have to build SQL queries from multiple tables
@@ -188,7 +162,6 @@ trait ftName_forTable {
 }
 class fcTable_wSource extends fcTableBase {
     use ftSource_forTable;
-    public function __construct(fcDataConn $oConn) { $this->TraitConstructor($oConn); }
 }
 /*::::
   PURPOSE: data source wrapper class
@@ -205,7 +178,6 @@ abstract class fcDataSource extends fcTableBase {
 */
 abstract class fcConnectedData extends fcDataSource {
     use ftSource_forTable;
-    public function __construct(fcDataConn $oConn) { $this->TraitConstructor($oConn); }
 }
 /*----
   PURPOSE: wrapper class for a database table which can generate recordsets

@@ -28,8 +28,15 @@ class fcaDropInManager extends fcDataTable_array {
     // -- DROP-IN API -- //
     // ++ ADMIN UI ++ //
 
+    /*----
+      NOTE: The reason we have to get another dropin manager and copy its data
+	is that the non-dropin version of the dropin manager always loads first --
+	so if we're going to do admin on it, we have to explicitly load the admin
+	version (which is $this) and copy from the existing object (the one from
+	the App object).
+    */
     protected function AdminPage() {
-	$tbl = fcApp::Me()->GetDropinTable();
+	$tbl = fcApp::Me()->GetDropinManager();
 	$this->SetAllRows($tbl->GetAllRows());	// copy data from loader-table to admin-table
 	$rs = $this->GetAllRecords();		// copy data from admin-table to admin-recordset
 	return $rs->AdminRows();		// render the dropin list
@@ -51,9 +58,12 @@ class fcaDropInModule extends fcDropInModule {
 	      ;
 	    $this->RewindRows();
 	    
+	    $odd = FALSE;
 	    while ($this->NextRow()) {
+		$odd = !$odd;
+		$sClass = $odd?'odd':'even';
 		$out .=
-		  "\n  <tr>"
+		  "\n  <tr class=$sClass>"
 		  .$this->AdminRow()
 		  ."\n</tr>"
 		  ;

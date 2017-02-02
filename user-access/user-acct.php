@@ -72,7 +72,8 @@ class fctUserAccts extends fcTable_keyed_single_standard {
     // ++ BASIC ACTIONS ++ //
 
     /*----
-      RETURNS: user object if login successful, NULL otherwise
+      RETURNS: user object if login is recognized, NULL otherwise
+	Sets an error if the login is not successful.
     */
     public function Login($sUser,$sPass) {
 	$rc = $this->FindUser($sUser);
@@ -177,12 +178,17 @@ class fcrUserAcct extends fcRecord_standard {
     public function UserName() {
 	return $this->GetFieldValue('UserName');
     }
-    public function FullName() {
+    /*----
+      HISTORY:
+	2017-01-29 Added $doUseDefault so username won't be used for full name
+	  in contexts where we don't want it (proxmiate case: login emails)
+    */
+    public function FullName($doUseDefault=TRUE) {
 	$sFullName = $this->GetFieldValue('FullName');
-	if (is_null($sFullName)) {
+	if (is_null($sFullName && $doUseDefault)) {
 	    return $this->GetFieldValue('UserName');
 	} else {
-	    return $this->GetFieldValue('FullName');
+	    return $sFullName;
 	}
     }
     public function EmailAddress() {

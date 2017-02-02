@@ -13,30 +13,66 @@
 */
 class fcUserTokens extends fcTable_keyed_single_standard {
 
+    // ++ SETUP ++ //
+
+    protected function SingularName() {
+	return 'fcUserToken';
+    }
+    protected function TableName() {
+	return 'user_token';
+    }
+    
+    // -- SETUP -- //
     // ++ STATIC ++ //
 
-    private static function MakeHash($sVal,$sSalt) {
+    /*----
+      PUBLIC because the recordset type also needs to access it, for now.
+	See note in MakeToken().
+    */
+    public static function MakeHash($sVal,$sSalt) {
 	$sToHash = $sSalt.$sVal;
 	$sHash = hash('whirlpool',$sToHash,TRUE);
 	return $sHash;
     }
 
     // -- STATIC -- //
-    // ++ SETUP ++ //
+    // ++ READ DB ++ //
 
-    // 2017-01-08 This will need rewriting
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->Name('user_tokens');
-	  $this->KeyName('ID');
-	  $this->ClassSng('fcUserToken');
+    /*----
+      NOTE: Even if the token has expired, we want to return it so that we can
+	tell the user it has expired. This should minimize frustration, and
+	doesn't really pose a security risk as far as I can tell.
+      RETURNS: token object if a matching token was found; NULL otherwise
+    */
+    public function FindToken($idToken,$sToken) {
+	$rc = $this->GetRecord_forKey($idToken);	// this also loads the first/only row
+	if ($rc->HasRows()) {
+	    if (!$rc->HasRow()) {
+		$qRows = $rc->RowCount();
+		$sDesc = $qRows.' row'.fcString::Pluralize($qRows);
+		throw new exception("Ferreteria internal error: Recordset has $sDesc but first row is empty.");
+	    }
+	    if ($rc->HashMatches($sToken)) {
+		return $rc;
+	    } else {
+		$this->SetError_TokenMismatch();
+	    }
+	} else {
+	    $this->SetError_TokenNotFound();
+	}
+	// no matching token found
+	return NULL;
     }
     
-    // -- SETUP -- //
+    // -- READ DB -- //
+    // ++ WRITE DB ++ //
 
     /*----
       ACTION: Ensure that a token record exists for the given type and entity values
       RETURNS: single record for matching or created token
+      TODO: 2017-02-01 There's probably a tidy way to move most of this functionality into
+	the recordset type so that MakeHash() can also go there and be protected/private,
+	but at the moment I don't really have time to figure it out.
     */
     public function MakeToken($nType,$sEntity) {
 	$db = $this->GetConnection();
@@ -77,27 +113,6 @@ class fcUserTokens extends fcTable_keyed_single_standard {
 	return $rc;
     }
     /*----
-      NOTE: Even if the token has expired, we want to return it so that we can
-	tell the user it has expired. This should minimize frustration, and
-	doesn't really pose a security risk as far as I can tell.
-      RETURNS: token object if a matching token was found; NULL otherwise
-    */
-    public function FindToken($idToken,$sToken) {
-	$rc = $this->GetRecord_forKey($idToken);
-	if ($rc->HasRows()) {
-	    $rc->NextRow();	// assume there's only 1 row, and load it
-	    if ($rc->HashMatches($sToken)) {
-		return $rc;
-	    } else {
-		$this->SetError_TokenMismatch();
-	    }
-	} else {
-	    $this->SetError_TokenNotFound();
-	}
-	// no matching token found
-	return NULL;
-    }
-    /*----
       ACTION: Delete all expired tokens
       USAGE: policy to be decided; right now, nothing is using this.
       TODO: Later, we might want to log unused tokens. Or maybe not.
@@ -111,6 +126,9 @@ class fcUserTokens extends fcTable_keyed_single_standard {
 	$sql = 'DELETE FROM '.$this->TableName_Cooked().' WHERE WhenExp < NOW()';
 	$this->GetConnection()->ExecuteAction($sql);
     }
+    
+    // -- WRITE DB -- //
+
     /*----
       ACTION: Send a password reset request to the given address.
       RETURNS: HTML to display showing status of request
@@ -174,6 +192,10 @@ class fcUserToken extends fcRecord_standard {
     protected function GetTokenType() {
 	return $this->GetFieldValue('Type');
     }
+    // PUBLIC because login functions need to get this value
+    public function GetTokenEntity() {
+	return $this->GetFieldValue('Entity');
+    }
     
     // -- FIELD VALUES -- //
     // ++ FIELD CALCULATIONS ++ //
@@ -182,13 +204,13 @@ class fcUserToken extends fcRecord_standard {
       RETURNS: TRUE iff expiration date has not passed
     */
     public function IsActive() {
-	$sExp = $this->Value('WhenExp');
+	$sExp = $this->GetFieldValue('WhenExp');
 	$dtExp = strtotime($sExp);	// there's got to be a better function for this
 	return ($dtExp > time());
     }
     public function HashMatches($sToken) {
 	$sSalt = $this->GetTokenSalt();
-	$sHash = self::MakeHash($sToken,$sSalt);
+	$sHash = $this->GetTableWrapper()->MakeHash($sToken,$sSalt);
 	return ($sHash == $this->GetTokenHash());
     }
 

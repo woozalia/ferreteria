@@ -13,10 +13,14 @@ define('KSF_USER_CTRL_SET_PASS1'	,'upass1');
 define('KSF_USER_CTRL_SET_PASS2'	,'upass2');
 define('KS_USER_URLQ_AUTHCODE'		,'auth');
 define('KSF_USER_BTN_LOGIN'		,'btnLogIn');
-define('KSF_USER_BTN_REQ_PASS'		,'btnReqPass');	// request the password reset form
-define('KSF_USER_BTN_SET_PASS'		,'btnSetPass');	// submit a new password
+define('KS_PATH_ACTION_KEY'		,'do');		// path key for actions (currently, only new acct and login)
+define('KS_USER_PATH_REQ_NEW_ACCT'	,'newacct');	// request to initiate new account process
+define('KF_USER_EMAIL_ADDRESS'		,'uemail');	// name of form field for entering email address
 define('KSF_USER_BTN_NEW_ACCT_EMAIL'	,'btnReqAcct');	// receiving email address to receive authlink
 define('KSF_USER_BTN_NEW_ACCT_CREATE'	,'btnCreAcct');	// receiving details sufficient to create new account
+define('KS_USER_PATH_REQ_LOGIN_FORM'	,'login');	// request for login form
+define('KSF_USER_BTN_REQ_PASS'		,'btnReqPass');	// request the password reset form (TODO: shouldn't this be a path req?)
+define('KSF_USER_BTN_SET_PASS'		,'btnSetPass');	// submit a new password
 
 define('KI_AUTH_TYPE_NEW_USER',1);
 define('KI_AUTH_TYPE_RESET_PASS',2);
@@ -42,7 +46,7 @@ class fcpeLoginWidget extends fcpeSimple {
     // ++ TABLES ++ //
 
     protected function TokenTable() {
-	return $this->GetDatabase()->MakeTableWrapper($this->TokensClass());
+	return fcApp::Me()->GetDatabase()->MakeTableWrapper($this->TokensClass());
     }
       
     // -- TABLES -- //
@@ -71,24 +75,8 @@ class fcpeLoginWidget extends fcpeSimple {
     // -- FRAMEWORK -- //
     // ++ INPUT ++ //
 
-	//++external input++//
+	//++internal states++// -- can be set internally or by external caller
     
-    /*----
-      PURPOSE: outside app sets this TRUE if it determines that a new account
-	is being requested (could be via button, could be via fragument...)
-	It needs to be set TRUE or FALSE, one way or the other, during OnRunCalculations().
-    */
-    /*
-    private $isNewAcctReq;
-    public function SetInput_IsNewAccountRequest($b) {
-	$this->isNewAcctReq = $b;
-    }
-    protected function GetInput_IsNewAccountRequest() {
-	if (!isset($this->isNewAcctReq)) {
-	    throw new exception('Application must call SetInput_IsNewAccountRequest().');
-	}
-	return $this->isNewAcctReq;
-    }*/
     /*----
       PURPOSE: outside app calls this if it determines that the user wants to log in.
     */
@@ -108,11 +96,17 @@ class fcpeLoginWidget extends fcpeSimple {
 	$this->SetStatus_DoNext(self::KS_STEP_SHOW_PASSRESET_USER);
     }
 
-	//--external input--//
-	//++input reading++//
+	//--internal states--//
+	//++user input states++//
 
+    // INPUT: URL path includes "do:login"
+    
+    protected function GetInput_IsLoginFormRequest() {
+	$sDo = fcApp::Me()->GetKioskObject()->GetInputObject()->GetString(KS_PATH_ACTION_KEY);
+	return $sDo == KS_USER_PATH_REQ_LOGIN_FORM;
+    }
     // INPUT: existing username, existing password
-    protected function GetInput_IsLoginRequest() {
+    protected function GetInput_IsLoginAttempt() {
 	return !empty($_POST[KSF_USER_BTN_LOGIN]);
     }
     // INPUT: button for requesting the password reset form
@@ -122,6 +116,11 @@ class fcpeLoginWidget extends fcpeSimple {
     // INPUT: button for submitting a new password
     protected function GetInput_IsPasswordSubmission() {
 	return !empty($_POST[KSF_USER_BTN_SET_PASS]);
+    }
+    // INPUT: URL path includes "do:newacct"
+    protected function GetInput_IsNewAccountRequest() {
+	$sDo = fcApp::Me()->GetKioskObject()->GetInputObject()->GetString(KS_PATH_ACTION_KEY);
+	return $sDo == KS_USER_PATH_REQ_NEW_ACCT;
     }
     // INPUT: button for form that just has an email address
     protected function GetInput_IsNewAccountEmailForm() {
@@ -138,6 +137,9 @@ class fcpeLoginWidget extends fcpeSimple {
     protected function GetInput_AuthCodeFound() {
 	return array_key_exists(KS_USER_URLQ_AUTHCODE,$_GET);
     }
+    protected function GetInput_EmailAddress() {
+	return trim(fcArray::Nz($_POST,KF_USER_EMAIL_ADDRESS));
+    }
     protected function GetInput_Username() {
 	return trim(fcArray::Nz($_POST,KSF_USER_CTRL_USERNAME));
     }
@@ -151,19 +153,22 @@ class fcpeLoginWidget extends fcpeSimple {
 	return trim(fcArray::Nz($_POST,KSF_USER_CTRL_SET_PASS2));
     }
     
-	//--input reading--//
+	//--user input states--//
 	//++input calculations++//
     
     /*----
       ACTION: receive input (POST/GET), and set internal states and any needed cookies
 	Render() will determine what to display based on internal states.
       STEPS:
-	PassReset --
+	(LOG) Login --
+	  STEP 0: Display user/pass form
+	  STEP 1: Receive entered user/pass
+	(PR) PassReset --
 	  STEP 0: Display a form for entering a username
 	  STEP 1: Authcode request (with username) received (generate PR authcode, look up email address for username, and email authcode)
 	  STEP 2: Receive a PR authcode (if valid, display PR form)
 	  STEP 3: Receive PR form data (if valid, reset password)
-	NewAcct --
+	(NA) NewAcct --
 	  STEP 0: Display a form for entering an email address
 	  STEP 1: Receive email address (generate NA authcode and email it)
 	  STEP 2: Receive NA authcode (if valid, display NewAcct form)
@@ -179,7 +184,7 @@ class fcpeLoginWidget extends fcpeSimple {
     protected function ProcessInput() {
 	$nState = $this->GetStatus_DoNext();
 	
-	if ($this->GetInput_IsLoginRequest()) {
+	if ($this->GetInput_IsLoginAttempt()) {
 
 	    // try to authorize existing account
 	    $rcSess = fcApp::Me()->GetSessionRecord();
@@ -196,9 +201,11 @@ class fcpeLoginWidget extends fcpeSimple {
 	    } else {
 		$this->AddErrorMessage('Log-in attempt failed. Sorry!');
 		$this->SendEmail_forLoginFailure();	// email the user a notif about the failed attempt
+		$this->StoreSubmittedUsername();	// stash the submitted username
 		$this->RedirectToEraseRequest();
 	    }
-
+	} elseif ($this->GetInput_IsLoginFormRequest()) {
+	    $this->SetInput_ShowLoginForm();
 	} elseif ($this->GetInput_AuthCodeFound()) {
 	    // could be either PR STEP 2 or NA STEP 2
 	    $this->SetFromInput_AuthCodeStatus();
@@ -223,8 +230,13 @@ class fcpeLoginWidget extends fcpeSimple {
 	    }
 	} elseif ($this->GetInput_IsNewAccountEmailForm()) {
 	    // NA STEP 1: receive email address for authcode; generate and send authcode
+	    // We have to check for this *before* checking the URL, otherwise we just keep getting the form (NA0).
+	    $sEmail = $this->GetInput_EmailAddress();
 	    $rcToken = $this->TokenTable()->MakeToken(KI_AUTH_TYPE_NEW_USER,$sEmail);
 	    $this->SendEmail_forNewUser($rcToken);
+	} elseif ($this->GetInput_IsNewAccountRequest()) {
+	    // NA STEP 0: display form to get email address for account request link
+	    $this->SetStatus_DoNext(self::KS_STEP_SHOW_EMAIL_ADDR);
 	} elseif ($this->GetInput_IsNewAccountCreateForm()) {
 	    // NA STEP 3: NA form received; if ok, create account
 	    $this->CheckInput_NewAccountCreateForm();
@@ -269,7 +281,7 @@ class fcpeLoginWidget extends fcpeSimple {
 	if ($this->GetStatus_GivenUsernameIsValid()) {
 	    $this->SetFromInput_NewPasswordOkay();
 	    if ($this->GetStatus_NewPasswordOkay()) {
-		$sEmail = $this->TokenRecord()->GetEntity();	// for new account tokens, entity is email address
+		$sEmail = $this->TokenRecord()->GetTokenEntity();	// for new account tokens, entity is email address
 		$sPass = $this->GetInput_PasswordOne();
 		$this->CreateNewAccount($sUser,$sPass,$sEmail);
 		$this->SetSuccess(TRUE);
@@ -307,6 +319,13 @@ class fcpeLoginWidget extends fcpeSimple {
     }
     protected function GetStatus_DoNext() {
 	return $this->nStep;
+    }
+    protected function StoreSubmittedUsername() {
+	$sUser = $this->GetInput_Username();
+	fcApp::Me()->GetSessionRecord()->SetStashValue('login-username',$sUser);
+    }
+    protected function FetchSubmittedUsername() {
+    	return fcApp::Me()->GetSessionRecord()->GetStashValue('login-username');
     }
     private $isUsernameValid;
     protected function SetStatus_InputUsernameIsValid($b) {
@@ -556,25 +575,70 @@ class fcpeLoginWidget extends fcpeSimple {
 	}
 	return $out;
     }
-    // 2016-12-25 Temporarily not sure why this needs to be public.
     protected function Render_LoginRequestControl() {
 	$urlBase = fcApp::Me()->GetKioskObject()->GetBasePath();
-	return "<a href='$urlBase/do:login/'>log in!!</a>";	// 2016-12-18 kluge for now
+	return '<a href="'
+	  .$urlBase
+	  //.KS_CHAR_PATH_SEP		// /
+	  .KS_PATH_ACTION_KEY		// do
+	  .KS_CHAR_URL_ASSIGN		// :
+	  .KS_USER_PATH_REQ_LOGIN_FORM	// login
+	  .KS_CHAR_PATH_SEP		// /
+	  .'" title="display the login form">log in</a>'	// TODO: make these strings config options too
+	  ;
+    }
+    // ACTION: renders the control (usually a link) for starting the new account process
+    protected function Render_NewAccountRequestControl() {
+	$oeLink = new fcUtilityLink(
+	  KS_PATH_ACTION_KEY,
+	  KS_USER_PATH_REQ_NEW_ACCT,
+	  'new',
+	  'request a new account'
+	  );
+	return $oeLink->Render();
+    /*
+	$urlBase = fcApp::Me()->GetKioskObject()->GetBasePath();
+	return '<a href="'
+	  .$urlBase
+	  .KS_CHAR_PATH_SEP		// /
+	  .KS_PATH_ACTION_KEY		// do
+	  .KS_CHAR_URL_ASSIGN		// :
+	  .KS_USER_PATH_REQ_NEW_ACCT	// newacct
+	  .KS_CHAR_PATH_SEP		// /
+	  .'" title="request a new account">new</a>'	// TODO: make these strings config options too
+	  ; */
+    }
+    protected function RenderForm_GetEmailAddressForNewAcct() {
+	$htEA = KF_USER_EMAIL_ADDRESS;
+	$htBtn = KSF_USER_BTN_NEW_ACCT_EMAIL;
+	return <<<__END__
+
+<table class="form-block-login"><tr><td>
+Please enter an email address to which you have access.<br>
+An authorization link will be sent to that address.
+<form method=post>
+Email address:<input name="$htEA" size=40>
+<input type=submit value="Request Access" name="$htBtn">
+</form>
+</td></tr></table>
+__END__;
     }
     /*----
       NOTE: Can't seem to get the HTTP REFERER, otherwise I'd include it as a hidden input here
 	so a successful login could redirect there.
     */
     protected function RenderForm_Login() {
-	$sName = '';	// TODO: fill in submitted userame, if this is a repeat attempt
+	$sName = $this->FetchSubmittedUsername();	// fetch submitted userame (if any) from session stash
 	$htName = htmlspecialchars($sName);
 	$htBtn = KSF_USER_BTN_LOGIN;
+	$htNewAcct = $this->Render_NewAccountRequestControl();
 	return <<<__END__
 
 <table class="form-block-login"><tr><td><form method=post>
 Username:<input name=uname size=10 value="$htName">
 Password:<input type=password name=upass size=10>
 <input type=submit value="Log In" name="$htBtn">
+$htNewAcct
 </form></td></tr></table>
 __END__;
     }
@@ -595,25 +659,30 @@ __END__;
     
 	$oTplt = new fcTemplate_array(KS_TPLT_OPEN,KS_TPLT_SHUT);
 
-	// these areguments are used both for the email text and the web text
+	// these arguments are used both for the email text and the web text
 	$url = $this->FigureURL_forAuthCode($rcToken->GetKeyValue(),$rcToken->GetToken());
+	$sAddr = $rcToken->GetTokenEntity();
 	$ar = array(
-	  'addr'	=> $rcToken->GetEntity(),
+	  'site'	=> KS_SITE_NAME,
+	  'addr'	=> $sAddr,
 	  'action'	=> 'allow you to create a new user account',
 	  'url'		=> $url
 	  );
 	$oTplt->VariableValues($ar);
 
 	// generate the email
-	$oTplt->Template(KS_TPLT_AUTH_EMAIL_TO_SEND);
+	$oTplt->Template(KS_TPLT_EMAIL_TEXT_FOR_NEW_ACCOUNT);
 	$sMsg = $oTplt->Render();
-	$sSubj = KS_TEXT_AUTH_EMAIL_SUBJ;
-	fcApp::Me()->DoEmail_Auto($sAddr,$sName,$sSubj,$sMsg);
+	$sSubj = KS_TEXT_EMAIL_SUBJ_FOR_NEW_ACCOUNT;
+	$sName = NULL;	// user's name not yet known
+	fcApp::Me()->DoEmail_fromAdmin_Auto($sAddr,$sName,$sSubj,$sMsg);
 
 	// generate status message
 	$oTplt->Template(KS_TPLT_AUTH_EMAIL_TO_SHOW);
 	$sMsg = $oTplt->Render();
-	$this->SetStatus_DisplayMessage($sMsg);
+	$this->AddSuccessMessage($sMsg);
+	
+	$this->RedirectToEraseRequest();
     }
     /*----
       TODO:
@@ -626,9 +695,10 @@ __END__;
 
 	// these areguments are used both for the email text and the web text
 	$url = $this->FigureURL_forAuthCode($rcToken->GetKeyValue(),$rcToken->GetToken());
-	$idUser = $rcToken->GetEntity();
+	$idUser = $rcToken->GetTokenEntity();
 	$rcUser = $this->UserTable()->GetRecord_forKey($idUser);
 	$ar = array(
+	  'site'	=> KS_SITE_NAME,
 	  'addr'	=> $this->RedactedEmailAddress($rcUser->EmailAddress()),
 	  'action'	=> 'allow you to change your password',
 	  'url'		=> $url
@@ -636,15 +706,37 @@ __END__;
 	$oTplt->VariableValues($ar);
 
 	// generate the email
-	$oTplt->Template(KS_TPLT_AUTH_EMAIL_TO_SEND);
+	$oTplt->Template(KS_TPLT_EMAIL_TEXT_FOR_PASS_CHANGE);
 	$sMsg = $oTplt->Render();
-	$sSubj = KS_TEXT_AUTH_EMAIL_SUBJ;
-	fcApp::Me()->DoEmail_Auto($sAddr,$sName,$sSubj,$sMsg);
+	$sSubj = KS_TEXT_EMAIL_SUBJ_FOR_PASS_CHANGE;
+	fcApp::Me()->DoEmail_fromAdmin_Auto($sAddr,$sName,$sSubj,$sMsg);
 
 	// generate status message
 	$oTplt->Template(KS_TPLT_AUTH_EMAIL_TO_SHOW);
 	$sMsg = $oTplt->Render();
-	$this->SetStatus_DisplayMessage($sMsg);
+	$this->AddSuccessMessage($sMsg);
+	
+	$this->RedirectToEraseRequest();
+    }
+    /*----
+      NOTE: As useful as it would be for legit users to see if someone *almost* knows their password,
+	an illegit user might gain a legit account's password by setting up accounts using obvious typos
+	of a legit account's username and then waiting for the legit user to make a mistake typing their username.
+	(Illegit user would then probably receive the correct password for legit username, or something
+	close to it.)
+    */
+    protected function SendEmail_forLoginFailure() {
+	$rcSess = fcApp::Me()->GetSessionRecord();
+	$rcUser = $rcSess->GetFailedUserRecord();
+	if (!is_null($rcUser)) {	// user exists, just failed login
+	    $sToAddr = $rcUser->EmailAddress();
+	    $sToName = $rcUser->FullName(FALSE);
+	    $sSite = KS_SITE_SHORT;
+	    $sSubj = $sSite.' login attempt failed';
+	    $sMsg = "Someone (hopefully you!) attempted to log in to $sSite, but the password did not match.";
+	    // TODO: IP address/domain, browser string
+	    fcApp::DoEmail_fromAdmin_Auto($sToAddr,$sToName,$sSubj,$sMsg);
+	}
     }
 
     // -- OUTPUT -- //
@@ -691,13 +783,14 @@ trait ftLoginContainer_standard {
     //abstract protected function Render_LoginRequestControl();	// like "log in" with a link
     
     // -- ABSTRACT -- //
-    // ++ CEMENTING ++ //
-    
+    // ++ CLASSES ++ //
+
+    // CEMENT
     protected function Class_forLoginWidget() {
 	return 'fcpeLoginWidget';
     }
 
-    // -- CEMENTING -- //
+    // -- CLASSES -- //
 
 }
     

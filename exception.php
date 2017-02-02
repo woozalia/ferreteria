@@ -38,7 +38,7 @@ abstract class fcExceptionBase extends exception {
 	$sSubj = $this->Exception_Subject_toEmail($arErr);	// generate subject for email
 	
 	// this still needs adapting
-	$this->App()->DoEmail_Auto(
+	$this->App()->DoEmail_fromAdmin_Auto(
 	  KS_TEXT_EMAIL_ADDR_ERROR,
 	  KS_TEXT_EMAIL_NAME_ERROR,
 	  $sSubj,$sMsg);

@@ -159,7 +159,7 @@ abstract class fcLinkBuilder {
 	$arLink = $this->LinkArray($arAdd);
 	$urlAdd = fcURL::FromArray($arLink);
 	$urlBase = fcApp::Me()->GetKioskObject()->GetBasePath();
-	return $urlBase.'/'.$urlAdd;
+	return $urlBase.$urlAdd;
     }
     /*----
       RETURNS: complete tag for link

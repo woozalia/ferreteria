@@ -40,7 +40,7 @@ abstract class fcMenuLink extends fcNavLink {
 
     // ++ SETUP ++ //
 
-    public function __construct($sKeyValue,$sText=NULL,$sPopup=NULL) {	// TODO: need a param which lets it detect usage
+    public function __construct($sKeyValue,$sText=NULL,$sPopup=NULL) {
 	$this->SetKeyValue($sKeyValue);
 	$this->SetLinkText($sText);
 	$this->SetPopup($sPopup);
@@ -179,25 +179,14 @@ abstract class fcMenuLink extends fcNavLink {
 	return fcApp::Me()->GetKioskObject();
     }
 }
-/*----
-  PURPOSE: selectable link that isn't dropin-specific
-  ABSTRACT: n/i = GetLinkURL()
-*/
-abstract class fcDynamicLink extends fcMenuLink {
-
-    // ++ CALCULATIONS ++ //
-    
-    private $isSel;
-    // PUBLIC so code can see whether menu options are activated
-    public function GetIsSelected() {
-	if (empty($this->isSel)) {
-	    $sKeyValue = $this->GetKeyValue();
-	    $sKeyName = $this->GetKeyName();
-	    $oKiosk = $this->GetKioskObject();
-	    $sInValue = $oKiosk->GetInputObject()->GetString($sKeyName);
-	    $this->isSel = ($sInValue == $sKeyValue);
-	}
-	return $this->isSel;
+class fcLink_fromArray extends fcMenuLink {
+    /*----
+      CEMENT
+    */
+    protected function GetLinkURL() {
+	$arPath = $this->GetLinkArray_dynamic();
+	$fpArgs = fcURL::FromArray($arPath);
+	return $this->MakeURL_fromPath($fpArgs);
     }
     // NEW
     protected function GetLinkArray_base() {
@@ -213,6 +202,53 @@ abstract class fcDynamicLink extends fcMenuLink {
 	Wait for a usage case, and then test.
     */
     protected function GetLinkArray_dynamic() {
+	return $this->GetLinkArray_base();
+    }
+}
+/*::::
+  PURPOSE: links which are basically utilities -- like "login" -- so the URL has to follow
+    a particular convention
+    For links where the URL is calculated elsewhere, use fcNavLinkFixed.
+*/
+class fcUtilityLink extends fcLink_fromArray {
+    public function __construct($sKeyName,$sKeyValue,$sText=NULL,$sPopup=NULL) {
+	parent::__construct($sKeyValue,$sText,$sPopup);
+	$this->SetKeyName($sKeyName);
+    }
+    // OVERRIDE - we don't want any list-formatting
+    protected function RenderSelf() {
+	$sClass = $this->GetKeyName().'-'.$this->GetKeyValue();
+	return "\n<span class='$sClass'>".$this->RenderContent()."</span>";
+    }
+    /*
+    public function Render() {
+	$sLinkURL = $this->GetLinkURL();
+	$htLinkText = htmlspecialchars($this->GetLinkText(),ENT_QUOTES);
+	return $this->RenderLink();
+    }*/
+}
+/*::::
+  PURPOSE: selectable link that isn't dropin-specific
+  ABSTRACT: n/i = GetLinkURL()
+*/
+abstract class fcDynamicLink extends fcLink_fromArray {
+
+    // ++ CALCULATIONS ++ //
+    
+    private $isSel;
+    // PUBLIC so code can see whether menu options are activated
+    public function GetIsSelected() {
+	if (empty($this->isSel)) {
+	    $sKeyValue = $this->GetKeyValue();
+	    $sKeyName = $this->GetKeyName();
+	    $oKiosk = $this->GetKioskObject();
+	    $sInValue = $oKiosk->GetInputObject()->GetString($sKeyName);
+	    $this->isSel = ($sInValue == $sKeyValue);
+	}
+	return $this->isSel;
+    }
+    // OVERRIDE - handles selection
+    protected function GetLinkArray_dynamic() {
 	$isSel = $this->GetIsSelected();
 	if ($isSel) {
 	    $arPath = array();
@@ -220,14 +256,6 @@ abstract class fcDynamicLink extends fcMenuLink {
 	    $arPath = $this->GetLinkArray_base();
 	}
 	return $arPath;
-    }
-    /*----
-      CEMENT
-    */
-    protected function GetLinkURL() {
-	$arPath = $this->GetLinkArray_dynamic();
-	$fpArgs = fcURL::FromArray($arPath);
-	return $this->MakeURL_fromPath($fpArgs);
     }
     
     // -- CALCULATIONS -- //

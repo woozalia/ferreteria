@@ -11,7 +11,7 @@
   */
 
 
-/*%%%%
+/*::::
   PURPOSE: defines the basic interface for a database connection
 */
 abstract class fcDataConn {
@@ -136,7 +136,9 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
     
     /*----
       NOTE: Adapted from Make() in db.v1
-      ASSUMES: If $id is not NULL, then $sTableClass must be a *single-keyed* table class.
+      ASSUMES:
+	* Table will connect itself to this database. (TODO: fix this assumption)
+	* If $id is not NULL, then $sTableClass must be a *single-keyed* table class.
     */
     private $arTables;
     public function MakeTableWrapper($sTableClass,$id=NULL) {
@@ -152,12 +154,8 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
 		$ksRequiredParent = 'fcTableBase';
 		if (is_subclass_of($sTableClass,$ksRequiredParent)) {
 		    $t = new $sTableClass($this);
-		    if ($t->HasFeature(fcTableBase::KS_FEATURE_CONNECTION)) {
-			$this->arTables[$sTableClass] = $t;
-			$ok = TRUE;
-		    } else {
-			$sErr = "Requested table class '$sTableClass' lacks the CONNECTION feature, which is needed here.";
-		    }
+		    $this->arTables[$sTableClass] = $t;
+		    $ok = TRUE;
 		} else {
 		    $sErr = "Requested class '$sTableClass' is not a descendant of $ksRequiredParent.";
 		}
