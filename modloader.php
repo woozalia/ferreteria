@@ -260,12 +260,12 @@ class fcCodeModule {
 		$fsMod = $this->Path();
 		$strName = $this->Key();
 		if (file_exists($fsMod)) {
-			require_once $fsMod;
+		    require_once $fsMod;
 		    $ok = TRUE;
 		} else {
 		    $fsCaller = $this->fsCaller;
 		    //$intCaller = $this->intCaller;
-		    echo "Module <b>$strName</b> could not be loaded because source file <b>$fsMod</b>, registered in <b>$fsCaller</b>, is not found.";
+		    echo "Module <b>$strName</b> could not be loaded because source file <b>$fsMod</b>, registered in <b>$fsCaller</b>, is not found.<br>";
 		}
 	    } catch(Exception $e) {
 		echo "ModLoader could not load module [$strName] from [$fsMod]; error: <b>".$e->getMessage().'</b>';

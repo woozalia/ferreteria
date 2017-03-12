@@ -32,6 +32,7 @@ class fctUserGroups extends fcTable_keyed_single_standard {
 
 }
 class fcrUserGroup extends fcRecord_standard {
+    use ftSaveableRecord;
 
     // ++ FIELD VALUES ++ //
 

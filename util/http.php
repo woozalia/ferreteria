@@ -34,6 +34,22 @@ class fcHTTP {
 	    return $nStatus;
 	}
     }
+    static public function SendDownload($sMIME,$fsNameLocal,$fnNameAs) {
+	header('Content-Description: File Transfer');
+	header('Content-Transfer-Encoding: binary');
+	header('Expires: 0');
+	header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+	header('Pragma: public');
+	header('Content-type: '.$sMIME);
+	//header('Content-Type: application/octet-stream');
+	header('Content-Disposition: attachment; filename="'.$fnNameAs.'"');
+	$nSize = filesize($fsNameLocal);
+	header('Content-Length: '.$nSize);
+	ob_end_flush();
+
+	readfile($fsNameLocal);
+	exit;
+    }
     // ++ FORM DATA ++ //
 
     /* 2016-02-22 old version

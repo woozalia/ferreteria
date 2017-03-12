@@ -12,6 +12,13 @@
 define('KWP_FERRETERIA_DOC','http://htyp.org/User:Woozle/Ferreteria');
 define('KWP_FERRETERIA_DOC_ERRORS',KWP_FERRETERIA_DOC.'/errors');
 
+// ++ EVENTS ++ //
+
+define('KS_EVENT_SUCCESS','OK');
+define('KS_EVENT_FAILED','ERR');
+define('KS_EVENT_FERRETERIA_SUSPICIOUS_INPUT','fe.suspicious');
+define('KS_EVENT_FERRETERIA_EMAIL_SENT','fe.email.sent');
+
 /*::::
   PURPOSE: application framework base class -- container for the application
   FUTURE: For now, we're assuming a single database per application.
@@ -116,9 +123,9 @@ abstract class fcAppStandard extends fcApp {
 	    $this->Main();
 	} catch(fcExceptionBase $e) {
 	    $e->React();
-	} catch(exception $e) {
+	} catch(Throwable $e) {
 	    $code = $e->getCode();
-	    $sNative = ($code==0)?'':"<b>Native exception $code</b> caught:";
+	    $sNative = ($code==0)?'':"<b>Native error $code</b> caught:";
 	    echo '<html><head><title>'
 	      .KS_SITE_SHORT
 	      .' error</title></head>'
@@ -179,13 +186,17 @@ abstract class fcAppStandard extends fcApp {
     // ++ CLASS NAMES ++ //
 
     protected function GetSessionsClass() {
-	return 'fctUserSessions';
+	//return 'fctUserSessions';
+	return KS_CLASS_ADMIN_USER_SESSIONS;
     }
     protected function GetUsersClass() {
-	return 'fctUserAccts_admin';
+	return KS_CLASS_ADMIN_USER_ACCOUNTS;
     }
     protected function GetEventsClass() {
-	return 'fctEvents_standard';
+	return 'fctEventPlex';
+    }
+    protected function GetEventsDoneClass() {
+	return 'fctSubEvents_done';
     }
     protected function GetDropinManagerClass() {
 	return 'fcDropInManager';
@@ -201,6 +212,10 @@ abstract class fcAppStandard extends fcApp {
     public function EventTable($id=NULL) {
 	$db = $this->GetDatabase();
 	return $db->MakeTableWrapper($this->GetEventsClass(),$id);
+    }
+    public function EventTable_Done() {
+	$db = $this->GetDatabase();
+	return $db->MakeTableWrapper($this->GetEventsDoneClass());
     }
 
     // -- TABLES -- //
@@ -229,6 +244,15 @@ abstract class fcAppStandard extends fcApp {
     }
 
     // -- STATUS -- //
+    // ++ LOGGING ++ //
+
+    public function CreateEvent($sCode,$sText,array $arData=NULL) {
+	$t = $this->EventTable();
+	$id = $t->CreateEvent($sCode,$sText,$arData);
+	return $id;
+    }
+
+    // -- LOGGING -- //
     // ++ FIELD CALCULATIONS ++ //
 
     /*----
@@ -313,6 +337,11 @@ abstract class fcAppStandard extends fcApp {
 
 	$sHdr = 'From: '.$sAddrFrom;
 	$ok = mail($sAddrToFull,$sSubj,$sMsg,$sHdr);
+	
+	$idEv = fcApp::Me()->EventTable()->GetLastID();
+	$rcEvSub = $this->EventTable_Done();
+	$rcEvSub->CreateRecord($idEv,KS_EVENT_FERRETERIA_EMAIL_SENT);
+	
 	return $ok;
     }
     

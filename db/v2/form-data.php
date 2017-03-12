@@ -148,7 +148,7 @@ class fcForm_DB extends fcForm_keyed {
 	// 2016-10-12 new version
 	if ($idUpd == KS_NEW_REC) {
 	    // Make sure recordset's ID field indicates NEW, so it will INSERT instead of UPDATE:
-	    $rc->ClearKeyValue();
+	    $rc->SetKeyValue(NULL);
 	}
 	if (method_exists($rc,'Save')) {
 	    $rc->Save($arSave);
@@ -159,14 +159,27 @@ class fcForm_DB extends fcForm_keyed {
 	      .'" must use trait "ftSaveableRecord".'
 	      );
 	}
+	//echo "SQL={$rc->sql}<br>";
 
-	$sErr = fcApp::Me()->GetDatabase()->ErrorString();
+	$db = fcApp::Me()->GetDatabase();
+	$sErr = $db->ErrorString();
 	//$tbl = $this->GetRecordsObject()->GetTableWrapper();	// seems likely there's another way to get the executed SQL
 	if (!empty($sErr)) {
+	    $oPage = fcApp::Me()->GetPageObject();
+	    $oPage->AddErrorMessage(
+	      '<b>Error</b>: '.$sErr.'<br>'
+	      .'<b>SQL</b>: '.$rc->sql
+	    );
+	    //throw new exception('How do we get here?');
+	    //die('THERE WAS AN ERROR');
+	    
+	    /*
 	    $this->AddMessage('<b>Error</b>: '.$sErr);
 	    $this->AddMessage('<b>SQL</b>: '.$rc->sql);	// not sure if $rc->sql will work for $rc->Save()... but it kinda *should*
+	    die('YES THERE WERE ERRORS');
+	    */
 	}
-	return $id;
+	return $db->CreatedID();
     }
     /*----
       ACTION: copy Field values to Recordset

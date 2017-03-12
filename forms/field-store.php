@@ -159,6 +159,17 @@ class fcFieldStorage_Time extends fcFieldStorage {
 }
 class fcFieldStorage_Bit extends fcFieldStorage {
 
+    // ++ UTILITY ++ //
+    
+    // ACTION: convert from storage format to native
+    static public function FromStorage($ch) {
+	return (ord($ch) != 0);
+    }
+    // ACTION: convert from native to storage format
+    static public function ToStorage($b) {
+	return $b?"b'1'":"b'0'";
+    }
+
     // ++ CEMENTING ++ //
 
     /*----
@@ -166,8 +177,8 @@ class fcFieldStorage_Bit extends fcFieldStorage {
       INPUT: as received from database engine
       RETURNS: value in internal format
     */
-    protected function toNative($sVal) {
-	return (ord($sVal) != 0);
+    protected function toNative($val) {
+	return self::FromStorage($val);
     }
     /*----
       PURPOSE: convert from internal format to sanitized (cooked) data format
@@ -178,7 +189,7 @@ class fcFieldStorage_Bit extends fcFieldStorage {
 	toNative()), but isn't human-readable (for debugging).
     */
     protected function fromNativeSane($bVal) {
-	return $bVal?"b'1'":"b'0'";
+	return self::ToStorage($bVal);
     }
 
     // -- CEMENTING -- //

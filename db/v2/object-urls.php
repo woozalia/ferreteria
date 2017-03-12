@@ -177,15 +177,26 @@ abstract class fcLinkBuilder {
     }
     /*----
       ACTION: redirects to a generated URL
+      HISTORY:
+	2017-02-09 now includes page contents in stash. Hopefully this won't cause a problem;
+	  deal with it when/if it does.
     */
     public function LinkRedirect($sText=NULL,array $arAdd=NULL) {
-	// TODO: finish adapting this
+	$oPage = fcApp::Me()->GetPageObject();
+    	$url = $this->LinkURL($arAdd);
+    	if (!is_null($sText)) {
+	    $oPage->AddContentString($sText);
+	}
+	$oPage->DoStashedRedirect($url);
 
+	/* 2017-02-09 old code
+	// TODO: finish adapting this
 	fcHTTP::DisplayOnReturn($sText);
 	$url = $this->LinkURL($arAdd);
 	echo 'REDIRECTING to '.$url.' and saving the following text:<br>'.$sText;	// for debugging
 	fcHTTP::Redirect($url,array(),FALSE,HTTP_REDIRECT_POST);
 	die();	// don't do any more work (including accidentally erasing the cookie)
+	*/
     }
 
     // -- API -- //

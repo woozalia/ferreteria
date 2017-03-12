@@ -8,14 +8,12 @@ class fctAdminUserSessions extends fctUserSessions {
     use ftLinkableTable;
 
     // ++ SETUP ++ //
-/*
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->ClassSng(KS_CLASS_ADMIN_USER_SESSION);
-	  $this->ActionKey(KS_ACTION_USER_SESSION);
-    } */
+
     protected function GetActionKey() {
 	return KS_PAGE_KEY_SESSION;
+    }
+    protected function SingularName() {
+	return KS_CLASS_ADMIN_USER_SESSION;
     }
     
     // -- SETUP -- //
@@ -25,13 +23,30 @@ class fctAdminUserSessions extends fctUserSessions {
       PURPOSE: execution method called by dropin menu
     */
     public function MenuExec(array $arArgs=NULL) {
-	// TODO
+	return $this->AdminListing();
     }
 
     // -- DROP-IN API -- //
+    // ++ WEB UI ++ //
+
+    protected function AdminListing() {
+	$rs = $this->SelectRecords();
+	$arCols = array(
+	  'ID'		=> 'ID',
+	  'ID_Client'	=> 'Client',
+	  'ID_Acct'	=> 'User',
+	  'Stash'	=> 'Data',
+	  'WhenCreated'	=> 'Created',
+	  'WhenExpires'	=> 'Exp',
+	  'WhenClosed'	=> 'End',
+	  );
+	$out = $rs->AdminRows($arCols);
+	return $out;
+    }
 }
-class acrAdminUserSession extends fcrUserSession {
+class fcrAdminUserSession extends fcrUserSession {
     use ftLinkableRecord;
+    use ftShowableRecord;
 
     // ++ DROP-IN API ++ //
 

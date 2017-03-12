@@ -14,6 +14,11 @@
     2013-11-09 backported improved Session classes back into user-session.php
     2016-04-03 moved RandomString() to fcString::Random().
 */
+
+define('KS_EVENT_FERRETERIA_LOGIN_OKAY','fe.login.ok');
+define('KS_EVENT_FERRETERIA_LOGIN_BAD','fe.login.bad');
+define('KS_EVENT_FERRETERIA_LOGOUT','fe.logout');
+
 /*::::
   PURPOSE: Handles the table of user sessions
 */
@@ -304,7 +309,7 @@ class fcrUserSession extends fcRecord_standard {
     // ++ CLASSES ++ //
 
     protected function ClientsClass() {
-	return 'clsUserClients';
+	return 'fctUserClients';
     }
     protected function UsersClass() {
 	return 'fctUserAccts';
@@ -417,6 +422,7 @@ class fcrUserSession extends fcRecord_standard {
     protected function ClearUserRecord() {
 	$this->rcUser = NULL;
     }
+    /* 2017-02-05 go directly to user table
     private $rcUserFailed;
     protected function SetFailedUserRecord(fcrUserAcct $rcUser) {
 	$this->ClearUserRecord();
@@ -425,6 +431,7 @@ class fcrUserSession extends fcRecord_standard {
     public function GetFailedUserRecord() {
 	return $this->rcUserFailed;
     }
+    */
     /* 2017-01-16 old version
     // TODO: is this ever *supposed* to be called with oUser=NULL? If so, why? Document.
     public function SetUserRecord(fcrUserAcct $oUser=NULL) {
@@ -699,30 +706,47 @@ class fcrUserSession extends fcRecord_standard {
     }*/
     /*----
       ACTION: Attempts to log the user in with the given credentials.
-      RETURNS: nothing
+      RETURNS: event record
 	Call UserIsLoggedIn() to find out if successful.
+      TODO: Record event before starting login, then log an event_done after trying it.
     */
     public function UserLogin($sUser,$sPass) {
 	$tUsers = $this->UserTable();
 	$rcUser = $tUsers->Login($sUser,$sPass);
+	$arData = array(
+	  'user'	=> $sUser
+	  );
 	if ($tUsers->DidSucceed()) {
+	    // SUCCESSFUL LOGIN
+	
 	    // set user for this session
 	    $this->SetUserRecord($rcUser);
+	    $sText = $sUser.' logged in';
+				      // $sCode,$sText,array $arData=NULL
+	    fcApp::Me()->CreateEvent(KS_EVENT_FERRETERIA_LOGIN_OKAY,$sText,$arData);
 	} else {
-	    // login failure -- clear any existing user (security precaution), save info about attempted user
-	    if (is_null($rcUser)) {
-		$this->ClearUserRecord();
-	    } else {
-		$this->SetFailedUserRecord($rcUser);
-	    }
+	    // LOGIN ATTEMPT FAILED
+	
+	    // clear any existing user (security precaution):
+	    $this->ClearUserRecord();
+	    $sErr = $tUsers->GetErrorCode();
+	    $sText = $sUser.' not logged in, error '.$sErr;
+	    fcApp::Me()->CreateEvent(KS_EVENT_FERRETERIA_LOGIN_FAIL,$sText,$arData);
 	}
     }
     /*----
       ACTION: Logs the current user out. (Clears ID_Acct in session record.)
     */
     public function UserLogout() {
-	$this->ClearValue('ID_Acct');
-	$arUpd = array('ID_Acct'=>'NULL');
+	$sName = $this->UserRecord()->UserName();
+	$arData = array(
+	  'user'	=> $sUser
+	  );
+	fcApp::Me()->EventTable()->CreateEvent(KS_EVENT_FERRETERIA_LOGOUT,$sName.' logged out',$arData);
+	$this->SetFieldValue('ID_Acct',NULL);
+	$arUpd = array(
+	  'ID_Acct'=>'NULL'
+	  );
 	$this->Update($arUpd);
     }
     /*----

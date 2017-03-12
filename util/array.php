@@ -4,15 +4,29 @@
   HISTORY:
     2015-09-13 Removed the [brackets] from the output of clsArray::Render().
     2016-01-19 Fixed bug in Render() recursion.
+    2017-02-22 auto-detection of CLI mode (this eventually belongs somewhere else)
 */
 
 class fcArray {
-    static private $sRenderPrefix = '<pre>';
-    static private $sRenderSuffix = '</pre>';
     static private $sRenderIndent = '  ';
     static private $sRenderSeparator = " => \t";
     static private $sRenderNewLine = "\n";
 
+    static protected function GetRenderPrefix() {
+	if (php_sapi_name() == "cli") {
+	    return '';
+	} else {
+	    return '<pre>';
+	}
+    }
+    static protected function GetRenderSuffix() {
+	if (php_sapi_name() == "cli") {
+	    return '';
+	} else {
+	    return '</pre>';
+	}
+    }
+    
     // ++ CALCULATIONS ++ //
 
     static public function Exists(array $ar=NULL,$key) {
@@ -161,7 +175,7 @@ class fcArray {
 	$nDepth = maximum depth to render (0 = no maximum)
     */
     static public function Render(array $ar=NULL,$nDepth=0) {
-	$out = self::$sRenderPrefix;
+	$out = self::GetRenderPrefix();
 	if (is_null($ar)) {
 	    $out .= 'NULL';
 	} else {
@@ -171,7 +185,7 @@ class fcArray {
 		$out .= self::RenderLayer($ar,0,$nDepth);
 	    //}
 	}
-	$out .= self::$sRenderSuffix;
+	$out .= self::GetRenderSuffix();
 	return $out;
     }
     static protected function RenderLayer($ar,$nDepthCur,$nDepthMax) {

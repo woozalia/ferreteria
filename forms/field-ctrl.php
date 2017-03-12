@@ -299,7 +299,7 @@ class fcFormControl_HTML_TextArea extends fcFormControl_HTML {
 	    $out = $this->RenderEditor();
 	} else {
 	    $val = parent::RenderValue();
-	    $out = clsHTML::RespectLineBreaks($val);
+	    $out = fcHTML::RespectLineBreaks($val);
 	}
 	return $out;
     }
@@ -370,10 +370,11 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
     // ++ OPTIONS ++ //
 
     private $rs;
-    public function Records(fcRecord_keyed_single $rs=NULL) {
-        if (!is_null($rs)) {
-            $this->rs = $rs;
-        }
+    // NOTE: Can be NULL because sometimes a particular recordset is empty or unavailable
+    public function SetRecords(fcRecord_keyed_single $rs=NULL) {
+	$this->rs = $rs;
+    }
+    public function GetRecords() {
         return $this->rs;
     }
     private $sNullData;		// string to return if value is NULL and the list doesn't have a NULL entry
@@ -414,7 +415,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	return $this->HasRecords() || $this->HasExtraChoices();
     }
     protected function HasRecords() {
-	$rs = $this->Records();
+	$rs = $this->GetRecords();
 	if (is_null($rs)) {
 	    return FALSE;	// no recordset data
 	} elseif ($rs->HasRows()) {
@@ -433,7 +434,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
     private $arRecs;
     protected function RecordArray() {
 	if (empty($this->arRecs)) {
-	    $rs = $this->Records();
+	    $rs = $this->GetRecords();
 	    if (is_null($rs)) {
 		$this->arRecs = NULL;
 	    } elseif ($rs->hasRows()) {
@@ -453,7 +454,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	    if (is_null($arRecs)) {
 		$this->arRecChc = NULL;
 	    } else {
-		$rs = $this->Records();
+		$rs = $this->GetRecords();
 		foreach ($arRecs as $id => $arRow) {
 		    $rs->SetFieldValues($arRow);
 		    $oChoice = new fcDropChoice($id,$rs->ListItem_Text());
@@ -463,10 +464,11 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	}
 	return $this->arRecChc;
     }
+    /* 2017-03-11 This seems not to be in use. Maybe it should be?
     protected function Choices() {
 	$arOut = fcArray::Merge($this->ExtraChoices(),$this->RecordChoices());
 	return $arOut;
-    }
+    }*/
 
     // -- CACHING -- //
     // ++ CONVERSION ++ //
@@ -499,7 +501,7 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 			$out = "<span title='value \"$vCurr\" not found in list'><i>?$vCurr?</i></span>";
 		    }
 		} else {
-		    $rs = $this->Records();	// get a copy of the recordset object
+		    $rs = $this->GetRecords();	// get a copy of the recordset object
 		    if (method_exists($rs,'ListItem_Link')) {
 			$rs->SetFieldValues($arRec);	// give it the row we want to display
 			$out = $rs->ListItem_Link();
@@ -517,39 +519,76 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
     // -- CONVERSION -- //
     // ++ OVERRIDES ++ //
 
+    /*----
+      HISTORY:
+	2017-03-09 Rewriting to better handle no-data conditions
+    */
     protected function RenderEditor() {
 
-	if (!$this->HasRows()) {
-	    if (!$this->HasRecords()) {
-		if (is_null($this->Records())) {
-		    // no recordeset object at all
-		    return $this->NoObjectString();
+    // 2017-03-11 The logic here is a bit precarious. May need further revision.
+	if ($this->HasRows()) {
+	    $doNoRows = FALSE;	// there are rows, but maybe no data
+	    
+	    if ($this->HasExtraChoices()) {
+		$doExtras = TRUE;
+	    } else {
+		$doExtras = FALSE;	// no extra rows
+	    }
+	    
+	    if ($this->HasRecords()) {
+		$doNoRecords = FALSE;	// there are data records
+	    } else {
+		$doNoRecords = TRUE;	// no data records
+		if (is_null($this->GetRecords())) {
+		    $doNoObject = TRUE;		// there is no recordset object at all
 		} else {
-		    // no records in set and no extra records
-		    return $this->NoDataString();
+		    $doNoObject = FALSE;	// there is at least a recordset object
 		}
 	    }
-        }
 
-        // we've confirmed there's something to display
-
-	$vDeflt = $this->NativeObject()->GetValue();
-
-	$out = "\n".'<select'
+        } else {
+	    $doNoRows = TRUE;	// no rows at all to display
+	}
+	  
+	if ($doNoRows) {
+	    if ($doNoObject) {
+		$out = $this->NoObjectString();
+	    } elseif ($doNoRecords) {
+		$out = $this->NoDataString();
+	    }
+	    $htTag = 'input';
+	    $this->TagAttributes(
+	      array(
+		'type'=>'hidden',
+		'value'=>''
+	      )
+	    );
+	    $htCloser = '/';
+	} else {
+	    // we've confirmed there's something to display
+	    $htTag = 'select';
+	    $htCloser = '';
+	    $out = NULL;
+	}
+	$out .= "\n<$htTag"
 	  .$this->RenderEditor_mainAttribs()
+	  .$htCloser
 	  .'>'
 	  ;
+	  
+	$vDeflt = $this->NativeObject()->GetValue();
 
 	// display extra choices first
-	if ($this->HasExtraChoices()) {
+	if ($doExtras) {
 	    $arRows = $this->ExtraChoices();
 	    foreach ($arRows as $id => $oRow) {
 		$out .= $oRow->RenderHTML($id == $vDeflt);
 	    }
 	}
 
-	if ($this->HasRecords()) {
-	    $rs = $this->Records();
+	if (!$doNoRecords) {
+	    $rs = $this->GetRecords();
+	    $sClass = get_class($rs);
 	    if (method_exists($rs,'ListItem_Text')) {
 
 /*
@@ -565,11 +604,12 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 		    $out .= $oChoice->RenderHTML($id == $vDeflt);
 		}
 	    } else {
-		throw new exception(get_class($rs).'::ListItem_Text() needs to be defined.');
+		throw new exception("$sClass::ListItem_Text() needs to be defined.");
 	    }
 	}
-
-	$out .= "\n</select>\n";
+	if (!$doNoRows) {
+	    $out .= "\n</select>\n";
+	}
 
 	return $out;
     }

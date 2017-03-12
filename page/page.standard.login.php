@@ -68,6 +68,8 @@ abstract class fcTag_body_login extends fcTag_body_standard {
 // ABSTRACT: n/i = GetStyleFolder, GetElement_PageHeader, GetElement_HeaderMenu, + 2 more
 abstract class fcPage_login extends fcPage_standard {
 
+    // ++ OBJECTS ++ //
+
     /*----
       PUBLIC because page header needs to access login widget's status thingy
       NEW
@@ -75,6 +77,10 @@ abstract class fcPage_login extends fcPage_standard {
     public function GetElement_LoginWidget() {
 	return $this->GetTagNode_body()->GetElement_LoginWidget();
     }
+    
+    // -- OBJECTS -- //
+    // ++ SCREEN ++ //
+
     /*----
       NOTE: These messages *conceivably* could be of use in a non-login app,
 	but that seems like a thing to do when the need actually arises.
@@ -89,4 +95,5 @@ abstract class fcPage_login extends fcPage_standard {
 	$this->GetElement_PageContent()->AddSuccessMessage($s);
     }
     
+    // -- SCREEN -- //
 }

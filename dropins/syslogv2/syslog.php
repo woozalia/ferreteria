@@ -9,13 +9,14 @@
     2013-12-07 rewriting as drop-in module
     2014-02-05 renaming *Syslog to *SysEvents
     2017-01-07 updating for db.v2 revisions
+    2017-02-07 adapting for eventPlex
 */
 /*::::
   CLASS: clsAdminSyslog
   PURPOSE: Admin interface to system logs
   NOTE that this descends from the event *table* class, not the event *helper* class.
 */
-class fctEvents_admin extends fctEvents {
+class fctEvents_admin extends fctEventPlex {
     use ftLinkableTable;
   
     // ++ SETUP ++ //
@@ -27,7 +28,7 @@ class fctEvents_admin extends fctEvents {
     }
     // OVERRIDE
     protected function SingularName() {
-	return 'VC_SysEvent';
+	return 'fcrEventAdmin';
     }
     // CEMENT
     public function GetActionKey() {
@@ -58,9 +59,10 @@ class fctEvents_admin extends fctEvents {
     /*----
       HISTORY:
 	2017-01-15 adapted from db.v1; moved from fctEvents to fctEvents_admin
+      TODO: This should probably limit to, say, the most recent 100 records by default.
     */
     public function EventListing() {
-	$rs = $this->EventRecords();
+	$rs = $this->SelectRecords();
 	$oHdr = new fcSectionHeader('System Events');
 	return 
 	  $oHdr->Render()
@@ -68,8 +70,10 @@ class fctEvents_admin extends fctEvents {
 	  ;
     }
     protected function AdminPage() {
+	return $this->EventListing();	// 2017-02-06 see if that works
+    
 	// 2017-01-15 WAIT -- this may be a duplicate of EventListing() or AdminRows().
-	$rsEv = $this->EventData();
+	$rsEv = $this->EventRecords();
 	if ($rsEv->HasRows()) {
 	    $out = $rsEv->AdminRows(TRUE);
 	} else {
@@ -80,12 +84,23 @@ class fctEvents_admin extends fctEvents {
 
     // -- ADMIN UI -- //
 }
-class VC_SysEvent extends fcrEvent {
+class fcrEventAdmin extends fcrEventPlex {
     use ftLinkableRecord;
     use ftShowableRecord;
 
     // ++ WEB ADMIN UI ++ //
 
+    // CALLBACK from ftShowableRecord
+    protected function AdminRows_settings_columns_default() {
+	return array(
+	  'ID'		=>	'ID',
+	  'WhenStart'	=>	'Start',
+	  'ID_Session'	=>	'Session',
+	  'TypeCode'	=> 	'Code',
+	  'Descrip'	=>	'Description',
+	  'Stash'	=> 	'Data'
+	  );
+    }
     /*----
       INPUT:
 	$doGeneral: TRUE = show Mod and Index columns
@@ -109,10 +124,10 @@ class VC_SysEvent extends fcrEvent {
 	  Data is apparently too long to show all at once now; something Clever is needed.
 	2013-12-08 adapting from clsAdminEvent (MW event admin class)
     */
-    public function AdminRows($doGeneral) {
+    public function AdminRows() {
 	if ($this->HasRows()) {
 	    //$htUnknown = '<span style="color: #888888;">?</span>';
-	    $out = self::AdminRowHeader($doGeneral);
+	    $out = self::AdminRowHeader();
 
 	    $isOdd = TRUE;
 	    $strDateLast = NULL;

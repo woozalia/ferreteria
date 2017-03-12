@@ -57,13 +57,20 @@ class fcDataRow_array extends fcSourcedDataRow {
     public function RewindRows() {
 	$this->nRow = 0;
 	reset($this->arRows);	// point native pointer at first element
+	$this->ClearRow();	// clear current-row buffer
     }
+    /*----
+      HISTORY:
+	2017-02-23 Fixed counting logic so this finally renders all rows
+    */
     public function NextRow() {
-	$this->nRow++;
 	$nRow = $this->nRow;
+	$this->nRow++;
 	if ($nRow < $this->RowCount()) {
 	    $arElem = each($this->arRows);
-	    $this->SetFieldValues($arElem['value']);
+	    //this->ClearFields();
+	    //$this->SetFieldValues($arElem['value']);
+	    $this->SetRow($arElem['value']);
 	    return TRUE;
 	} else {
 	    return FALSE;	// no more row-elements in the array
@@ -75,5 +82,12 @@ class fcDataRow_array extends fcSourcedDataRow {
 
     public function SetAllRows(array $ar) {
 	$this->arRows = $ar;
+	$this->RewindRows();
     }
+    // NOTE: Same output as FetchRows_asArray(), but does not alter the current-row pointer
+    public function GetAllRows() {
+	return $this->arRows;
+    }
+    
+    // -- NEW -- //
 }

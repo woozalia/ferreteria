@@ -1,6 +1,6 @@
 <?php
 
-class clsUserClients extends fcTable_keyed_single_standard {
+class fctUserClients extends fcTable_keyed_single_standard {
     // ++ SETUP ++ //
     
     // CEMENT
@@ -9,7 +9,7 @@ class clsUserClients extends fcTable_keyed_single_standard {
     }
     // CEMENT
     protected function SingularName() {
-	return 'clsUserClient';
+	return 'fcrUserClient';
     }
 
     // -- SETUP -- //
@@ -68,7 +68,7 @@ class clsUserClients extends fcTable_keyed_single_standard {
     // -- RECORDS -- //
 
 }
-class clsUserClient extends fcRecord_standard {
+class fcrUserClient extends fcRecord_standard {
 
     // ++ SETUP ++ //
 

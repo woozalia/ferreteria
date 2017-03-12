@@ -39,16 +39,25 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	return $this->NativeObject()->escape_string($sSQL);
     }
     /*----
-      ACTION: Sanitizes, and encloses in quotes if needed
+      ACTION: Sanitizes, and encloses in quotes if needed;
+	returns 'NULL' if input is NULL.
 	This is equivalent to the functionality of
 	  mysql_real_escape_string().
+      HISTORY:
+	2017-02-11 Now handles NULL properly. Also, decided there's no
+	  need to sanitize a numeric.
+      TODO: Should probably be named something that implies general SQLification.
     */
     public function Sanitize_andQuote($sSQL) {
-	$s = $this->Sanitize($sSQL);
-	if (is_numeric($s)) {
-	    return $s;
+	if (is_null($sSQL)) {
+	    return 'NULL';
 	} else {
-	    return "'$s'";
+	    if (is_numeric($sSQL)) {
+		return $sSQL;
+	    } else {
+		$s = $this->Sanitize($sSQL);
+		return "'$s'";
+	    }
 	}
     }
 

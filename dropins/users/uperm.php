@@ -32,9 +32,15 @@ class fctAdminUserPermits extends fctUserPerms {
     // ++ ADMIN INTERFACE ++ //
 
     protected function AdminListing() {
-	$rs = $this->GetData();
+	$rs = $this->SelectRecords();
 
 	// set up header action-links
+	
+	$oMenu = fcApp::Me()->GetHeaderMenu();
+	  // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
+	  $oMenu->SetNode($ol = new fcMenuOptionLink('id',KS_NEW_REC));
+	    $ol->SetBasePath($this->SelfURL());
+	/* 2017-02-05 v2 - obsolete
 	$oPage = $this->Engine()->App()->Page();
 	$arPage = $oPage->PathArgs();
 	$arActs = array(
@@ -42,6 +48,7 @@ class fctAdminUserPermits extends fctUserPerms {
 	  new clsActionLink_option($arPage,KS_NEW_REC,'id')
 	  );
 	$oPage->PageHeaderWidgets($arActs);
+	*/
 
 	if ($rs->HasRows()) {
 	    $out = "\n<table class=listing>\n".$rs->AdminLine_header();
@@ -59,6 +66,7 @@ class fctAdminUserPermits extends fctUserPerms {
 }
 class fcrAdminUserPermit extends fcrUserPermit {
     use ftLinkableRecord;
+    use ftSaveableRecord;
 
     // ++ STATIC ++ //
 
@@ -96,7 +104,7 @@ __END__;
 	$htID = $this->AdminLink();
 	if (!is_null($sName)) {
 	    $id = $this->GetKeyValue();
-	    $htID .= clsHTML::CheckBox($sName,$bSel,$id);
+	    $htID .= fcHTML::CheckBox($sName,$bSel,$id);
 	}
 
 	$htName = fcString::EncodeForHTML($this->ValueNz('Name'));
@@ -152,14 +160,14 @@ __END__;
 	control class, but let's save that for later.)
     */
     public function RenderEditableList($sName=NULL) {
-	$tbl = $this->Table;
+	$tbl = $this->GetTableWrapper();
 	if (is_null($sName)) {
 	    $sName = KS_ACTION_USER_PERMISSION;
 	}
 
 	// build arrays
-	$arCur = $this->AsArray();
-	$arAll = $tbl->AsArray();
+	$arCur = $this->asKeyedArray();
+	$arAll = $tbl->SelectRecords()->FetchRows_asKeyedArray();
 	if (count($arAll) > 0) {
 
 	    $ht = "\n<form method=post>"
@@ -167,7 +175,7 @@ __END__;
 	      .static::AdminLine_header();
 	    foreach ($arAll as $id => $row) {
 		$isActive = array_key_exists($id,$arCur);
-		$this->Values($row);
+		$this->SetRowValues($row);
 		$ht .= $this->AdminLine($sName,$isActive);
 	    }
 	    $sqBtnName = '"'.self::BTN_SAVE.'"';
@@ -184,6 +192,7 @@ __END__;
     // -- RENDER UI COMPONENTS -- //
     // ++ ADMIN INTERFACE ++ //
 
+    private $isOdd;
     public function AdminLine($sName=NULL,$bSel=NULL) {
 	$htID = $this->SelfLink();
 	if (!is_null($sName)) {
@@ -193,9 +202,11 @@ __END__;
 	$htName = fcString::EncodeForHTML($this->GetFieldValueNz('Name'));
 	$htDescr = fcString::EncodeForHTML($this->GetFieldValueNz('Descr'));
 	$htWhen = $this->GetFieldValueNz('WhenCreated');
+	$this->isOdd = ($isOdd = empty($this->isOdd));
+	$sCSS = $isOdd?'odd':'even';
 
 	$out = <<<__END__
-  <tr>
+  <tr class=$sCSS>
     <td>$htID</td>
     <td>$htName</td>
     <td>$htDescr</td>
@@ -206,23 +217,30 @@ __END__;
 	return $out;
     }
     protected function AdminPage() {
-	throw new exception('2017-01-28 This is going to need some updating.');
-	$oPage = $this->Engine()->App()->Page();
-
-	$doSave = $oPage->ReqArgBool(self::BTN_SAVE);
+	$oFormIn = fcHTTP::Request();
+	$doSave = $oFormIn->GetBool(self::BTN_SAVE);
 	if ($doSave) {
 	    $this->AdminPageSave();
 	}
 
 	// set up header action-links
+	
+	$oMenu = fcApp::Me()->GetHeaderMenu();
+	  // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
+	  $oMenu->SetNode($ol = new fcMenuOptionLink('edit'));
+	    //$ol->SetBasePath($this->SelfURL());
+	/* 2017-02-05 v2 - obsolete
 	$arPage = $oPage->PathArgs();
 	$arActs = array(
 	  // (array $iarData,$iLinkKey,$iGroupKey=NULL,$iDispOff=NULL,$iDispOn=NULL,$iDescr=NULL)
 	  new clsActionLink_option($arPage,'edit')
 	  );
 	$oPage->PageHeaderWidgets($arActs);
+	*/
 
-	$doEdit = $oPage->PathArg('edit') || $this->IsNew();
+	$oKiosk = fcApp::Me()->GetKioskObject();
+	$oPathIn = $oKiosk->GetInputObject();
+	$doEdit = $oPathIn->GetBool('edit') || $this->IsNew();
 
 	// prepare the form
 

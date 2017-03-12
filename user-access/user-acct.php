@@ -13,7 +13,7 @@
   PURPOSE: collectively handles all user records
 */
 class fctUserAccts extends fcTable_keyed_single_standard {
-    use ftLinkableTable;
+    //use ftLinkableTable;
 
     // ++ CEMENTING ++ //
     
@@ -23,9 +23,10 @@ class fctUserAccts extends fcTable_keyed_single_standard {
     protected function SingularName() {
 	return 'fcrUserAcct';
     }
+    /* This should only be defined in the admin class
     public function GetActionKey() {
 	return KS_ACTION_USER_ACCOUNT;
-    }
+    }*/
     
     // -- CEMENTING -- //
     // ++ STATIC ++ //
@@ -82,18 +83,32 @@ class fctUserAccts extends fcTable_keyed_single_standard {
 	    $rcUser = NULL;
 	    $this->SetError_UserUnknown();
 	} elseif ($rc->PassMatches($sPass)) {
+	    // success!
 	    $rcUser = $rc;
 	} else {
 	    // username found, password wrong
+	    $this->SetFailedUser($rc);	// we use this to warn the (real) user that someone tried to log in
 	    $rcUser = NULL;
 	    $this->SetError_WrongPassword();
 	}
 	return $rcUser;
     }
+    static private $rcFailed;
+    protected function SetFailedUser(fcrUserAcct $rc) {
+	self::$rcFailed = $rc;
+    }
+    public function GetFailedUser() {
+	return self::$rcFailed;
+    }
+    public function GetFailedUserWasFound() {
+	return !empty(self::$rcFailed);
+    }
     /*----
       ACTION: add a user to the database
-      ASSUMES: iEmail is valid because it was used earlier to receive
+      ASSUMES:
+	* sEmail is valid because it was used earlier to receive
 	the auth token which is required before you can set user/pw.
+	* sLogin does not match the UserName of an existing record.
     */
     public function AddUser($sLogin,$sPass,$sEmail) {
 	$sSalt = self::MakeSalt();
@@ -117,16 +132,17 @@ class fctUserAccts extends fcTable_keyed_single_standard {
 	return 'LOWER(UserName)='.$this->GetConnection()->Sanitize_andQuote(strtolower($iName));
     }
 
-    public function FindUser($iName) {
-	$sqlFilt = $this->SQL_forUserName_filter($iName);
+    public function FindUser($sName) {
+	$sqlFilt = $this->SQL_forUserName_filter($sName);
 	$rc = $this->SelectRecords($sqlFilt);
 	$nRows = $rc->RowCount();
 	if ($nRows == 0) {
 	    $rc = NULL;
 	} elseif ($nRows > 1) {
 	    $nCount = $rc->RowCount();
-	    $sDescr = 'Username "'.$iName.'" appears '.$nCount.' times in the user database.';
-	    $this->Engine()->LogEvent(__FILE__.' line '.__LINE__,'name='.$iName,$sDescr,'UDUP',TRUE,TRUE);
+	    $sText = 'Username "'.$sName.'" appears '.$nCount.' times in the user database.';
+	    fcApp::Me()->EventTable()->CreateEvent(KS_EVENT_FERRETERIA_DB_INTEGRITY_ERROR,$sText);
+	    //$this->Engine()->LogEvent(__FILE__.' line '.__LINE__,'name='.$sName,$sDescr,'UDUP',TRUE,TRUE);
 	    $rc = NULL;
 	} else {
 	    $rc->NextRow();	// load the first (only) row
@@ -138,7 +154,7 @@ class fctUserAccts extends fcTable_keyed_single_standard {
     */
     public function UserExists($iLogin) {
 	$sqlFilt = $this->SQL_forUserName_filter($iLogin);
-	$rc = $this->GetData($sqlFilt);
+	$rc = $this->SelectRecords($sqlFilt);
 	return $rc->HasRows();
     }
     public function FindEmail($sEmail) {
@@ -155,7 +171,7 @@ class fctUserAccts extends fcTable_keyed_single_standard {
 */
 class fcrUserAcct extends fcRecord_standard {
     use ftFrameworkAccess;
-    use ftLinkableRecord;
+    //use ftLinkableRecord;
 
     // ++ STATUS ++ //
 
@@ -198,35 +214,27 @@ class fcrUserAcct extends fcRecord_standard {
 	if (empty($sPass)) {
 	    throw new exception('Internal error: setting blank password');
 	}
-	$t = $this->Table();
+	$t = $this->GetTableWrapper();
 	$sSalt = $t->MakeSalt();
 	$sHashed = $t->HashPass($sSalt,$sPass);
+	$db = $this->GetConnection();
 	$ar = array(
-	  'PassHash'	=> SQLValue($sHashed),
-	  'PassSalt'	=> SQLValue($sSalt),
+	  'PassHash'	=> $db->Sanitize_andQuote($sHashed),
+	  'PassSalt'	=> $db->Sanitize_andQuote($sSalt),
 	  );
 	$ok = $this->Update($ar);
 	return $ok;
     }
 
     // -- FIELD VALUES -- //
-    // ++ FIELD CALCULATIONS ++ //
-    
-    // TAGS: admin function, trait helper, cement
-    public function SelfLink_name() {
-	$sName = $this->UserName();
-	return $this->SelfLink($sName);
-    }
-
-    // -- FIELD CALCULATIONS -- //
-    // ++ CLASS NAMES ++ //
+    // ++ CLASSES ++ //
 
     protected function PermsQueryClass() {
 	return 'fcqtUserPerms';
     }
 
-    // -- CLASS NAMES -- //
-    // ++ DATA TABLE ACCESS ++ //
+    // -- CLASSES -- //
+    // ++ TABLES ++ //
 
     protected function XGroupTable() {
 	return $this->GetConnection()->MakeTableWrapper($this->XGroupClass());
@@ -239,8 +247,8 @@ class fcrUserAcct extends fcRecord_standard {
 	return $this->GetConnection()->MakeTableWrapper($this->PermsQueryClass());
     }
 
-    // -- DATA TABLE ACCESS -- //
-    // ++ DATA RECORDS ACCESS ++ //
+    // -- TABLES -- //
+    // ++ RECORDS ++ //
 
     protected function UGroupRecords() {
 	return $this->XGroupTable()->UGroupRecords($this->GetKeyValue());
@@ -267,18 +275,18 @@ class fcrUserAcct extends fcRecord_standard {
 	return $this->arPerm;
     }
 
-    // -- DATA RECORDS ACCESS -- //
-    // ++ BUSINESS LOGIC ++ //
+    // -- RECORDS -- //
+    // ++ CALCULATIONS ++ //
 
-    public function PassMatches($iPass) {
+    public function PassMatches($sPass) {
 	// get salt for this user
 	$sSalt = $this->GetFieldValue('PassSalt');
 
 	// hash [stored salt]+[given pass]
-	$sThisHashed = $this->GetTableWrapper()->HashPass($sSalt,$iPass);
+	$sThisHashed = $this->GetTableWrapper()->HashPass($sSalt,$sPass);
 	// get stored hash
 	$sSavedHash = $this->GetFieldValue('PassHash');
-
+	
 	// see if they match
 	$ok = ($sThisHashed == $sSavedHash);
 	return $ok;
@@ -316,5 +324,5 @@ class fcrUserAcct extends fcRecord_standard {
 	}
     }
 
-    // -- BUSINESS LOGIC -- //
+    // -- CALCULATIONS -- //
 }

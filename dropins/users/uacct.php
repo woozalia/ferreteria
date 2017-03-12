@@ -44,34 +44,18 @@ class fctUserAccts_admin extends fctUserAccts {
       NOTE: App()->User() may return the non-dropin class (TODO: FIX), so
 	we have to upgrade it here.
     */
-    public function MenuExec(array $arArgs=NULL) {
-	$this->arArgs = $arArgs;
+    public function MenuExec() {
 	$rcUser_base = fcApp::Me()->GetUserRecord();
 	$rcUser = $this->GetRecord_forKey($rcUser_base->GetKeyValue());
 	if ($rcUser->CanDo(KS_PERM_SEC_USER_VIEW)) {
 	    $out = $this->AdminListing();
 	} else {
-	    $out = $rcUser->MenuExec();
+	    $rcUser->SelfRedirect();	// redirect to user's record
 	}
 	return $out;
     }
-    /*----
-      RETURNS: TRUE iff user has permission to access this class
-    */
-    /* may not be needed
-    public function UserCanAccess() {
-	return $this->Engine()->App()->User()->CanDo(KS_PERM_SEC_PERM_VIEW);
-    }*/
 
     // -- DROP-IN API -- //
-    // ++ APP FRAMEWORK ++ //
-/* 2016-10-31 this should be replaced by the app framework trait
-    protected function App() {
-	return $this->Engine()->App();
-    }
-*/
-
-    // -- APP FRAMEWORK -- //
     // ++ WEB UI ++ //
 
     protected function AdminListing() {
@@ -85,13 +69,6 @@ class fctUserAccts_admin extends fctUserAccts {
 	  '!grps'	=> 'Groups',
 	  );
 	$out = $rs->AdminRows($arCols);
-/*
-	$out = "\n<table class=listing>\n".VC_UserAcct::AdminLine_header();
-	while ($rs->NextRow()) {
-	    $out .= $rs->AdminLine();
-	}
-	$out .= "\n</table>";
-*/
 	return $out;
     }
 
@@ -100,6 +77,7 @@ class fctUserAccts_admin extends fctUserAccts {
 class fcrUserAcct_admin extends fcrUserAcct {
     use ftShowableRecord;
     use ftSaveableRecord;
+    use ftLinkableRecord;
 
     // ++ CLASSES ++ //
 
@@ -131,12 +109,29 @@ class fcrUserAcct_admin extends fcrUserAcct {
     }
 
     // -- DROP-IN API -- //
-    // ++ ADMIN INTERFACE ++ //
+    // ++ FIELD CALCULATIONS ++ //
+    
+    // TAGS: ADMIN, TRAIT HELPER, CEMENT
+    public function SelfLink_name() {
+	$sName = $this->UserName();
+	return $this->SelfLink($sName);
+    }
 
-    protected function AdminRows_start(array $arOptions = NULL) {
+    // -- FIELD CALCULATIONS -- //
+    // ++ CALCULATIONS ++ //
+    
+    protected function IsCurrentUser() {
+	$idUser = fcApp::Me()->GetUserID();
+	return ($idUser == $this->GetKeyValue());
+    }
+    
+    // -- CALCULATIONS -- //
+    // ++ ADMIN UI ++ //
+
+    protected function AdminRows_start() {
 	return "\n<table class=listing>";
     }
-    protected function AdminField($sField, array $arOptions = NULL) {
+    protected function AdminField($sField) {
 	switch ($sField) {
 	  case 'ID':
 	    $val = $this->SelfLink();
@@ -199,6 +194,7 @@ __END__;
 	// set up header action-links
 	// v3
 	$oMenu = fcApp::Me()->GetHeaderMenu();
+	    // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
 	  $oMenu->SetNode(new fcMenuOptionLink('edit'));
 	
 	/* v2
@@ -220,7 +216,11 @@ __END__;
 	$oTplt = $this->PageTemplate();
 	$arCtrls = $frmEdit->RenderControls($doEdit);
 	  // custom vars
-	  $arCtrls['ID'] = $this->SelfLink();
+	  $htID = $this->SelfLink();
+	  if ($this->IsCurrentUser()) {
+	      $htID .= $this->Admin_UserControls();
+	  }
+	  $arCtrls['ID'] = $htID;
 	  $arCtrls['!Groups'] = $this->AdminGroups();
 
 	// render the form
@@ -236,9 +236,23 @@ __END__;
 	    $htFormBtn = NULL;
 	    $htFormFtr = NULL;
 	}
-
-	$out = $htFormHdr.$htForm.$htFormBtn.$htFormFtr;
-	return $out;
+		    
+	return $htFormHdr.$htForm.$htFormBtn.$htFormFtr;
+    }
+    /*----
+      RETURNS: controls that the current user should be able to use
+	Should include: logout, change password
+    */
+    protected function Admin_UserControls() {
+    }
+    // TODO: move to calculations section
+    protected function CanAdminThisUser() {
+	if ($this->IsCurrentUser()) {
+	    return TRUE;	// current user can always admin own account
+	} else {
+	    $rcCurr = fcApp::Me()->GetCurrentUser();
+	    return $rcCurr->CanDo(KS_PERM_SEC_USER_EDIT);
+	}
     }
     protected function AdminPage_SaveGroups() {
 	$oFormInput = fcHTTP::Request();
@@ -330,8 +344,8 @@ __END__;
 		// 2017-01-14 What we *do* want is an edit link for the groups.
 		//$oMenu = $oPage->GetElement_HeaderMenu();	// this puts it in the title header
 		$oMenu = new fcHeaderMenu();
-		  // (sLinkKey,sGroupKey=NULL,sDispOff=NULL,sDispOn=NULL,sPopup=NULL)
-		  $oMenu->SetNode(new fcMenuOptionLink('edit.grp',NULL,'edit'));
+		  // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
+		  $oMenu->SetNode(new fcMenuOptionLink('edit.grp',TRUE,'edit'));
 		  
 		if ($rs->HasRows()) {
 		    $out = $rs->RenderInlineList();
@@ -344,5 +358,5 @@ __END__;
 	}
     }
 
-    // -- ADMIN INTERFACE -- //
+    // -- ADMIN UI -- //
 }

@@ -4,13 +4,42 @@
     2014-09-18 Created in order to allow administering of client records.
 */
 
-class actUserClients extends clsUserClients {
-    public function __construct($iDB) {
-	parent::__construct($iDB);
-	  $this->ClassSng(KS_CLASS_ADMIN_USER_CLIENT);
+class fctUserClientsAdmin extends fctUserClients {
+
+    // ++ SETUP ++ //
+
+    protected function SingularName() {
+	return KS_CLASS_ADMIN_USER_CLIENT;
     }
+    
+    // -- SETUP -- //
+    // ++ CALLBACKS ++ //
+    
+    public function MenuExec() {
+	return $this->AdminListing();
+    }
+
+    // -- CALLBACKS -- //
+    // ++ WEB UI ++ //
+
+    protected function AdminListing() {
+	$rs = $this->SelectRecords();
+	$arCols = array(
+	  'ID'		=> 'ID',
+	  'Address'	=> 'Address',
+	  'Domain'	=> 'Domain',
+	  'Browser'	=> 'Browser',
+	  'WhenFirst'	=> 'First',
+	  'WhenFinal'	=> 'Final',
+	  );
+	$out = $rs->AdminRows($arCols);
+	return $out;
+    }
+
+    // -- WEB UI -- //
 }
-class acrUserClient extends clsUserClient {
+class fcrUserClientAdmin extends fcrUserClient {
+    use ftShowableRecord;
 
     // ++ BOILERPLATE ++ //
 
@@ -22,13 +51,13 @@ class acrUserClient extends clsUserClient {
     // ++ FIELD ACCESS ++ //
 
     public function BrowserString() {
-	return $this->Value('Browser');
+	return $this->GetFieldValue('Browser');
     }
     public function DomainString() {
-	return $this->Value('Domain');
+	return $this->GetFieldValue('Domain');
     }
     public function AddressString() {
-	return $this->Value('Address');
+	return $this->GetFieldValue('Address');
     }
     public function SourceShort() {
 	$sDom = $this->DomainString();

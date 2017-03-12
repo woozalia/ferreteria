@@ -52,7 +52,8 @@ trait ftShowableRecord {
 	}
 	return $this->arAdminRows_options;
     }
-    protected function AdminRows_settings_option($sName,$val=NULL,$vDef=NULL) {
+    // PUBLIC so callers can set options depending on context
+    public function AdminRows_settings_option($sName,$val=NULL,$vDef=NULL) {
 	if (!is_null($val)) {
 	    $this->arAdminRows_options[$sName] = $val;
 	}

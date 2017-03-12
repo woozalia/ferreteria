@@ -73,6 +73,7 @@ $om = new fcCodeModule(__FILE__, 'menu/dropin.php');
 $om = new fcCodeModule(__FILE__, 'menu/hdr.php');
   $om->AddClass('fcHeaderMenu');
   $om->AddClass('fcSectionHeader');
+  $om->AddClass('fcMenuOptionLink');
 /*
 $om = new fcCodeModule(__FILE__, 'menu/menu-action.php');
   $om->AddClass('clsActionLink');
@@ -143,13 +144,22 @@ $om = new fcCodeModule(__FILE__, 'strings/string-block.php');
   $om->AddClass('fcStringBlock_static');
   $om->AddClass('fcsStringBlock');
   $om->AddClass('fcStringBlock');
+$om = new fcCodeModule(__FILE__, 'strings/report.php');
+  $om->AddClass('fcReport');
+  $om->AddClass('fcReportStandard');
+$om = new fcCodeModule(__FILE__, 'strings/report-file.php');
+  $om->AddClass('fcReportFile');
+$om = new fcCodeModule(__FILE__, 'strings/report-file-od.php');
+  $om->AddClass('fcReport_OpenDoc');
+$om = new fcCodeModule(__FILE__, 'strings/string-report.php');
+  $om->AddClass('fcReportSimple');
 $om = new fcCodeModule(__FILE__, 'strings/string-tplt.php');
   $om->AddClass('fcTemplate_array');
   $om->AddClass('clsStringTemplate');
   $om->AddClass('clsStringTemplate_array');
 $om = new fcCodeModule(__FILE__, 'strings/string-xt.php');
-  $om->AddClass('xtString_static');
-  $om->AddClass('xtString');
+  $om->AddClass('fcStringDynamic');
+  $om->AddClass('xtString');	// deprecated
 
 // UTILITY LIBRARIES
 $om = new fcCodeModule(__FILE__, 'util/args.php');
@@ -165,8 +175,11 @@ $om = new fcCodeModule(__FILE__, 'util/debug.php');
   $om->AddClass('fcStackTrace');
 $om = new fcCodeModule(__FILE__, 'util/html.php');
   $om->AddClass('fcHTML');
+  $om->AddClass('fcHTML_Parser');
 $om = new fcCodeModule(__FILE__, 'util/http.php');
   $om->AddClass('fcHTTP');
+$om = new fcCodeModule(__FILE__, 'util/file.php');
+  $om->AddClass('fcFileSystem');
 $om = new fcCodeModule(__FILE__, 'util/money.php');
   $om->AddClass('fcMoney');
 //  $om->AddFunc('Xplode');

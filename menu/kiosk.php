@@ -11,6 +11,15 @@
 */
 abstract class fcMenuKiosk {
     abstract protected function GetBasePath();
+    
+    private $wpPage;
+    public function SetPagePath($wp) {
+	$this->wpPage = $wp;
+    }
+    public function GetPagePath() {
+	$wp = $this->wpPage;
+	return isset($wp) ? $wp : $this->GetBasePath();
+    }
     /*----
       RETURNS: The full URL for the given input string
 	This format can be overridden if you want the string to be presented some other way,

@@ -39,7 +39,7 @@ class fcHTML {
     */
     static public function BuildLink($urlBase,$sText,$sDescr=NULL,$arAttr=NULL) {
 	if (is_array($sText)) {
-	    echo "STEXT: ".clsArray::Render($sText);
+	    echo "STEXT: ".fcArray::Render($sText);
 	    throw new exception('Internal Error: Received an array for $sText instead of a string.');
 	}
 	$htURL = '"'.$urlBase.'"';
@@ -58,18 +58,6 @@ class fcHTML {
     }
 
     // -- ARRAYS -- //
-
-    // ++ URLs ++ //
-    // TODO: move these functions to clsHTTP?
-
-    static public function RemoveBaseURI($fpBaseURL,$sPath=NULL) {
-	throw new exception('Use clsHTTP for this function.');
-    }
-    static public function ParsePath($sPath,$sPathSep=KS_CHAR_PATH_SEP,$sArgSep=KS_CHAR_URL_ASSIGN) {
-	throw new exception('Use clsHTTP for this function.');
-    }
-
-    // -- URLs -- //
     // ++ WIDGETS ++ //
 
     /*----
@@ -120,6 +108,11 @@ class fcHTML {
     
     static public function RespectLineBreaks($s) {
 	return str_replace("\n",'<br />',$s);
+	// NOTE: could probably use nl2br() instead. Test later.
+    }
+    // NOTE: This is actually specifically for use in attribute values, and should probably be renamed to reflect that.
+    static public function FormatString_forTag($s) {
+	return htmlspecialchars($s,ENT_QUOTES);
     }
     
     // -- FORMATS -- //
@@ -153,4 +146,102 @@ class fcHTML {
     }
 */
 }
-class clsHTML extends fcHTML {}	// DEPRECATED alias
+class fcHTML_Parser extends fcStringDynamic {
+    
+    // ++ STATUS ++ // - other output
+
+    private $sTagName;
+    protected function SetTagName($s) {
+	$this->sTagName = $s;
+    }
+    public function GetTagName() {
+	return $this->sTagName;
+    }
+    private $sTagValue;	// all attributes, not parsed
+    protected function SetTagValue($s) {
+	$this->sTagValue = $s;
+    }
+    public function GetTagValue() {
+	return $this->sTagValue;
+    }
+    private $bClosesBlock;
+    protected function SetClosesBlock($b) {
+	$this->bClosesBlock = $b;
+    }
+    public function GetClosesBlock() {
+	return $this->bClosesBlock;
+    }
+    private $bClosesSelf;
+    protected function SetClosesSelf($b) {
+	$this->bClosesSelf = $b;
+    }
+    public function GetClosesSelf() {
+	return $this->bClosesSelf;
+    }
+
+    // -- STATUS -- //
+    // ++ CALCULATIONS ++ //
+    
+    /*----
+      ASSUMES: GetValue() a single HTML tag, optionally followed by some inter-tag text.
+	* First character should be "<".
+	* Must be exactly one "<" and exactly one ">".
+    */
+    public function ParseTag() {
+	$sPiece = $this->GetValue();
+	
+	$htPiece = htmlspecialchars($sPiece);
+	
+	// $sTag = "<name value/>intertag"
+	fcString::SetIsCharList(TRUE);	// set splitting option: look for any char in divider string
+	$sTag = fcString::GetAfterFirst($sPiece,'<');		// = "name value/>"
+
+	fcString::SetPartToReturn(fcString::KS_BEFORE);
+	$sName = fcString::Get_fromSplit($sTag," >\t");		// $sName = "name" or "name/"
+	$sRem = fcString::GetSplitResult(fcString::KS_AFTER);	// $sRem = "value/>inter-tag text" or just "inter-tag text"
+	if (fcString::IsBlank($sRem)) {
+	    // tag has no value portion
+	    $sVal = NULL;
+	    if (substr($sName,-1,1) == '/') {
+		$this->SetClosesSelf(TRUE);
+		$sName = substr($sName,0,-1);	// remove ending '/'
+	    } else {
+		$this->SetClosesSelf(FALSE);
+	    }
+	    
+	} else {
+	    // $sRem = "value/>inter-tag text"
+	    $sRem = fcString::Get_fromSplit($sRem,'>');		// $sRem = "value/"
+	    $sInter = fcString::GetSplitResult(fcString::KS_AFTER);	// $sInter = "inter-tag text"
+	    
+	    //fcString::SetPartToReturn(fcString::KS_BEFORE);
+	    //$sRem = fcString::GetSplitResult(fcString::KS_AFTER);	// $sRem = "value/"
+	    
+	    // NOTE 2017-03-06: for now, $sInter is discarded. Maybe we should save it.
+	    if (substr($sRem,-1,1) == '/') {
+		$this->SetClosesSelf(TRUE);
+		$sVal = trim(substr($sRem,0,strlen($sRem)-1));
+	    } else {
+		$this->SetClosesSelf(FALSE);
+		$sVal = trim($sRem);
+	    }
+	}
+	$sInter = fcString::Get_fromSplit($sRem,'>');		// $sInter = "inter-tag text"
+	
+	if (substr($sName,0,1) == '/') {
+	    $this->SetClosesBlock(TRUE);
+	    $sName = substr($sName,1);
+	} else {
+	    $this->SetClosesBlock(FALSE);
+	}
+	$this->SetTagName($sName);
+	$this->SetTagValue($sVal);
+    }
+    public function HighlightName($sTag) {
+	fcString::SetIsCharList(TRUE);	// set splitting option: look for any char in divider string
+	$sTag = fcString::GetAfterFirst($sPiece,'<');
+	$sTag = fcString::GetBeforeFirst($sTag," >\t");
+    }
+    
+    // -- CALCULATIONS -- //
+}

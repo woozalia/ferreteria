@@ -22,7 +22,7 @@ $om = new fcCodeModule(__FILE__, 'user-acct.php');
 $om = new fcCodeModule(__FILE__, 'user-acct-x-group.php');
   $om->AddClass(KS_CLASS_GROUPS_FOR_UACCT);
 $om = new fcCodeModule(__FILE__, 'user-client.php');
-  $om->AddClass('clsUserClients');
+  $om->AddClass('fctUserClients');
 $om = new fcCodeModule(__FILE__, 'user-group.php');
   $om->AddClass(KS_CLASS_USER_GROUPS);
   $om->AddClass(KS_CLASS_USER_GROUP);

@@ -20,10 +20,12 @@ define('KS_CLASS_SITE_DROPIN_MODULE',	'fcaDropInModule');
 
 $om = $oRoot->SetNode(new fcMenuFolder('Site'));
 
-  $omi = $om->SetNode(new fcDropinLink(KS_PAGE_KEY_DROPINS,'Dropins','manage drop-in modules'));
+  $omi = $om->SetNode(new fcDropinLink(
+    KS_PAGE_KEY_DROPINS,
+    KS_CLASS_SITE_DROPIN_MANAGER,
+    'Dropins','manage drop-in modules'));
     $omi->SetPageTitle('Drop-in Modules');
-    $omi->SetActionClass(KS_CLASS_SITE_DROPIN_MANAGER);
-    //$omi->SetRequiredPrivilege(KS_PERM_SITE_VIEW_CONFIG);
+    $omi->SetRequiredPrivilege(KS_PERM_SITE_VIEW_CONFIG);
     $omi->SetRequiredPrivilege(NULL);	// debugging
 
 /* 2016-12-11 old dropin version

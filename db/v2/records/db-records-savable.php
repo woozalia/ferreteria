@@ -25,6 +25,7 @@ trait ftSaveableRecord {
 	    if (is_array($arSave)) {
 		$tbl = $this->GetTableWrapper();
 		$out = $tbl->Insert($arSave);
+		echo "SQL=[{$tbl->sql}]";
 		$this->sql = $tbl->sql;
 		if ($out !== FALSE) {
 		    $this->SetKeyValue($out);	// retrieve new record's ID
@@ -34,10 +35,9 @@ trait ftSaveableRecord {
 	} else {
 	    $arSave = $this->UpdateArray($arSave);
 	    if (is_array($arSave)) {
-		$out = $this->Update($arSave);
+		$this->Update($arSave);
 	    }
 	}
-	return $out;
     }
     
     // -- CALLABLE API -- //
@@ -74,13 +74,17 @@ trait ftSaveableRecord {
 	fields that should only be set on insert or update specifically.
       FORMAT: Sanitized SQL; can include expressions like "NOW()".
 	Default is just to return all changed values, sanitized.
+      TODO: This won't work with keyless or multi-key tables because of GetKeyName(). Fix when needed.
     */
     protected function ChangeArray($ar=NULL) {
 	$arTouch = $this->TouchedArray();	// just a list; no values
 	if (is_array($arTouch)) {
 	    $db = $this->GetConnection();
+	    $sKey = $this->GetTableWrapper()->GetKeyName();
 	    foreach ($arTouch as $sField) {
-		$ar[$sField] = $db->Sanitize_andQuote($this->GetFieldValue($sField));
+		if ($sField != $sKey) {		// don't write to the key field
+		    $ar[$sField] = $db->Sanitize_andQuote($this->GetFieldValue($sField));
+		}
 	    }
 	}
 	return $ar;

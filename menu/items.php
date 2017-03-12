@@ -35,12 +35,15 @@ class fcMenuFolder extends fcNavFolder {
     Base class does not define how usage is determined.
     It is also still PASSIVE - status checks happen when rendering.
   ADDS: usage-awareness
+  HISTORY:
+    2017-02-08 Can't see any reason for ActionClass methods to be defined here; moving them to Dropin Link class
+      (in dropin.php).
 */
 abstract class fcMenuLink extends fcNavLink {
 
     // ++ SETUP ++ //
 
-    public function __construct($sKeyValue,$sText=NULL,$sPopup=NULL) {
+    public function __construct(string $sKeyValue,$sText=NULL,$sPopup=NULL) {
 	$this->SetKeyValue($sKeyValue);
 	$this->SetLinkText($sText);
 	$this->SetPopup($sPopup);
@@ -87,13 +90,6 @@ abstract class fcMenuLink extends fcNavLink {
 
       //++external++//
     
-    private $sActionClass;
-    public function SetActionClass($sClass) {
-	$this->sActionClass = $sClass;
-    }
-    protected function GetActionClass() {
-	return $this->sActionClass;
-    }
     private $sPageTitle;
     public function SetPageTitle($s) {
 	$this->sPageTitle = $s;
@@ -115,12 +111,28 @@ abstract class fcMenuLink extends fcNavLink {
     public function SetBasePath($s) {
 	$this->sBasePath = $s;
     }
+    protected function GetBasePath() {
+	return $this->sBasePath;
+    }
+    protected function HasBasePath() {
+	return isset($this->sBasePath);
+    }
+    protected function GetBasePath_toUse() {
+	if ($this->HasBasePath()) {
+	    return $this->GetBasePath();
+	} else {
+	    return fcApp::Me()->GetKioskObject()->GetPagePath();
+	}
+    }
     protected function MakeURL_fromPath($sPath) {
-	if (isset($this->sBasePath)) {
-	    return $this->sBasePath.$sPath;
+	return $this->GetBasePath_toUse().$sPath;
+    /* 2017-02-13 previous code
+	if ($this->HasBasePath()) {
+	    return $this->GetBasePath().$sPath;
 	} else {
 	    return fcApp::Me()->GetKioskObject()->MakeURLFromString($sPath);
 	}
+    */
     }
 
       //--external--//
@@ -137,6 +149,10 @@ abstract class fcMenuLink extends fcNavLink {
 		If we later decide NOT to delete unauthorized nodes, then we need
 			(a) some way to prevent them from being selected
 			(b) some reasonably efficient way for the parent-folder to count how many are permitted
+	2017-02-10 Came really close to needing to hide the "users" node from unauthorized users while still allowing
+	  them to access their own profile through it, but decided that "my profile" should be a "do:" command instead.
+	  If we (later) want admins to be able to modify other users' profiles without logging in as them, we can add
+	  an extra user ID parameter. No changes made here.
     */
     protected function FigureIfAuthorized() {
 	$sPerm = $this->GetRequiredPrivilege();
@@ -184,25 +200,46 @@ class fcLink_fromArray extends fcMenuLink {
       CEMENT
     */
     protected function GetLinkURL() {
-	$arPath = $this->GetLinkArray_dynamic();
+	$arPath = $this->GetLinkArray();
 	$fpArgs = fcURL::FromArray($arPath);
 	return $this->MakeURL_fromPath($fpArgs);
     }
-    // NEW
-    protected function GetLinkArray_base() {
+    /*----
+      NEW
+      PURPOSE: returns the array to use for calculating link URL
+    */
+    protected function GetLinkArray() {
+	return array_merge(
+	  $this->GetLinkArray_figured(),
+	  $this->GetLinkArray_added()
+	  );
+    }
+    private $arContext;
+    public function AddLinkArray(array $ar) {
+	$this->arContext = array_merge($this->GetLinkArray_added(),$ar);
+    }
+    protected function GetLinkArray_added() {
+	return isset($this->arContext) ? $this->arContext : array();
+    }
+    /*----
+      NEW
+      PURPOSE: calculates self-identifying array
+    */
+    protected function GetLinkArray_self() {
 	$sValue = $this->GetKeyValue();
 	$sName = $this->GetKeyName();
 	return array($sName=>$sValue);
     }
     /*----
       NEW
+      PURPOSE: gets the part of the link array which might change
       NOTE: There originally was code to handle value-only paths --
 	    $arPath = array($sValue=>(!$isSel));
 	-- but it's not clear that this is actually necessary.
 	Wait for a usage case, and then test.
     */
-    protected function GetLinkArray_dynamic() {
-	return $this->GetLinkArray_base();
+    protected function GetLinkArray_figured() {
+	return $this->GetLinkArray_self();
     }
 }
 /*::::
@@ -236,28 +273,37 @@ abstract class fcDynamicLink extends fcLink_fromArray {
     // ++ CALCULATIONS ++ //
     
     private $isSel;
-    // PUBLIC so code can see whether menu options are activated
+    // PUBLIC so other objects can see whether menu options are activated
     public function GetIsSelected() {
 	if (empty($this->isSel)) {
 	    $sKeyValue = $this->GetKeyValue();
 	    $sKeyName = $this->GetKeyName();
-	    $oKiosk = $this->GetKioskObject();
-	    $sInValue = $oKiosk->GetInputObject()->GetString($sKeyName);
-	    $this->isSel = ($sInValue == $sKeyValue);
+	    $oPathIn = $this->GetKioskObject()->GetInputObject();
+	    if ($sKeyName === TRUE || is_null($sKeyName)) {
+		// if key name is TRUE or NULL, we use the presence of the value as a flag
+		$this->isSel = $oPathIn->GetBool($sKeyValue);
+	    } else {
+		$sInValue = $oPathIn->GetString($sKeyName);
+		$this->isSel = ($sInValue == $sKeyValue);
+	    }
 	}
 	return $this->isSel;
-    }
-    // OVERRIDE - handles selection
-    protected function GetLinkArray_dynamic() {
-	$isSel = $this->GetIsSelected();
-	if ($isSel) {
-	    $arPath = array();
-	} else {
-	    $arPath = $this->GetLinkArray_base();
-	}
-	return $arPath;
     }
     
     // -- CALCULATIONS -- //
 
+}
+class fcToggleLink extends fcDynamicLink {
+    /*----
+      OVERRIDE - removes self from the URL when selected, so that clicking again un-toggles state
+    */
+    protected function GetLinkArray_figured() {
+	$isSel = $this->GetIsSelected();
+	if ($isSel) {
+	    $arPath = array();
+	} else {
+	    $arPath = $this->GetLinkArray_self();
+	}
+	return $arPath;
+    }
 }

@@ -8,6 +8,12 @@
       meaning of types must be defined by caller
 */
 
+// ++ EVENTS ++ //
+
+define('KS_EVENT_FERRETERIA_RECV_AUTHCODE','fe.authcode.recv');
+
+// -- EVENTS -- //
+
 /*::::
   PURPOSE: manages emailed authorization tokens
 */
@@ -29,15 +35,77 @@ class fcUserTokens extends fcTable_keyed_single_standard {
       PUBLIC because the recordset type also needs to access it, for now.
 	See note in MakeToken().
     */
-    public static function MakeHash($sVal,$sSalt) {
+    static public function MakeHash($sVal,$sSalt) {
 	$sToHash = $sSalt.$sVal;
 	$sHash = hash('whirlpool',$sToHash,TRUE);
 	return $sHash;
     }
+    // ASSUMES: There is an authcode to process
+    static protected function ParseAuthCode($sAuth) {
+	$id = strtok($sAuth, ':');	// string before ':' is auth-email ID
+	$sHex = strtok(':');		// string after ':' is token (in hexadecimal)
+	//$sToken = hex2bin($sHex);	// requires PHP 5.4
+	$sBin = pack("H*",$sHex);	// equivalent to hex2bin()
+	$arOut = array(
+	  'auth'	=> $sAuth,	// token in text format -- for forms/links
+	  'id'		=> $id,		// ID of auth email this is supposed to match
+	  'bin'		=> $sBin	// token in binary format
+	  );
+	return $arOut;
+    }
+
 
     // -- STATIC -- //
+    // ++ STATUS ++ //
+    
+    private $sErrCode,$sErrText;
+    protected function SetError($sCode,$sText) {
+	$this->sErrCode = $sCode;
+	$this->sErrText = $sText;
+    }
+    public function GetErrorCode() {
+	return $this->sErrCode;
+    }
+    public function GetErrorText() {
+	return $this->sErrText;
+    }
+    protected function SetError_TokenMismatch() {
+	$this->SetError('MIS','token does not match stored value');
+    }
+    protected function SetError_TokenNotFound() {
+	$this->SetError('NF','there is no record of the given token ID');
+    }
+    protected function SetError_TokenExpired($sWhen) {
+	$this->SetError('EXP','token expired at '.$sWhen);
+    }
+    
+    // -- STATUS -- //
     // ++ READ DB ++ //
 
+    public function GetRecord_fromTokenString($s) {
+	$arAuth = self::ParseAuthCode($s);
+	
+	$idEv = fcApp::Me()->CreateEvent(KS_EVENT_FERRETERIA_RECV_AUTHCODE,'authcode received',$arAuth);
+	$tEvSub = fcApp::Me()->EventTable_Done();
+	
+	$id = $arAuth['id'];
+	$sToken = $arAuth['bin'];
+	$sAuth = $arAuth['auth'];
+
+	$rcToken = $this->FindToken($id,$sToken);	// returns NULL or valid matching token record
+	if (is_null($rcToken)) {
+	    $sErrText = $this->GetErrorText();
+	    $sErrCode = $this->GetErrorCode();
+	    $tEvSub->CreateRecord($idEv,KS_EVENT_FAILED.':TOK:'.$sErrCode,'kept old password: '.$sErrText);
+	} else {
+	    if (!$rcToken->HasExpired()) {
+		// token has not expired
+		$rcToken->Renew();	// extend the expiration
+	    }
+
+	}
+	return $rcToken;
+    }
     /*----
       NOTE: Even if the token has expired, we want to return it so that we can
 	tell the user it has expired. This should minimize frustration, and
@@ -53,14 +121,18 @@ class fcUserTokens extends fcTable_keyed_single_standard {
 		throw new exception("Ferreteria internal error: Recordset has $sDesc but first row is empty.");
 	    }
 	    if ($rc->HashMatches($sToken)) {
-		return $rc;
+		if ($rc->HasExpired()) {
+		    $this->SetError_TokenExpired($rc->GetExpirationString());
+		} else {
+		    return $rc;
+		}
 	    } else {
 		$this->SetError_TokenMismatch();
 	    }
 	} else {
 	    $this->SetError_TokenNotFound();
 	}
-	// no matching token found
+	// no valid matching token found
 	return NULL;
     }
     
@@ -119,53 +191,14 @@ class fcUserTokens extends fcTable_keyed_single_standard {
 	Right now, nothing is calling this -- because we don't want
 	to delete tokens right after they expire. Not yet sure how
 	long to leave them active... but that can be decided later.
-	Maybe they should only be deleted once the user has successfully
-	reset their password?
+	Maybe they should only be deleted once successfully used?
     */
     protected function CleanTokens() {
-	$sql = 'DELETE FROM '.$this->TableName_Cooked().' WHERE WhenExp < NOW()';
+	$sql = 'DELETE FROM '.$this->TableName_Cooked().' WHERE WhenExp < NOW() + INTERVAL 1 DAY';
 	$this->GetConnection()->ExecuteAction($sql);
     }
     
     // -- WRITE DB -- //
-
-    /*----
-      ACTION: Send a password reset request to the given address.
-      RETURNS: HTML to display showing status of request
-      INPUT:
-	$sAddr: address to which the email should be sent
-	$sSubj: subject for the email
-	$stMsgEmail : template for emailed message -- may include the following variables:
-	  {{addr}} : address to which the email is being sent
-	  {{url}} (required) : link to click
-	$stMsgWeb : template for message to display after sending email. Uses {{addr}} only.
-    */
-/*
-    public function SendPassReset_forAddr($sAddr,$sName,$sSubj,$stMsgEmail,$stMsgWeb) {
-	// generate and store the auth token:
-	$rc = $this->MakeToken($sAddr);
-	// calculate the authorization URL:
-	$url = self::AuthURL($rc->GetKeyValue(),$rc->Token());
-	// replace template variables:
-	$ar = array(
-	  'addr'	=> $sAddr,
-	  'url'		=> $url
-	  );
-	$oTplt = new clsStringTemplate_array(KS_TPLT_OPEN,KS_TPLT_SHUT,$ar);
-	$sMsg = $oTplt->Replace($stMsgEmail);
-	// send the email
-	$sSubj = KS_TEXT_AUTH_EMAIL_SUBJ;
-	$this->Engine()->App()->DoEmail_Auto($sAddr,$sName,$sSubj,$sMsg);
-
-	// display status message
-	$sMsg = $oTplt->Replace($stMsgWeb);
-
-	$oSkin = $this->App()->Skin();
-	$out = $oSkin->RenderSuccess($sMsg);
-	$out .= $oSkin->RenderHLine();
-	return $out;
-    }
-*/
 
 }
 class fcUserToken extends fcRecord_standard {
@@ -189,10 +222,14 @@ class fcUserToken extends fcRecord_standard {
     protected function GetTokenHash() {
 	return $this->GetFieldValue('TokenHash');
     }
-    protected function GetTokenType() {
+    /*----
+      PUBLIC because this tells the caller (login management) what the token means
+	Specifically: what action it authorizes, what type of identity value is being used
+    */
+    public function GetTokenType() {
 	return $this->GetFieldValue('Type');
     }
-    // PUBLIC because login functions need to get this value
+    // PUBLIC because this tells the caller (login management) who has been authorized (their identity value)
     public function GetTokenEntity() {
 	return $this->GetFieldValue('Entity');
     }
@@ -201,12 +238,19 @@ class fcUserToken extends fcRecord_standard {
     // ++ FIELD CALCULATIONS ++ //
     
     /*----
-      RETURNS: TRUE iff expiration date has not passed
+      RETURNS: TRUE iff expiration date has passed
     */
-    public function IsActive() {
+    public function HasExpired() {
 	$sExp = $this->GetFieldValue('WhenExp');
-	$dtExp = strtotime($sExp);	// there's got to be a better function for this
-	return ($dtExp > time());
+	if (is_null($sExp)) {
+	    return TRUE;	// for now, tokens MUST have an expiry
+	} else {
+	    $dtExp = strtotime($sExp);	// there's got to be a better function for this
+	    return ($dtExp < time());	// expiry has passed?
+	}
+    }
+    public function GetExpirationString() {
+	return $this->WhenExpires();	// TODO: make it more friendly
     }
     public function HashMatches($sToken) {
 	$sSalt = $this->GetTokenSalt();

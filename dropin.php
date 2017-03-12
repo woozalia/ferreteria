@@ -91,20 +91,12 @@ class fcDropInManager extends fcDataTable_array {
 	// OUTPUT: $arDropin
 
 	$od = $this->SpawnRecordset();
-	$od->SetSpecs($arDropin);		// create dropin object to hold module's specs
-	
-	/* 2017-01-01 This is completely redundant.
-	$om = $od->MenuObject();		// check dropin object for a menu
-	if (is_object($om)) {			// if there is one...
-	    $oMenu->SetNode($om);			// ...add it to the top-level menu
+	if (isset($arDropin)) {
+	    $od->SetSpecs($arDropin);		// create dropin object to hold module's specs
+	} else {
+	    throw new error("Dropin error: $fsIndex does not define \$arDropin.");
 	}
-	*/
-	/* 2017-01-01 Decided to discontinue support for "feature" tracking. It doesn't really make sense.
-	if (array_key_exists(KS_DROPIN_FIELD_FEATURES,$arDropin)) {
-	    $arAdd = $arDropin[KS_DROPIN_FIELD_FEATURES];
-	    self::$arFeat = array_merge(self::$arFeat,$arAdd);
-	}*/
-	//$od->RegisterClasses();	// 2017-01-01 Done inside module class now.
+	
 	return $od;
     }
     static public function IsReady($sName) {

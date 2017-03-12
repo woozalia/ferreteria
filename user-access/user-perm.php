@@ -19,6 +19,7 @@ class fctUserPerms extends fcTable_keyed_single_standard {
     // -- SETUP -- //
     // ++ ARRAYS ++ //
 
+    /* 2017-02-05 Call FetchRows_asKeyedArray() instead.
     private $arData;
     public function AsArray() {
 	throw new exception('2017-01-27 Does anything actually call this? Use FetchRows_asKeyedArray() instead.');
@@ -27,7 +28,7 @@ class fctUserPerms extends fcTable_keyed_single_standard {
 	    $this->arData = $rs->AsArray();
 	}
 	return $this->arData;
-    }
+    } */
 
     // -- ARRAYS -- //
 
@@ -49,6 +50,7 @@ class fcrUserPermit extends fcRecord_standard {
     /*----
       RETURNS: The current recordset as an associative array, indexed by ID
     */
+    /* 2017-02-05 Call asKeyedArray() instead.
     public function AsArray() {
 	throw new exception("2016-10-28 Isn't there a base class function for this?");
 	$ar = array();
@@ -57,7 +59,7 @@ class fcrUserPermit extends fcRecord_standard {
 	    $ar[$id] = $this->Values();
 	}
 	return $ar;
-    }
+    } */
 
     // -- DATA RECORDS ACCESS -- //
 }

@@ -19,8 +19,20 @@ class fcDataRow {
 	return !is_null($this->GetFieldValues());
     }
     /*----
+      NOTE: 2017-02-26 The potential issue with using this is that I'm not sure if $arVals is treated as a reference
+	or a value. If it's a reference, then passing an array variable which is later altered could result in
+	altering the row values as well. I have a recollection that this is why I used array_merge() in SetFieldValues().
+    */
+    public function SetRow(array $arVals) {
+	$this->arRow = $arVals;
+    }
+    // NEEDED for array-data descendant class
+    protected function ClearRow() {
+	$this->arRow = NULL;
+    }
+    /*----
       ACTION: Sets any field values defined in $arVals; does not clear any existing field values.
-	To completely replace field values with $arVals, call ClearFields() first.
+	To completely replace field values with $arVals, call ClearFields() first or call SetRow().
     */
     public function SetFieldValues(array $arVals) {
 	if (is_array($this->arRow)) {
@@ -66,6 +78,19 @@ class fcDataRow {
 	} else {
 	    throw new exception('Ferreteria usage error: FieldIsSet() called on empty row. Call HasRow() to check first.');
 	}
+    }
+    public function FieldIsNonBlank($sKey) {
+	if ($this->FieldIsSet($sKey)) {
+	    $v = $this->GetFieldValue($sKey);
+	    return (!is_null($v) && ($v != ''));
+	} else {
+	    return FALSE;
+	}
+    }
+    // TODO: 2017-02-09 Has not actually been tested with zero, NULL, or non-numeric strings.
+    public function FieldIsNonZeroInt($sKey) {
+	$n = (int)$this->GetFieldValue($sKey);
+	return ($n != 0) && is_integer($n);
     }
     public function GetFieldValue($sKey) {
 	if ($this->FieldIsSet($sKey)) {

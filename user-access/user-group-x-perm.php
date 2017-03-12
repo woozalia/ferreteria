@@ -73,8 +73,8 @@ class fctUPermits_for_UGroup extends fcTable_wSource {
 	$sql = 'SELECT up.*'
 	  .' FROM '.KS_TABLE_UGROUP_X_UPERM.' AS axp'
 	  .' LEFT JOIN '.KS_TABLE_USER_PERMISSION.' AS up'
-	  .' ON up.ID=axp.ID_UPrm'
-	  ." WHERE axp.ID_UGrp=$idUGroup";
+	  .' ON up.ID=axp.ID_Permit'
+	  ." WHERE axp.ID_Group=$idUGroup";
 	$rs = $this->PermitTable()->FetchRecords($sql);
 	//$tbl = $this->PermTable();
 	//$rs->Table($tbl);
@@ -98,8 +98,8 @@ class fctUPermits_for_UGroup extends fcTable_wSource {
 	// next, add any specified by the form:
 	foreach ($arPerms as $idPerm => $on) {
 	    $this->Insert(array(
-	      'ID_UGrp'=>$idGroup,
-	      'ID_UPrm'=>$idPerm
+	      'ID_Group'=>$idGroup,
+	      'ID_Permit'=>$idPerm
 	      )
 	    );
 //	    $sql = $this->sqlExec;

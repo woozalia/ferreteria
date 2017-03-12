@@ -93,6 +93,11 @@ trait ftRenderableTree {
 abstract class fcPageElement extends fcTreeNode {
     abstract public function Render();
     abstract public function DoEvent($nEvent);
+    
+    private $arConfig;
+    protected function SetConfigValue($sName,$v) {
+	$this->arConfig[$sName] = $v;
+    }
 }
 /*::::
   PURPOSE: a Simple Page Element is a Page Element with a name and a value, no other contents to display; 
@@ -456,11 +461,11 @@ abstract class fcPageContent extends fcpeSimple {
 	return $out;
     }
     /*----
-      PUBLIC so widgets (so far, just the login widget) can call it
-      HISTORY:
-	2016-12-25 moved here from the login widget, because this is the content we want to save
+      ACTION: Save anything which should be preserved across a redirect, and then do the redirect.
+      PUBLIC so linkable objects can redirect without losing content
+      NEW
     */
-    public function RedirectToEraseRequest() {
+    public function DoStashedRedirect($url) {
 	// save the current page contents for redisplay after redirect
 	$s = $this->GetValue();	// get content that won't be displayed because we're redirecting
 	$rcSess = $this->GetSessionRecord();
@@ -468,11 +473,32 @@ abstract class fcPageContent extends fcpeSimple {
 	// debugging
 	$rcSess->SetStashValue('page contents',$s);
 	$rcSess->Save();	// write to persistent storage
-	
+
 	// now actually redirect
-	$url = fcApp::Me()->GetKioskObject()->GetBasePath();	// until we can come up with something more fine-tuned
 	fcHTTP::Redirect($url);
 	die();	// stop doing stuff; we're redirecting
+    }
+    /*----
+      ACTION: Redirect the browser to the same page (path only; no domain, ?query, or #fragment)
+      PUBLIC so widgets (so far, just the login widget) can call it
+      HISTORY:
+	2017-02-04 written as a companion to RedirectToDefaultPage()
+    */
+    public function RedirectToSamePage() {
+	$url = fcURL::GetCurrentString();
+	$this->DoStashedRedirect($url);
+    }
+    /*----
+      ACTION: Redirect the browser to a sensible default URL (currently the base page).
+	Later we might try to figure out where we were before, and go back there.
+      PUBLIC so widgets (so far, just the login widget) can call it
+      HISTORY:
+	2016-12-25 moved here from the login widget, because this is the content we want to save
+	2017-02-04 renamed from RedirectToEraseRequest() -> RedirectToDefaultPage()
+    */
+    public function RedirectToDefaultPage() {
+	$url = fcApp::Me()->GetKioskObject()->GetBasePath();	// until we can come up with something more fine-tuned
+	$this->DoStashedRedirect($url);
     }
 }
 trait ftContentMessages {
@@ -540,14 +566,6 @@ abstract class fcPage extends fcPageElement {
     }
 
     // -- EXECUTION -- //
-    // ++ CEMENTING ++ //
-
-    // NOTE: All of a Page's contents are subnodes; it has none aside from that.
-    public function Render() {
-	return $this->RenderNodes();
-    }
-    
-    // -- CEMENTING -- //
     // ++ CLASSES ++ //
     
     protected function DocTypeClass() {
@@ -562,6 +580,20 @@ abstract class fcPage extends fcPageElement {
     }
 
     // -- NODES -- //
+    // ++ I/O ++ //
+    
+    abstract public function AddContentString($s);
+    abstract public function DoStashedRedirect($url);
+    /*----
+      CEMENT
+      NOTE: All of a Page's contents are subnodes; it has none aside from that.
+    */
+    public function Render() {
+	return $this->RenderNodes();
+    }
+
+    // -- I/O -- //
+
 }
 // PURPOSE: Page formatted as HTML
 abstract class fcHTMLPage extends fcPage {

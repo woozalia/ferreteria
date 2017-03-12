@@ -76,3 +76,6 @@ $om = new fcCodeModule(__FILE__, 'records/db-records-savable.php');
   $om->AddClass('ftSaveableRecord');
 $om = new fcCodeModule(__FILE__, 'records/db-records-unique.php');
   $om->AddClass('ftUniqueRecords');
+$om = new fcCodeModule(__FILE__, 'events/event-plex.php');
+  $om->AddClass('fctEventPlex');
+  $om->AddClass('fctSubEvents_done');

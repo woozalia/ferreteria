@@ -18,8 +18,8 @@ class fcDBOFactory {
     */
     static public function GetConn($sSpec,$bAllowFail) {
 	$arSplit = fcString::SplitFirst($sSpec,':');
-	$sType = $arSplit[KS_BEFORE];
-	$sSubSpec = $arSplit[KS_AFTER];
+	$sType = $arSplit[fcString::KS_BEFORE];
+	$sSubSpec = $arSplit[fcString::KS_AFTER];
 	if (self::TypeExists($sType)) {
 	    $sClass = self::GetTypeClass($sType,$bAllowFail);
 	    $oConn = new $sClass;		// make the Engine object

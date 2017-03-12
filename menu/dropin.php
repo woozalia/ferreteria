@@ -11,8 +11,29 @@
     * When a link determines that it is being "used", DoSelect() is called (abstract here).
     * DoSelect() instantiates the ActionClass as a table and a predefined method is called.
     * This method is hard-coded here as MenuExec(), but that can be overridden by descendant classes.
+  HISTORY:
+    2017-02-08 If a DropinLink is created without defining its Action Class, that creates problems
+      which were difficult to trace -- so let's just make that part of the constructor, shall we?
+      Also, moving Set/Get Action Class methods here from parent. All the other Action stuff seems
+      to be added here.
 */
 class fcDropinLink extends fcDynamicLink {
+
+    // ++ SETUP ++ //
+    
+    // OVERRIDE
+    public function __construct(string $sKeyValue,string $sActionClass,string $sText=NULL,string $sPopup=NULL) {
+	parent::__construct($sKeyValue,$sText,$sPopup);
+	$this->SetActionClass($sActionClass);
+    }
+    // NEW
+    private $sActionClass;
+    public function SetActionClass($sClass) {
+	$this->sActionClass = $sClass;
+    }
+    protected function GetActionClass() {
+	return $this->sActionClass;
+    }
 
     // ++ EVENTS ++ //
 
@@ -20,9 +41,10 @@ class fcDropinLink extends fcDynamicLink {
     protected function SetupDefaults() {
 	$this->SetRequiredPrivilege('*');
 	// if '*' ever means anything, that will be "root".
-	// For now, it implies "nobody has permission", because there is no permission named '*'.
-	$this->SetKeyName('page');	// this could be a site option
-	$this->SetIndexName('id');	// same
+	// For now, it implies "nobody has permission", because there is no permission named '*'
+	// ...although the site admin could just define one.
+	$this->SetKeyName(KS_PATHARG_NAME_TABLE);
+	$this->SetIndexName(KS_PATHARG_NAME_INDEX);	// same
     }
 
     // -- EVENTS -- //
@@ -61,23 +83,15 @@ class fcDropinLink extends fcDynamicLink {
     }
 
     // -- EVENTS -- //
-    // ++ CALCULATIONS ++ //
-    
-    /*----
-      OVERRIDE
-      ADDS: Does not modify URL when entry is selected
-    */
-    protected function GetLinkArray_dynamic() {
-	return $this->GetLinkArray_base();
-    }
-
-    // -- CALCULATIONS -- //
     // ++ OBJECTS ++ //
 
     // NOTE: This could presumably be overridden to invoke things other than tables.
     protected function MakeActionObject() {
 	$oKiosk = $this->GetKioskObject();
 	$sClass = $this->GetActionClass();
+	if (empty($sClass)) {
+	    throw new exception('Ferreteria Dropin definition error: action class not defined!');
+	}
 
 	$id = $oKiosk->GetInputObject()->GetString($this->GetIndexName());
 	//$id = $oKiosk->GetInputRecordKey();	// TODO: this belongs in the dropin link, not the kiosk
@@ -85,6 +99,14 @@ class fcDropinLink extends fcDynamicLink {
     }
 
     // -- OBJECTS -- //
+    // ++ CALCULATIONS ++ //
+    
+    // OVERRIDE
+    protected function GetBasePath_toUse() {
+	return fcApp::Me()->GetKioskObject()->GetBasePath();
+    }
+
+    // -- CALCULATIONS -- //
     // ++ ACTIONS ++ //
     
     /*----
@@ -101,8 +123,9 @@ class fcDropinLink extends fcDynamicLink {
     }
     // NOTE: This could presumably be overridden to invoke a different method.
     protected function DoObjectAction($o) {
-	// We probably just need to have an App method for adding content.
-	fcApp::Me()->AddContentString($o->MenuExec());
+	$oApp = fcApp::Me();
+	$oApp->GetKioskObject()->SetPagePath($o->SelfURL());	// let's just assume $o is a LinkableObject
+	$oApp->AddContentString($o->MenuExec());
     }
 
     // -- ACTIONS -- //

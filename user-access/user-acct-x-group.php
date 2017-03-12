@@ -30,8 +30,8 @@ class fctUGroups_for_UAcct extends fcTable_wSource {
 	$sql = 'SELECT ug.*'
 	  .' FROM '.KS_TABLE_UACCT_X_UGROUP.' AS axg'
 	  .' LEFT JOIN '.KS_TABLE_USER_GROUP.' AS ug'
-	  .' ON ug.ID=axg.ID_UGrp'
-	  .' WHERE ID_User='.$idUAcct;
+	  .' ON ug.ID=axg.ID_Group'
+	  .' WHERE ID_Acct='.$idUAcct;
 	// if there is a group to which all users automatically belong...
 	if (defined('ID_GROUP_USERS')) {
 	    // ...include that group too

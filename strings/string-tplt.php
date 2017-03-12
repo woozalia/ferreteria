@@ -3,12 +3,10 @@
   HISTORY:
     2016-08-08 fcTemplate can now be constructed with no parameters, so we can set marks and template with the same string
       using MarkedValue().
+    2017-02-17 Convention update: get/set instead of fake-overloaded access method
 */
 
 abstract class fcTemplate {
-    protected $sMarkSt;
-    protected $sMarkFi;
-    private $sTplt;
 
     public function __construct($sStartMark=NULL, $sFinishMark=NULL,$sTemplate=NULL) {
 	$this->SetStartMark($sStartMark);
@@ -18,32 +16,30 @@ abstract class fcTemplate {
     /*----
       PUBLIC so callers can override individual values
     */
-    abstract public function VariableValue($sName);
+    abstract public function SetVariableValue($sName,$sValue);
+    abstract public function GetVariableValue($sName);
 
     // ++ CONFIGURATION ++ //
 
+    private $sTplt;
     public function Template($s=NULL) {
 	if (!is_null($s)) {
 	    $this->sTplt = $s;
 	}
 	return $this->sTplt;
     }
+    private $sMarkSt;
     protected function SetStartMark($s) {
 	$this->sMarkSt = $s;
     }
-    protected function StartMark($s=NULL) {
-	if (!is_null($s)) {
-	    $this->sMarkSt = $s;
-	}
+    protected function GetStartMark() {
 	return $this->sMarkSt;
     }
+    private $sMarkFi;
     protected function SetFinishMark($s) {
 	$this->sMarkFi = $s;
     }
-    protected function FinishMark($s=NULL) {
-	if (!is_null($s)) {
-	    $this->sMarkFi = $s;
-	}
+    protected function GetFinishMark() {
 	return $this->sMarkFi;
     }
     /*
@@ -56,22 +52,26 @@ abstract class fcTemplate {
     */
     public function MarkedValue($sValue) {
 	$arIn = fcString::Xplode($sValue);
-	$this->StartMark($arIn[0]);
-	$this->FinishMark($arIn[1]);
+	$this->SetStartMark($arIn[0]);
+	$this->SetFinishMark($arIn[1]);
 	$this->Template($arIn[2]);
     }
-
+    // STUB
+    protected function SanitizeInput($s) { return $s; }
+    // STUB
+    protected function SanitizeOutput($s) { return $s; }
+    
     // -- CONFIGURATION -- //
     // ++ MAIN PROCESS ++ //
 
     public function Render() {
 	$out = $this->Template();
-	$smSt = $this->StartMark();
-	$smFi = $this->FinishMark();
+	$smSt = $this->GetStartMark();
+	$smFi = $this->GetFinishMark();
 
 	$nStarts = 0;
 	do {
-	    $isFound = false;
+	    $isFound = FALSE;
 	    $posSt = strpos ( $out, $smSt );
 	    if ($posSt !== FALSE) {
 		$nStarts++;
@@ -81,27 +81,38 @@ abstract class fcTemplate {
 		    $posStVar = ($posSt+strlen($smSt));
 		    $varLen = $posFiVar - $posStVar;
 		    $varName = substr($out, $posStVar, $varLen);
+		    $n = 0;
+		    do {
+		      $n++;
+		      $old = $varName;
+		      $varName = htmlspecialchars_decode($varName);
+		    } while (($old != $varName) && $n < 30);
+		    $varName = $this->SanitizeInput($varName);		// strip out any accidental tags
 		    $posFi = ($posFiVar+strlen($smFi));
-		    $varVal = $this->VariableValue($varName);	// virtual method to retrieve variable's value
+		    $varVal = $this->GetVariableValue($varName);	// virtual method to retrieve variable's value
+		    $varVal = $this->SanitizeOutput($varVal);
 		    $out =
-			substr($out, 0, $posSt )
-			.$varVal
-			.substr($out, $posFi );
+		      substr($out, 0, $posSt )
+		      .$varVal
+		      .substr($out, $posFi)
+		      ;
 		}
 	    }
 	} while ($isFound);
 	return $out;
     }
-    /*----
+   /*----
       PURPOSE: Same as Render(), but handles recursive replacement -- i.e. a variable's value
 	may contain a reference to another variable.
+      TODO: Test tag-stripping.
       HISTORY:
 	2015-09-03 Defined $smSt. Code could not possibly have worked before this.
+	2017-02-17 Added tag-stripping option (not tested).
     */
     public function RenderRecursive() {
 	$out = $this->Render();
 	$done = FALSE;
-	$smSt = $this->StartMark();
+	$smSt = $this->GetStartMark();
 	do {
 	    $posSt = strpos ( $out, $smSt );	// does output contain more vars?
 	    if ($posSt === FALSE) {
@@ -109,7 +120,7 @@ abstract class fcTemplate {
 	    } else {
 		// spawn another object to handle inner vars
 		$sClass =  __CLASS__;
-		$tpInner = new $sClass($smSt,$this->FinishMark(),$out);
+		$tpInner = new $sClass($smSt,$this->GetFinishMark(),$out);
 		$out = $tpInner->RenderRecursive();
 	    }
 	} while (!$done);
@@ -121,27 +132,41 @@ abstract class fcTemplate {
 
 class fcTemplate_array extends fcTemplate {
     private $arVals;
-
+    
     public function VariableValues(array $arVals=NULL) {
+	throw new exception('2017-02-17 VariableValues() is deprecated; call SetVariableValues() or GetVariableValues().');
 	if (!is_null($arVals)) {
 	    $this->arVals = $arVals;
 	}
 	return $this->arVals;
     }
+    public function SetVariableValues(array $arVals) {
+	$this->arVals = $arVals;
+    }
+    public function GetVariableValues() {
+	return $this->arVals;
+    }
     public function VariableValue($sName,$sVal=NULL) {
-	if (!is_null($sVal)) {
-	    $this->arVals[$sName] = $sVal;
-	}
+	throw new exception('2017-02-17 VariableValue() is deprecated; call SetVariableValue() or GetVariableValue().');
+    }
+    public function SetVariableValue($sName,$sVal) {
+	$this->arVals[$sName] = $sVal;
+    }
+    public function GetVariableValue($sName) {
+	//$sName = $this->SanitizeInput($sName);
 	if (array_key_exists($sName,$this->arVals)) {
 	    return $this->arVals[$sName];
 	} else {
-	    echo 'Variables defined:<br>'.clsArray::Render($this->arVals).'<br>';
+	    $htArray = fcArray::Render($this->arVals);
+	    echo "Variables defined:$htArray";
 	    throw new exception("Attempting to access undefined template variable [$sName].");
 	}
     }
 
     public function Render($arVals=NULL) {
-	$this->VariableValues($arVals);
+	if (is_array($arVals)) {
+	    $this->SetVariableValues($arVals);
+	}
 	return parent::Render();
     }
 }

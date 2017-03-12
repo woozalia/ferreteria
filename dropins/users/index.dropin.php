@@ -8,11 +8,11 @@
 
 // ACTIONS
 
-define('KS_ACTION_USER_ACCOUNT',	'usr');
-define('KS_ACTION_USER_GROUP',		'grp');
-define('KS_ACTION_USER_PERMISSION',	'perm');
-define('KS_ACTION_USER_SESSION',	'sess');
-define('KS_ACTION_USER_CLIENT',	'cli');
+define('KS_ACTION_USER_ACCOUNT',	'uacct');
+define('KS_ACTION_USER_GROUP',		'ugrp');
+define('KS_ACTION_USER_PERMISSION',	'uperm');
+define('KS_ACTION_USER_SESSION',	'usess');
+define('KS_ACTION_USER_CLIENT',	'ucli');
 
 // CLASS NAMES
 
@@ -24,11 +24,20 @@ define('KS_CLASS_ADMIN_USER_PERMISSIONS',	'fctAdminUserPermits');
 define('KS_CLASS_ADMIN_USER_PERMISSION',	'fcrAdminUserPermit');
 define('KS_CLASS_ADMIN_UGROUPS_FOR_UACCT',	'fctUGroups_for_UAcct_admin');
 define('KS_CLASS_ADMIN_UPERMITS_FOR_UGROUP',	'fctUPermits_for_UGroup_admin');
-
 define('KS_CLASS_ADMIN_USER_SESSIONS',		'fctAdminUserSessions');
-define('KS_CLASS_ADMIN_USER_SESSION',		'acrAdminUserSession');
-define('KS_CLASS_ADMIN_USER_CLIENTS',		'actUserClients');
-define('KS_CLASS_ADMIN_USER_CLIENT',		'acrUserClient');
+define('KS_CLASS_ADMIN_USER_SESSION',		'fcrAdminUserSession');
+define('KS_CLASS_ADMIN_USER_CLIENTS',		'fctUserClientsAdmin');
+define('KS_CLASS_ADMIN_USER_CLIENT',		'fcrUserClientAdmin');
+
+// PERMISSIONS
+
+// -- TODO: possibly these should be prefixed 'ferreteria.users.'
+define('KS_PERM_SEC_USER_EDIT','user.acct.edit');		// can modify user accounts
+define('KS_PERM_SEC_PERM_VIEW','user.perm.view');		// can view user (group) permits
+define('KS_PERM_SEC_GROUP_VIEW','user.group.view');		// can view user groups
+define('KS_PERM_USER_CONN_DATA','data.conn.view');		// can view user connection data (browser ID, IP address)
+define('KS_PERM_SEC_USER_VIEW','user.acct.view');		// can view all user accounts
+
 
 /* names of FEATURES which might or might not be loaded.
 
@@ -45,31 +54,46 @@ define('KS_FEATURE_USER_SESSION_ADMIN','user.admin.sess');
 
 $om = $oRoot->SetNode(new fcMenuFolder('User Permissions','User Access Management','user/group security management'));
 
-  $omi = $om->SetNode(new fcDropinLink(KS_ACTION_USER_ACCOUNT,'Users','user account management'));
+  $omi = $om->SetNode(new fcDropinLink(
+    KS_ACTION_USER_ACCOUNT,
+    KS_CLASS_ADMIN_USER_ACCOUNTS,
+    'Users','user account management'));
+    
     $omi->SetPageTitle('User Accounts');
-    $omi->SetActionClass(KS_CLASS_ADMIN_USER_ACCOUNTS);
     $omi->SetRequiredPrivilege(KS_PERM_SEC_USER_VIEW);
     //$omi->SetRequiredPrivilege(NULL);
 
-  $omi = $om->SetNode(new fcDropinLink(KS_ACTION_USER_GROUP,'Groups','security groups to which users can belong'));
+  $omi = $om->SetNode(new fcDropinLink(
+    KS_ACTION_USER_GROUP,
+    KS_CLASS_ADMIN_USER_GROUPS,
+    'Groups','security groups to which users can belong'));
+
     $omi->SetPageTitle('Security Groups');
-    $omi->SetActionClass(KS_CLASS_ADMIN_USER_GROUPS);
     $omi->SetRequiredPrivilege(KS_PERM_SEC_GROUP_VIEW);
 
-  $omi = $om->SetNode(new fcDropinLink(KS_ACTION_USER_PERMISSION,'Perms','security permissions assignable to groups'));
+  $omi = $om->SetNode(new fcDropinLink(
+    KS_ACTION_USER_PERMISSION,
+    KS_CLASS_ADMIN_USER_PERMISSIONS,
+    'Perms','security permissions assignable to groups'));
+
     $omi->SetPageTitle('Security Permissions');
-    $omi->SetActionClass(KS_CLASS_ADMIN_USER_PERMISSIONS);
     $omi->SetRequiredPrivilege(KS_PERM_SEC_PERM_VIEW);
 
-  $omi = $om->SetNode(new fcDropinLink(KS_ACTION_USER_SESSION,'Sess','user session records'));
-    $omi->SetPageTitle('User Sessions');
-    $omi->SetActionClass(KS_CLASS_ADMIN_USER_SESSIONS);
-    $omi->SetRequiredPrivilege(KS_PERM_SEC_GROUP_VIEW);
+  $omi = $om->SetNode(new fcDropinLink(
+    KS_ACTION_USER_SESSION,
+    KS_CLASS_ADMIN_USER_SESSIONS,
+    'Sess','user session records'));
 
-  $omi = $om->SetNode(new fcDropinLink(KS_ACTION_USER_CLIENT,'Clients','user web client records'));
+    $omi->SetPageTitle('User Sessions');
+    $omi->SetRequiredPrivilege(KS_PERM_USER_CONN_DATA);
+
+  $omi = $om->SetNode(new fcDropinLink(
+    KS_ACTION_USER_CLIENT,
+    KS_CLASS_ADMIN_USER_CLIENTS,
+    'Clients','user web client records'));
+
     $omi->SetPageTitle('User Clients');
-    $omi->SetActionClass(KS_CLASS_ADMIN_USER_CLIENTS);
-    $omi->SetRequiredPrivilege(KS_PERM_SEC_GROUP_VIEW);
+    $omi->SetRequiredPrivilege(KS_PERM_USER_CONN_DATA);
 
 /* 2016-12-11 old dropin version
 $om = new fcMenuFolder($oRoot, '*users','User Permissions','User Access Management','user/group security management');

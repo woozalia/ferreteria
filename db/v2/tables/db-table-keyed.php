@@ -31,11 +31,12 @@ abstract class fcTable_keyed_single extends fcTable_keyed {
 
 abstract class fcTable_keyed_single_standard extends fcTable_keyed_single {
 
-    // ++ CEMENTING ++ //
+    // ++ SETUP ++ //
 
+    // CEMENT
     public function GetKeyName() {
 	return 'ID';
     }
     
-    // -- CEMENTING -- //
+    // -- SETUP -- //
 }

@@ -33,27 +33,25 @@ class fcHeaderMenu extends fcMenuFolder {
 }
 /*::::
   PURPOSE: For setting off a group of menu items together, with a label
-  TODO:
-    This will probably need to be rendered with a colon added to the text, or something.
-    Formatting should be done with CSS.
+  TODO: Formatting should be done with CSS.
 */
 class fcHeaderMenuGroup extends fcMenuFolder {
     protected function RenderNodesBlock() {
 	return $this->RenderNodes();
     }
     protected function RenderSelf() {
-	return ' &#149; '.$this->RenderContent().':';
+	return ' &bull; '.$this->RenderContent().':';
     }
 }
 /*::::
   PURPOSE: menu link that can be one of several mutually-exclusive options
     Designed for headers, but theoretically should work in vertical/hierarchical menus as well.
 */
-class fcMenuOptionLink extends fcDynamicLink {
+class fcMenuOptionLink extends fcToggleLink {
 
     // ++ SETUP ++ //
 
-    public function __construct($sKeyValue,$sGroupKey=NULL,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL) {
+    public function __construct($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL) {
 	$this->SetPopup($sPopup);
 	$this->SetKeyValue($sKeyValue);
 	$this->SetKeyName($sGroupKey);
@@ -65,10 +63,6 @@ class fcMenuOptionLink extends fcDynamicLink {
       //++values++//
 
     // NEW
-    protected function GetGroupKey() {
-	return $this->sGroup;
-    }
-    // NEW
     protected function SetOffDisplay($s) {
 	$this->SetValue($s);
     }
@@ -77,6 +71,10 @@ class fcMenuOptionLink extends fcDynamicLink {
 	$s = $this->GetValue();
 	if (is_null($s)) {
 	    $s = $this->GetKeyValue();	// default
+	    if ($s === TRUE) {
+		// TRUE = special value meaning that the group key should be used without a value, so also display it
+		$s = $this->GetKeyName();
+	    }
 	}
 	return $s;
     }
@@ -117,24 +115,6 @@ class fcMenuOptionLink extends fcDynamicLink {
 	return $this->GetDisplayPrefix().$s;
     }
     
-    /*
-    // NEW
-    // could be called GetInnerContentHTML()
-    protected function GetInnerContentHTML() {
-	$sCSS = $this->GetIsSelected()?'menu-link-active':'menu-link-inactive';
-	$sText = $this->GetLinkText();
-	return "<span class=$sCSS>$sText</span>";
-    }
-    // NEW
-    // could be called GetOuterContentHTML()
-    protected function FigureLinkHTML($url,$sText,$sPopup) {
-	$htPopup = is_null($sPopup)?'':(' title="'.htmlspecialchars($sPopup).'"');
-	return "[<a class=ctrl-link-action href='$url'$sPopup>$sText</a>]";
-    }
-    protected function FigureOuterContentHTML($sContent) {
-	return "[$sContent]";
-    }
-    */
     // OVERRIDE
     protected function RenderSelf() {
 	$sCSS = $this->GetIsSelected()?'menu-link-active':'menu-link-inactive';
@@ -147,19 +127,60 @@ class fcMenuOptionLink extends fcDynamicLink {
 
       //--calculations--//
     // -- SETUP -- //
-    // ++ OUTPUT ++ //
 
-    /* this appears to be the wrong level at which to redefine things
-    public function Render() {
-	$url = $this->GetLinkURL();
-	$sText = $this->GetInnerContentHTML();
-	$sPopup = $this->GetPopup();
-	$sLink = $this->FigureLinkHTML($url,$sText,$sPopup);
-	return $this->FigureOuterContentHTML($sLink);
-    } */
+}
+/*::::
+  PURPOSE: Equivalent to a radio-button group
+*/
+class fcHeaderChoiceGroup extends fcHeaderMenuGroup {
 
-    // -- OUTPUT -- //
+    public function __construct($sKeyName,$sText=NULL,$sPopup=NULL) {
+	parent::__construct($sText,$sPopup);
+	$this->SetKeyName($sKeyName);
+    }
+    private $sKeyName;
+    protected function SetKeyName($s) {
+	$this->sKeyName = $s;
+    }
+    protected function GetKeyName() {
+	return $this->sKeyName;
+    }
+    public function SetChoice(fcHeaderChoice $oChoice) {
+	$sKeyName = $this->GetKeyName();
+	$oChoice->SetKeyName($sKeyName);
+	$sKeyValue = $oChoice->GetKeyValue();
+	$this->SetNode($oChoice,$sKeyValue);
+    }
+    public function GetChoiceValue() {
+	$sKeyName = $this->GetKeyName();
+	$oPathIn = fcApp::Me()->GetKioskObject()->GetInputObject();
+	$sInValue = $oPathIn->GetString($sKeyName);
+	return $sInValue;
+    }
+}
+/*::::
+  PURPOSE: Like a fcMenuOptionLink, but requires a parent fcHeaderChoiceGroup
+    This way you can get a single value specifying which choice was clicked.
+*/
+class fcHeaderChoice extends fcMenuOptionLink {
 
+    // ++ SETUP ++ //
+
+    public function __construct($sKeyValue,$sPopup=NULL,$sDispOff=NULL,$sDispOn=NULL) {
+	$this->SetPopup($sPopup);
+	$this->SetKeyValue($sKeyValue);
+	$this->SetOffDisplay($sDispOff);
+	$this->SetOnDisplay($sDispOn);
+	$this->SetupDefaults();			// ALWAYS CALL THIS from constructor
+    }
+    // PUBLICIZE so group object can call it
+    public function SetKeyName($s) {
+	parent::SetKeyName($s);
+    }
+    // PUBLICIZE so group object can call it
+    public function GetKeyValue() {
+	return parent::GetKeyValue();
+    }
 }
 class fcSectionHeader extends fcPageElement {
     use ftRenderableTree;

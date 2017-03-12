@@ -27,6 +27,7 @@ $om = new fcCodeModule(__FILE__, 'field-store.php');
   $om->AddClass('fcFieldStorage_Text');
   $om->AddClass('fcFieldStorage_Num');
   $om->AddClass('fcFieldStorage_Time');
+  $om->AddClass('fcFieldStorage_Bit');
 $om = new fcCodeModule(__FILE__, 'form.php');
   $om->AddClass('fcForm');
   $om->AddClass('fcForm_keyed');

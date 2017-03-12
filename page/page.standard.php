@@ -192,10 +192,12 @@ abstract class fcPage_standard extends fcHTMLPage {
 	return $this->GetTagNode_body()->GetElement_PageContent();
     }
     abstract public function GetElement_PageHeader();
-    abstract public function GetElement_HeaderMenu();
+    public function GetElement_HeaderMenu() {
+	return $this->GetElement_PageHeader()->GetElement_Menu();
+    }
 
     // -- ELEMENTS -- //
-    // ++ THRUPUT ++ //
+    // ++ I/O ++ //
     
     // PUBLIC so Content subnode can use it
     public function SetPageTitle($s) {
@@ -206,11 +208,18 @@ abstract class fcPage_standard extends fcHTMLPage {
     public function SetContentTitle($s) {
 	$this->GetElement_PageHeader()->SetTitleString($s);
     }
+    public function AddContentString($s) {
+	$this->GetElement_PageContent()->AddText($s);
+    }
+    public function DoStashedRedirect($url) {
+	$this->GetElement_PageContent()->DoStashedRedirect($url);
+    }
+
     // 2017-01-26 This seems kind of silly.
     public function AddImmediateRender(fcPageElement $o) {
 	$s = $o->Render();
-	$this->GetElement_PageContent()->AddText($s);
+	$this->AddContentString($s);
     }
     
-    // -- THRUPUT -- //
+    // -- I/O -- //
 }

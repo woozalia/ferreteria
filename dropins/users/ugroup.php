@@ -30,10 +30,16 @@ class acUserGroups extends fctUserGroups {
     // ++ ADMIN INTERFACE ++ //
 
     protected function AdminListing() {
-	throw new exception('2017-01-28 This will need some updating.');
-	$rs = $this->GetData();
+	$rs = $this->SelectRecords();
 
 	// set up header action-links
+	
+	$oMenu = fcApp::Me()->GetHeaderMenu();
+	  // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
+	  //$oMenu->SetNode($ol = new fcMenuOptionLink('do','add'));
+	  $oMenu->SetNode($ol = new fcMenuOptionLink('id',KS_NEW_REC));
+	    //$ol->SetBasePath($this->SelfURL());
+	/* v2
 	$oPage = $this->Engine()->App()->Page();
 	$arPage = $oPage->PathArgs();
 	$arActs = array(
@@ -41,6 +47,7 @@ class acUserGroups extends fctUserGroups {
 	  new clsActionLink_option($arPage,'add','id')
 	  );
 	$oPage->PageHeaderWidgets($arActs);
+	*/
 
 	if ($rs->HasRows()) {
 	    $arCols = array(
@@ -60,6 +67,7 @@ class acUserGroups extends fctUserGroups {
 }
 class acUserGroup extends fcrUserGroup {
     use ftLinkableRecord;
+    use ftShowableRecord;
 
     // ++ DATA TABLE ACCESS ++ //
 
@@ -87,7 +95,7 @@ class acUserGroup extends fcrUserGroup {
 	if ($sField == 'ID') {
 	    $val = $this->SelfLink();
 	} else {
-	    $val = $this->Value($sField);
+	    $val = $this->GetFieldValue($sField);
 	}
 	return "<td>$val</td>";
     }
@@ -239,8 +247,9 @@ __END__;
 
 	// set up header action-links
 	$oMenu = fcApp::Me()->GetHeaderMenu();
-	  $oMenu->SetNode($ol = new fcMenuOptionLink('edit','do',NULL,'cancel','edit this supplier'));
-	    $ol->SetBasePath($this->SelfURL());
+	  // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
+	  $oMenu->SetNode($ol = new fcMenuOptionLink('do','edit',NULL,'cancel','edit this supplier'));
+	    //$ol->SetBasePath($this->SelfURL());
 	
 	/* 2017-01-26 old
 	$arActs = array(
@@ -342,14 +351,15 @@ __END__;
 	// set up header action-links
 	$sName = $this->NameString();
 	$oMenu = fcApp::Me()->GetHeaderMenu();
+	  // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
 	  $oMenu->SetNode($ol = new fcMenuOptionLink(
-	    'edit.prm',			// $sLinkKey
 	    'do',				// $sGroupKey=NULL
+	    'edit.prm',				// $sLinkKey
 	    'edit',				// $sDispOff=NULL
 	    NULL,				// $sDispOn=NULL
 	    "edit permissions for $sName"	// $sPopup=NULL
 	    ));
-	    $ol->SetBasePath($this->SelfURL());
+	    //$ol->SetBasePath($this->SelfURL());
 	    $doEdit = $ol->GetIsSelected();
 
 	// set up section and menu
