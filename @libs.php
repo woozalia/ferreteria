@@ -37,6 +37,8 @@ $om = new fcCodeModule(__FILE__, 'dtree.php');
   $om->AddClass('clsDTreeAPI');
 $om = new fcCodeModule(__FILE__, 'exception.php');
   $om->AddClass('fcSilentException');
+$om = new fcCodeModule(__FILE__, 'globals.php');
+  $om->AddClass('fcGlobals');
 /* 2016-11-13 old page/skin scheme
 $om = new fcCodeModule(__FILE__, 'page.php');
   $om->AddClass('clsPage');

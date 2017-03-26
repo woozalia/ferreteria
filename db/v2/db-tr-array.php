@@ -46,7 +46,9 @@ class fcDataTable_array extends fcDataSource {
 	return array_key_exists($id,$this->arRows);
     }
 }
-class fcDataRow_array extends fcSourcedDataRow {
+class fcDataRow_array extends fcSourcedDataRow implements fiLinkableRecord {
+    use ftLinkableRecord;
+
     private $arRows, $nRow;
 
     // ++ CEMENT ++ //

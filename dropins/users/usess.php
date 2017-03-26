@@ -4,13 +4,13 @@
   HISTORY:
     2010-10-17 created
 */
-class fctAdminUserSessions extends fctUserSessions {
+class fctAdminUserSessions extends fctUserSessions implements fiLinkableTable {
     use ftLinkableTable;
 
     // ++ SETUP ++ //
 
-    protected function GetActionKey() {
-	return KS_PAGE_KEY_SESSION;
+    public function GetActionKey() {
+	return KS_ACTION_USER_SESSION;
     }
     protected function SingularName() {
 	return KS_CLASS_ADMIN_USER_SESSION;
@@ -37,16 +37,17 @@ class fctAdminUserSessions extends fctUserSessions {
 	  'ID_Acct'	=> 'User',
 	  'Stash'	=> 'Data',
 	  'WhenCreated'	=> 'Created',
+	  'WhenUsed'	=> 'Used',
 	  'WhenExpires'	=> 'Exp',
-	  'WhenClosed'	=> 'End',
 	  );
 	$out = $rs->AdminRows($arCols);
 	return $out;
     }
 }
-class fcrAdminUserSession extends fcrUserSession {
+class fcrAdminUserSession extends fcrUserSession implements fiLinkableRecord {
     use ftLinkableRecord;
     use ftShowableRecord;
+    use ftSaveableRecord;
 
     // ++ DROP-IN API ++ //
 

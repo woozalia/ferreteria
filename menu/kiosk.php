@@ -10,7 +10,7 @@
     Rules can be overridden by descendants if this format just isn't good enough...
 */
 abstract class fcMenuKiosk {
-    abstract protected function GetBasePath();
+    abstract protected function GetBasePath();	// changes depending on which kiosk
     
     private $wpPage;
     public function SetPagePath($wp) {

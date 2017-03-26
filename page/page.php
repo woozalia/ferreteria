@@ -23,6 +23,10 @@
 define('KI_NODE_EVENT_DO_BUILDING',1);	// set up node structure
 define('KI_NODE_EVENT_DO_FIGURING',2);	// do any necessary communication between nodes
 
+interface fiEventConsumer {
+    function DoEvent($nEvent);
+}
+
 // PURPOSE: So a node can respond to events (does not pass them down to subnodes)
 trait ftExecutableTwig {
     public function DoEvent($nEvent) {
@@ -34,9 +38,6 @@ trait ftExecutableTwig {
 	    $this->OnCreateElements();
 	    break;
 	  case KI_NODE_EVENT_DO_FIGURING:
-/*	    if (get_class($this) == 'fcpeLoginWidget') {
-		echo 'NAME ['.$this->GetName().'] EVENT DO_FIGURING<br>';
-	    }*/
 	    $this->OnRunCalculations();
 	    break;
 	}
@@ -506,15 +507,15 @@ trait ftContentMessages {
 	switch ($nType) {
 	  case 1:
 	    $sType = 'error';
-	    $urlIcon = KWP_ICON_ALERT;
+	    $urlIcon = fcGlobals::Me()->GetWebPath_forErrorIcon();
 	    break;
 	  case 2:
 	    $sType = 'warning';
-	    $urlIcon = KWP_ICON_WARN;
+	    $urlIcon = fcGlobals::Me()->GetWebPath_forWarningIcon();
 	    break;
 	  case 3:
 	    $sType = 'success';
-	    $urlIcon = KWP_ICON_OKAY;
+	    $urlIcon = fcGlobals::Me()->GetWebPath_forSuccessIcon();
 	    break;
 	  default:
 	    throw new exception('Ferreteria internal error: Unknown message type.');

@@ -284,7 +284,7 @@ class fctUserSessions extends fcTable_keyed_single_standard {
 */
 class fcrUserSession extends fcRecord_standard {
     use ftVerbalObject;
-    use ftSaveableRecord;
+    //use ftSaveableRecord;
 
     protected $rcUser;
 
@@ -723,7 +723,7 @@ class fcrUserSession extends fcRecord_standard {
 	    $this->SetUserRecord($rcUser);
 	    $sText = $sUser.' logged in';
 				      // $sCode,$sText,array $arData=NULL
-	    fcApp::Me()->CreateEvent(KS_EVENT_FERRETERIA_LOGIN_OKAY,$sText,$arData);
+	    fcApp::Me()->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_LOGIN_OKAY,$sText,$arData);
 	} else {
 	    // LOGIN ATTEMPT FAILED
 	
@@ -731,7 +731,7 @@ class fcrUserSession extends fcRecord_standard {
 	    $this->ClearUserRecord();
 	    $sErr = $tUsers->GetErrorCode();
 	    $sText = $sUser.' not logged in, error '.$sErr;
-	    fcApp::Me()->CreateEvent(KS_EVENT_FERRETERIA_LOGIN_FAIL,$sText,$arData);
+	    fcApp::Me()->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_LOGIN_FAIL,$sText,$arData);
 	}
     }
     /*----

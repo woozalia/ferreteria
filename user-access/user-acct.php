@@ -171,6 +171,7 @@ class fctUserAccts extends fcTable_keyed_single_standard {
 */
 class fcrUserAcct extends fcRecord_standard {
     use ftFrameworkAccess;
+    use ftSaveableRecord;
     //use ftLinkableRecord;
 
     // ++ STATUS ++ //
@@ -232,6 +233,9 @@ class fcrUserAcct extends fcRecord_standard {
     protected function PermsQueryClass() {
 	return 'fcqtUserPerms';
     }
+    protected function PermitsClass() {
+	return KS_CLASS_USER_PERMISSIONS;
+    }
 
     // -- CLASSES -- //
     // ++ TABLES ++ //
@@ -239,10 +243,9 @@ class fcrUserAcct extends fcRecord_standard {
     protected function XGroupTable() {
 	return $this->GetConnection()->MakeTableWrapper($this->XGroupClass());
     }
-    /*
-    protected function PermTable() {
-	return $this->Engine()->Make($this->PermsClass());
-    }*/
+    protected function PermitTable() {
+	return $this->GetConnection()->MakeTableWrapper($this->PermitsClass());
+    }
     protected function PermsQuery() {
 	return $this->GetConnection()->MakeTableWrapper($this->PermsQueryClass());
     }
@@ -302,24 +305,43 @@ class fcrUserAcct extends fcRecord_standard {
 	2014-01-25 changed default (NULL) access to FALSE, to prevent accidentally
 	  giving access by not assigning a permission. (All users can be deliberately
 	  given access to a feature by simply not checking CanDo().
+	2017-03-25 Added check to make sure that the requested permit actually exists.
     */
     public function CanDo($sPerm) {
 	if ($this->IsNew()) {
 	    throw new exception('Ferreteria usage error: attempting to determine permissions for an empty user record.');
 	}
+	if (KB_USE_ANONYMOUS_ROOT) {
+	    // TODO: display this message nicely
+	    echo '<b>WARNING</b>: USING ANONYMOUS ROOT! DISABLE THIS AS SOON AS POSSIBLE.';
+	    return TRUE;
+	}
+	$hasRoot = FALSE;
 	if (defined('ID_USER_ROOT')) {
 	    if ($this->GetKeyValue() == ID_USER_ROOT) {
-		return TRUE;
+		$hasRoot = TRUE;
 	    }
 	}
-	if (is_null($sPerm)) {
-	    return FALSE;
-	} else {
-	    $ar = $this->UPermArray();
-	    if (is_null($ar)) {
-		return FALSE;	// user has NO permissions (yet)
+
+	if ($this->PermitTable()->PermitExists($sPerm)) {
+	    if (is_null($sPerm)) {
+		return $hasRoot;	// user can only do this if ROOT
 	    } else {
-		return (array_key_exists($sPerm,$ar));
+		$ar = $this->UPermArray();
+		if (is_null($ar)) {
+		    // user has NO permissions (yet)
+		    $hasPerm = FALSE;	
+		} else {
+		    $hasPerm = array_key_exists($sPerm,$ar);
+		}
+		return $hasPerm || $hasRoot;
+	    }
+	} else {
+	    if ($hasRoot) {
+		$this->PermitTable()->SetNeededPermit($sPerm);	// make a note that code expects this to exist
+		return TRUE;
+	    } else {
+		throw new exception("Ferreteria configuration error: permission '$sPerm' does not exist in database.");
 	    }
 	}
     }

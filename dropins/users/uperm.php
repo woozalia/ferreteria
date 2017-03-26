@@ -4,7 +4,7 @@
   HISTORY:
     2013-12-29 started
 */
-class fctAdminUserPermits extends fctUserPerms {
+class fctAdminUserPermits extends fctUserPerms implements fiLinkableTable {
     use ftLinkableTable;
 
     // ++ SETUP ++ //
@@ -59,12 +59,32 @@ class fctAdminUserPermits extends fctUserPerms {
 	} else {
 	    $out = '<i>(none defined)</i>';
 	}
+	
+	// report any permits that need to be created
+	
+	echo 'GOT TO THE PART WHERE WE SHOW THE NEEDED PERMITS<br>';
+	if ($this->HasNeededPermits()) {
+	    $arNeed = $this->GetNeededPermits();
+	    $nNeed = count($arNeed);
+	    $out .= '<div class=content>'
+	      .$nNeed
+	      .' additional permit'
+	      .fcString::Pluralize($nNeed,' is','s are')
+	      .' needed:'
+	      ;
+	
+	    foreach ($arNeed as $sName) {
+		$out .= " <b>$sName</b>";
+	    }
+	    $out .= '</div>';
+	}
+	
 	return $out;
     }
 
     // -- ADMIN INTERFACE -- //
 }
-class fcrAdminUserPermit extends fcrUserPermit {
+class fcrAdminUserPermit extends fcrUserPermit implements fiLinkableRecord, fiEditableRecord {
     use ftLinkableRecord;
     use ftSaveableRecord;
 
@@ -146,7 +166,7 @@ __END__;
 	    }
 	    $ht .= "\n</table>";
 	} else {
-	    $ht = '<i>(no permissions assigned)</i>';
+	    $ht = '<div class=content><i>(no permissions assigned)</i></div>';
 	}
 	return $ht;
     }
@@ -223,24 +243,24 @@ __END__;
 	    $this->AdminPageSave();
 	}
 
+	$isNew = $this->IsNew();
+	
 	// set up header action-links
 	
-	$oMenu = fcApp::Me()->GetHeaderMenu();
-	  // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
-	  $oMenu->SetNode($ol = new fcMenuOptionLink('edit'));
-	    //$ol->SetBasePath($this->SelfURL());
-	/* 2017-02-05 v2 - obsolete
-	$arPage = $oPage->PathArgs();
-	$arActs = array(
-	  // (array $iarData,$iLinkKey,$iGroupKey=NULL,$iDispOff=NULL,$iDispOn=NULL,$iDescr=NULL)
-	  new clsActionLink_option($arPage,'edit')
-	  );
-	$oPage->PageHeaderWidgets($arActs);
-	*/
-
-	$oKiosk = fcApp::Me()->GetKioskObject();
-	$oPathIn = $oKiosk->GetInputObject();
-	$doEdit = $oPathIn->GetBool('edit') || $this->IsNew();
+	if ($isNew) {
+	    $sTitle = 'new Permit';
+	    $htTitle = 'create new Security Permission';
+	    $doEdit = TRUE;
+	} else {
+	    $sTitle = 'Permit #'.$this->GetKeyValue();
+	    $htTitle = 'edit Security permit #'.$this->SelfLink();
+	    $oMenu = fcApp::Me()->GetHeaderMenu();
+	      // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
+	      $oMenu->SetNode($ol = new fcMenuOptionLink('edit'));
+		$doEdit = $ol->GetIsSelected();
+	}
+	fcApp::Me()->GetPageObject()->SetBrowserTitle($sTitle);
+	fcApp::Me()->GetPageObject()->SetContentTitle($htTitle);
 
 	// prepare the form
 
@@ -256,7 +276,7 @@ __END__;
 	  $arCtrls['ID'] = $this->SelfLink();
 
 	// render the form
-	$oTplt->VariableValues($arCtrls);
+	$oTplt->SetVariableValues($arCtrls);
 	$htForm = $oTplt->Render();
 
 	if ($doEdit) {
@@ -287,7 +307,7 @@ __END__;
     protected function PageTemplate() {
 	if (empty($this->tpPage)) {
 	    $sTplt = <<<__END__
-<table>
+<table class=content>
   <tr><td align=right><b>ID</b>:</td><td>{{ID}}</td></tr>
   <tr><td align=right><b>Name</b>:</td><td>{{Name}}</td></tr>
   <tr><td align=right><b>Description</b>:</td><td>{{Descr}}</td></tr>

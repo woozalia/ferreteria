@@ -77,6 +77,7 @@ class fcDropinLink extends fcDynamicLink {
     // ++ EVENTS ++ //
 
     protected function OnRunCalculations() {
+	parent::OnRunCalculations();
 	if ($this->GetIsSelected() && $this->GetIsAuthorized()) {
 	    $this->DoSelect();
 	}
@@ -121,11 +122,18 @@ class fcDropinLink extends fcDynamicLink {
 	$o = $this->MakeActionObject();
 	$this->DoObjectAction($o);
     }
-    // NOTE: This could presumably be overridden to invoke a different method.
+    /*----
+      NOTE: This could presumably be overridden to invoke a different method.
+      TODO: Require an interface for $o
+    */
     protected function DoObjectAction($o) {
 	$oApp = fcApp::Me();
-	$oApp->GetKioskObject()->SetPagePath($o->SelfURL());	// let's just assume $o is a LinkableObject
-	$oApp->AddContentString($o->MenuExec());
+	if (method_exists($o,'SelfURL')) {
+	    $oApp->GetKioskObject()->SetPagePath($o->SelfURL());	// let's just assume $o is a LinkableObject
+	    $oApp->AddContentString($o->MenuExec());
+	} else {
+	    throw new exception('Ferreteria usage error: class "'.get_class($o).'" needs to use ftLinkableTable.');
+	}
     }
 
     // -- ACTIONS -- //
@@ -146,6 +154,9 @@ class fcDropinLink extends fcDynamicLink {
 */
 class fcDropinAction extends fcDropinLink {
 
+    public function __construct(string $sKeyValue,string $sActionClass) {
+	parent::__construct($sKeyValue,$sActionClass);
+    }
     protected function GetShouldDisplay() {
 	return FALSE;
     }

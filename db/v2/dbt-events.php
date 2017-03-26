@@ -5,7 +5,7 @@
     2014-06-10 Extracting useful non-vbz-specific bits from vbz-data.php
     2015-07-12 resolving conflicts with other edited version
     2015-09-06 moving methods into traits
-        ftLoggableRecordset
+        ftLoggableRecord
     2016-10-23 adapting from db.v1 (events.php) to db.v2
     2017-01-15 some class renaming
 */
@@ -30,7 +30,12 @@ define('KS_EVENT_ARG_IS_SEVERE'		,'severe');
 */
 trait ftLoggableObject {
 
-    public function EventListing() {
+    protected function EventListing_SectionHeader() {
+	$oHdr = new fcSectionHeader('System Events');
+	return $oHdr;
+    }
+    // TODO: this needs to be different for recordsets and tables
+    protected function EventListing() {
 	$tEv = $this->EventTable();
 	if (method_exists($tEv,'EventListing')) {
 	    return $tEv->EventListing();
@@ -38,7 +43,9 @@ trait ftLoggableObject {
 	    throw new exception('Ferreteria usage error: you need to be using the admin UI (dropin) descendant of the event table class which defines EventListing(). The event table class received from EventTable() was '.get_class($tEv).'.');
 	}
     }
-    abstract protected function EventTable();
+    protected function EventTable() {
+	return $this->GetConnection()->MakeTableWrapper($this->SystemEventsClass());
+    }
 }
 /*::::
   REQUIRES: nothing yet
@@ -46,11 +53,12 @@ trait ftLoggableObject {
 trait ftLoggableTable {
     use ftLoggableObject;
 
-    // ++ ABSTRACT ++ //
+    // ++ SETUP ++ //
     
     abstract public function GetActionKey();
     
-    // -- ABSTRACT -- //
+    // -- SETUP -- //
+    // ++ WRITE DATA ++ //
     
     /*----
       ACTION: Automatically adds in the Table's specs to the event data,
@@ -64,6 +72,20 @@ trait ftLoggableTable {
 	$arArgs[fcrEvent::KF_MOD_TYPE] = $this->GetActionKey();
 	return $this->EventTable()->CreateEvent($arArgs,$arEdits);
     }
+    
+    // -- WRITE DATA -- //
+    // ++ READ DATA ++ //
+
+    protected function EventListing() {
+	$tEv = $this->EventTable();
+	// TODO: define an interface for this
+	$rs = $tEv->SelectRecords_forTable($this->GetActionKey());
+	return $this->EventListing_SectionHeader()->Render()
+	  .$rs->AdminRows()
+	  ;
+    }
+    
+    // -- READ DATA -- //
 }
 
 /*::::
@@ -71,16 +93,34 @@ trait ftLoggableTable {
 */
 trait ftLoggableRecord {
     use ftLoggableObject;
-  
+
+    /* sysevents v1
     public function CreateEvent(array $arArgs,$arEdits=NULL) {
 	$arArgs[fcrEvent::KF_MOD_TYPE] = $this->GetTableWrapper()->GetActionKey();
 	$arArgs[fcrEvent::KF_MOD_INDEX] = $this->GetKeyValue();
 	return $this->EventTable()->CreateEvent($arArgs,$arEdits);
+    } */
+    public function CreateEvent($sCode,$sText,array $arData=NULL) {
+	$t = $this->EventTable();
+	$id = $t->CreateBaseEvent($sCode,$sText,$arData);
     }
     protected function EventTable() {
 	return $this->GetConnection()->MakeTableWrapper($this->SystemEventsClass());
     }
     abstract protected function SystemEventsClass();
+    
+    // ++ READ DATA ++ //
+
+    protected function EventListing() {
+	$tEv = $this->EventTable();
+	// TODO: define an interface for this
+	$rs = $tEv->SelectRecords_forTable($this->GetActionKey(),$this->GetKeyValue());
+	return $this->EventListing_SectionHeader()->Render()
+	  .$rs->AdminRows()
+	  ;
+    }
+    
+    // -- READ DATA -- //
 }
 
 abstract class fctEvents_base extends fcTable_keyed_single_standard {

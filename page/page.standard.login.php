@@ -65,7 +65,7 @@ abstract class fcTag_body_login extends fcTag_body_standard {
 	return $this->MakeElement_LoginWidget();	// in ftLoginContainer_standard
     }
 }
-// ABSTRACT: n/i = GetStyleFolder, GetElement_PageHeader, GetElement_HeaderMenu, + 2 more
+// ABSTRACT: n/i = GetElement_PageHeader, GetElement_HeaderMenu, + 2 more
 abstract class fcPage_login extends fcPage_standard {
 
     // ++ OBJECTS ++ //

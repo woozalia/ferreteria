@@ -24,7 +24,7 @@
     ...although it really doesn't do much itself.
 */
 class fcTableBase {
-    
+
     public function __construct() {
 	$this->InitVars();
     }
@@ -214,6 +214,19 @@ abstract class fcDataTable extends fcConnectedData {
 	    return FALSE;
 	}
     }
+    /*----
+      PURPOSE: Insert only values, not SQL
+      ACTION: Sanitizes values before passing them to $this->Insert()
+      USED BY: was going to be used by array tables, but ended up unneeded (2017-03-25)
+    */ /*
+    protected function InsertValues(array $arData) {
+	$db = $this->GetConnection();
+	foreach ($arData as $key => $val) {
+	    $sqlVal = $db->Sanitize_andQuote($val);
+	    $arSQL[$key] = $sqlVal;
+	}
+	return $this->Insert($arSQL);
+    } */
     public function Update(array $arChg,$sqlWhere) {
 	$sql = $this->FigureSQL_forUpdate($arChg,$sqlWhere);
 	$this->sql = $sql;

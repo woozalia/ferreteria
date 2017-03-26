@@ -10,12 +10,22 @@
       Descendants can override this by calling $this->NameString() directly.
       Possibly fcForm_DB should be renamed fcForm_Records or similar... later.
 */
+interface fiEditableRecord {
+    function GetActionKey();
+    function IsNew();
+    function SetFieldValues(array $arVals);
+    function GetFieldValues();
+    function SetKeyValue($id);
+    function GetKeyValue();
+    function Save($arSave=NULL);
+}
 
 class fcForm_DB extends fcForm_keyed {
 
     // ++ SETUP ++ //
 
-    public function __construct(fcRecord_keyed_single $rs) {
+//    public function __construct(fcRecord_keyed_single $rs) {
+    public function __construct(fiEditableRecord $rs) {
 	$this->InitVars();
 	$sName = $rs->GetActionKey();
 	$this->NameString($sName);
@@ -46,12 +56,12 @@ class fcForm_DB extends fcForm_keyed {
     protected function RecordsObject(fcRecord_keyed_single $rs=NULL) {
 	throw new exception('2017-01-15 Call SetRecordsObject() or GetRecordsObject().');
     }
-    protected function SetRecordsObject(fcRecord_keyed_single $rs) {
+    protected function SetRecordsObject(fiEditableRecord $rs) {
 	$this->rs = $rs;
 	//echo 'RECORD:'.fcArray::Render($rs->GetFieldValues());
 	//throw new exception('2017-01-15 Debugging: How is this called?');
     }
-    protected function GetRecordsObject() {
+    protected function GetRecordsObject() : fiEditableRecord {
 	return $this->rs;
     }
 
@@ -150,6 +160,7 @@ class fcForm_DB extends fcForm_keyed {
 	    // Make sure recordset's ID field indicates NEW, so it will INSERT instead of UPDATE:
 	    $rc->SetKeyValue(NULL);
 	}
+	// 2017-03-24 requiring an interface instead of a class should make this check unnecessary:
 	if (method_exists($rc,'Save')) {
 	    $rc->Save($arSave);
 	} else {

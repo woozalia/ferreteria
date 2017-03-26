@@ -38,6 +38,8 @@ class fcMenuFolder extends fcNavFolder {
   HISTORY:
     2017-02-08 Can't see any reason for ActionClass methods to be defined here; moving them to Dropin Link class
       (in dropin.php).
+    2017-03-26 Figuring authorization at RunCalculations time now, instead of at Render time, because in the latter case
+      we don't have the list of needed permits at render time (when we might want to display them).
 */
 abstract class fcMenuLink extends fcNavLink {
 
@@ -52,43 +54,8 @@ abstract class fcMenuLink extends fcNavLink {
     protected function SetupDefaults() {
 	$this->SetRequiredPrivilege(NULL);	// this class is security-aware, but assumes permission by default
     }
-    
-    // -- SETUP -- //
-    // ++ STATUS ++ //
-    
-      //++stored values++//
 
-    // NEW
-    private $sKeyValue;
-    protected function SetKeyValue($s) {
-	$this->sKeyValue = $s;
-    }
-    protected function GetKeyValue() {
-	return $this->sKeyValue;
-    }
-    // NEW
-    private $sKeyName;
-    protected function SetKeyName($s) {
-	$this->sKeyName = $s;
-    }
-    protected function GetKeyName() {
-	return $this->sKeyName;
-    }
-    
-    
-      //--stored values--//
-      //++calcualted values++//
-    
-    protected function GetIsAuthorized() {
-	return $this->FigureIfAuthorized();
-    }
-
-      //--calculated values--//
-
-    // -- STATUS -- //
-    // ++ SETUP FIELDS ++ //
-
-      //++external++//
+      //++fields++//
     
     private $sPageTitle;
     public function SetPageTitle($s) {
@@ -126,18 +93,60 @@ abstract class fcMenuLink extends fcNavLink {
     }
     protected function MakeURL_fromPath($sPath) {
 	return $this->GetBasePath_toUse().$sPath;
-    /* 2017-02-13 previous code
-	if ($this->HasBasePath()) {
-	    return $this->GetBasePath().$sPath;
-	} else {
-	    return fcApp::Me()->GetKioskObject()->MakeURLFromString($sPath);
-	}
-    */
     }
 
-      //--external--//
+      //--fields--//
 
-    // -- SETUP FIELDS -- //
+    // -- SETUP -- //
+    // ++ EVENTS ++ //
+/*
+    protected function OnEventDispatch($nEvent) {
+	echo "EVENT [$nEvent] RECEIVED by [".$this->GetKeyValue()."].<br>";
+	//parent::OnEventDispatch($nEvent);
+    }
+*/
+    protected function OnRunCalculations(){
+	parent::OnRunCalculations();
+	echo "EVENT ".__METHOD__.' for ['.$this->GetKeyValue().'] CLASS '.get_class($this).'<br>';
+	$this->SetIsAuthorized($this->FigureIfAuthorized());
+    }
+    /*
+    protected function OnEventAfter($nEvent){
+	echo "EVENT $nEvent IN ".__METHOD__.' for ['.$this->GetKeyValue().'] CLASS '.get_class($this).'<br>';
+	parent::OnEventAfter($nEvent);
+	$this->OnEventDispatch($nEvent);
+    }*/
+
+    // -- EVENTS -- //
+    // ++ STATUS ++ //
+    
+      //++stored values++//
+
+    // NEW
+    private $sKeyValue;
+    protected function SetKeyValue($s) {
+	$this->sKeyValue = $s;
+    }
+    protected function GetKeyValue() {
+	return $this->sKeyValue;
+    }
+    // NEW
+    private $sKeyName;
+    protected function SetKeyName($s) {
+	$this->sKeyName = $s;
+    }
+    protected function GetKeyName() {
+	return $this->sKeyName;
+    }
+    private $isAuth;
+    protected function SetIsAuthorized($b) {
+	$this->isAuth = $b;
+    }
+    protected function GetIsAuthorized() {
+	return $this->isAuth;
+    }
+    
+    // -- STATUS -- //
     // ++ CALCULATIONS ++ //
 
     /*----

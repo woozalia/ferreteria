@@ -46,7 +46,7 @@ define('KS_EVENT_FERRETERIA_RECV_PW_RESET','fe.login.PR2');
 // -- EVENTS -- //
 
 
-class fcpeLoginWidget extends fcpeSimple {
+abstract class fcpeLoginWidget extends fcpeSimple {
     use ftExecutableTwig;
 
     // ++ EVENTS ++ //
@@ -926,29 +926,7 @@ __END__;
 __END__;
 	throw new exception('2017-02-10 This form still under construction.');
     }
-    /*----
-      NOTE: Can't seem to get the HTTP REFERER, otherwise I'd include it as a hidden input here
-	so a successful login could redirect there.
-    */
-    protected function RenderForm_Login() {
-	$sUser = $this->FetchSubmittedUsername();	// fetch submitted userame (if any) from session stash
-	$htvUser = htmlspecialchars($sUser);		// previous value of username (if any)
-	$htnUser = KSF_USER_CTRL_USERNAME;		// field name for username
-	$htnPass = KSF_USER_CTRL_ENTER_PASS;		// field name for password
-	$htnBtn = KSF_USER_BTN_LOGIN;			// field name for login button
-	$htNewAcct = $this->Render_NewAccountRequestControl();		// link for creating an account
-	$htPWReset = $this->Render_ResetPasswordRequestControl();	// link for resetting password
-	return <<<__END__
-
-<table class="form-block-login"><tr><td><form method=post>
-<b>Username</b>: <input name="$htnUser" size=10 value="$htvUser">
-<b>Password</b>: <input type=password name="$htnPass" size=10>
-<input type=submit value="Log In" name="$htnBtn">
-[$htNewAcct]
-[$htPWReset]
-</form></td></tr></table>
-__END__;
-    }
+    abstract protected function RenderForm_Login();
     protected function Render_UserProfileMessage(fcrUserAcct $rcUser) {
 	$htUser = $rcUser->SelfLink_name();
 	return "Hi, $htUser!";
@@ -1039,7 +1017,7 @@ __END__;
 	  'user'	=> $rcUser->UserName(),
 	  'addr'	=> $sAddr,
 	  );
-	fcApp::Me()->CreateEvent(KS_EVENT_FERRETERIA_EMAIL_SENT,'lost password reset',$arEv);
+	fcApp::Me()->EventPlex()->CreateBaseEvent(KS_EVENT_FERRETERIA_SENDING_ADMIN_EMAIL,'lost password reset',$arEv);
 
 	// generate the email
 	$oTplt->Template(KS_TPLT_EMAIL_TEXT_FOR_PASS_CHANGE);
@@ -1080,8 +1058,8 @@ __END__;
 	$sToAddr = $rcUser->EmailAddress();
 	$sToName = $rcUser->FullName();
 	$sSubj = 'login notification from '.KS_SITE_NAME;
+	fcApp::Me()->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_SENDING_ADMIN_EMAIL,'successful login notification');
 	$ok = fcApp::Me()->DoEmail_fromAdmin_Auto($sToAddr,$sToName,$sSubj,$sMsg);
-	fcApp::Me()->EventTable()->CreateEvent(KS_EVENT_FERRETERIA_EMAIL_SENT,$sText);
 	return $ok;
     }
     /*----
@@ -1112,7 +1090,67 @@ __END__;
 
     // -- OUTPUT -- //
 }
-/*----
+/*::::
+  PURPOSE: Implements the login form inline, for minimum vertical space
+    This was originally so it could be inserted in a VbzCart checkout form,
+    but it may have other uses.
+*/
+class fcpeLoginWidget_inline extends fcpeLoginWidget {
+    /*----
+      NOTE: Can't seem to get the HTTP REFERER, otherwise I'd include it as a hidden input here
+	so a successful login could redirect there.
+    */
+    protected function RenderForm_Login() {
+	$sUser = $this->FetchSubmittedUsername();	// fetch submitted userame (if any) from session stash
+	$htvUser = htmlspecialchars($sUser);		// previous value of username (if any)
+	$htnUser = KSF_USER_CTRL_USERNAME;		// field name for username
+	$htnPass = KSF_USER_CTRL_ENTER_PASS;		// field name for password
+	$htnBtn = KSF_USER_BTN_LOGIN;			// field name for login button
+	$htNewAcct = $this->Render_NewAccountRequestControl();		// link for creating an account
+	$htPWReset = $this->Render_ResetPasswordRequestControl();	// link for resetting password
+	return <<<__END__
+
+<table class="form-block-login"><tr><td><form method=post>
+<b>Username</b>: <input name="$htnUser" size=10 value="$htvUser">
+<b>Password</b>: <input type=password name="$htnPass" size=10>
+<input type=submit value="Log In" name="$htnBtn">
+[$htNewAcct]
+[$htPWReset]
+</form></td></tr></table>
+__END__;
+    }
+}
+/*::::
+  PURPOSE: Implements the login form as a block, optimized for use on a page with no other content.
+  HISTORY:
+    2017-03-15 backported from Greenmine into Ferreteria
+*/
+class fcpeLoginWidget_block extends fcpeLoginWidget {
+    protected function RenderForm_Login() {
+	// re-display submitted username, if any
+	$sName = $this->FetchSubmittedUsername();	// fetch submitted userame (if any) from session stash
+	$htName = htmlspecialchars($sName);
+	$htBtn = KSF_USER_BTN_LOGIN;
+	$htNewAcct = $this->Render_NewAccountRequestControl();
+	$htPWReset = $this->Render_ResetPasswordRequestControl();	// link for resetting password
+	return <<<__END__
+
+<table class="form-block-login"><tr><td>
+<form method=post>
+<table>
+<tr><td align=right><b>Username</b>:</td><td><input name=uname size=10 value="$htName"></td></tr>
+<tr><td align=right><b>Password</b>:</td><td><input type=password name=upass size=10></td></tr>
+<tr><td align=center colspan=2>
+  <input type=submit value="Log In" name="$htBtn">
+  <div style="float: right;">[$htNewAcct] [$htPWReset]</div>
+</td></tr>
+</table>
+</form></td></tr></table>
+__END__;
+    }
+}
+
+/*::::
   USAGE: use in whatever element should contain the Login Widget node but:
     * ONLY USE IN ONE ELEMENT, else you will get multiple LWs, resulting
       in stuff happening twice whenever it's supposed to happen once.
@@ -1158,7 +1196,7 @@ trait ftLoginContainer_standard {
 
     // CEMENT
     protected function Class_forLoginWidget() {
-	return 'fcpeLoginWidget';
+	return 'fcpeLoginWidget_block';
     }
 
     // -- CLASSES -- //

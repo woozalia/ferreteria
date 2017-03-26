@@ -33,7 +33,21 @@
     2015-09-06 renamed from menu-helper.php to object-urls.php; removing old classes
     2015-09-20 moved common functions from ftLinkableTable and ftLinkableRecord to ftLinkableObject
     2016-10-31 moved both versions into db.v* folders; upgrading this one to db.v2
+    2017-03-21 modifying slightly to require interfaces rather than descendants of specific class roots
 */
+
+// REQUIRED by ftLinkableObject
+interface fiLinkable {
+    function SelfLink_idArray();
+}
+// REQUIRED by fcLinkBuilder_table
+interface fiLinkableTable extends fiLinkable {
+}
+// REQUIRED by 
+interface fiLinkableRecord extends fiLinkable {
+// 2017-03-21 commenting out until proof that it's needed
+//    function GetKeyString();	// might represent more than one key field
+}
 
 trait ftLinkableObject {
     /*----
@@ -94,7 +108,7 @@ trait ftLinkableRecord {
     // PUBLIC so Link Builder can use it
     public function SelfLink_idArray() {
 	$arThis = array(
-	  'id'	=> $this->GetKeyString()
+	  'id'	=> $this->GetKeyValue()
 	  );
 	$tbl = $this->GetTableWrapper();
 	if (!method_exists($tbl,'SelfArray')) {
@@ -206,24 +220,15 @@ class fcLinkBuilder_table extends fcLinkBuilder {
 
     // ++ SETUP ++ //
 
-    public function __construct(fcTable_keyed $tbl) {
+    public function __construct(fiLinkableTable $tbl) {
         $this->SetTableWrapper($tbl);
     }
 
     // -- SETUP -- //
-    // ++ STATIC METHODS ++ //
-/*
-    static public function _LinkHTML(clsTable $tbl,$sText=NULL,$sPopup=NULL,array $arAdd=NULL,array $arAttr=NULL) {
-	$self = static::_Spawn();			// make an object so we can call dynamic methods
-	$self->Table($tbl);
-	return $self->LinkHTML($sText,$sPopup,$arAdd,$arAttr);
-    } */
-
-    // -- STATIC METHODS -- //
     // ++ LOCAL FIELD ACCESS ++ //
 
     private $tbl;
-    protected function SetTableWrapper(fcTable_keyed $tbl) {
+    protected function SetTableWrapper(fiLinkableTable $tbl) {
 	$this->tbl = $tbl;
     }
     protected function GetTableWrapper() {
@@ -237,6 +242,7 @@ class fcLinkBuilder_table extends fcLinkBuilder {
 	return $this->GetTableWrapper()->SelfLink_idArray();
     }
     protected function KeyString() {
+	throw new exception('2017-03-21 Does anything actually call this?');
 	return $this->GetTableWrapper()->ActionKey();	// not sure if this is the most useful response
     }
 
@@ -247,24 +253,28 @@ class fcLinkBuilder_table extends fcLinkBuilder {
   PURPOSE: approximately replaces clsMenuData_helper and offspring
 */
 class fcLinkBuilder_records extends fcLinkBuilder {
-    private $rs;
 
     // ++ SETUP/CONFIG ++ //
-/*
-    public function __construct() {
-	$this->sNewTxt = 'new';
-	$this->sNewKey = '';
-    }*/
 
-    public function __construct(fcRecord_keyed $rcThis) {
-        $this->rs = $rcThis;
+//    public function __construct(fcRecord_keyed $rs) {
+    public function __construct(fiLinkableRecord $rs) {
+	$this->SetRecordWrapper($rs);
+    }
+    
+    private $rs;
+    protected function SetRecordWrapper(fiLinkableRecord $rs) {
+	$this->rs = $rs;
+    }
+    protected function GetRecordWrapper() {
+	return $this->rs;
     }
 
     /*----
       HISTORY:
 	2014-02-21 changed $iRecs from single-keyed class to abstract-keyed class
     */
-    public function Recs(clsRecs_keyed_abstract $iRecs=NULL) {
+    public function Recs(fiLinkableRecord $iRecs=NULL) {
+	throw new exception('2017-03-21 This is deprecated; call SetRecordWrapper() or GetRecordWrapper() instead.');
 	if (!is_null($iRecs)) {
 	    $this->rs = $iRecs;
 	}
@@ -275,10 +285,11 @@ class fcLinkBuilder_records extends fcLinkBuilder {
     // ++ CEMENTING ++ //
 
     protected function IdentityValues() {
-	return $this->Recs()->SelfLink_idArray();
+	return $this->GetRecordWrapper()->SelfLink_idArray();
     }
+    // USED BY fcLinkBuilder::LinkHTML()
     protected function KeyString() {
-	return $this->Recs()->GetKeyString();
+	return $this->GetRecordWrapper()->GetKeyValue();
     }
 
     // -- CEMENTING -- //

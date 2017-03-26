@@ -159,14 +159,14 @@ abstract class fcPage_standard extends fcHTMLPage {
 	$oeNode->SetValue($s);
 	$this->SetNode($oeNode,'html.doctype');
     }
-    protected function SetBrowserTitle($s) {
+    public function SetBrowserTitle($s) {
 	$this->GetTagNode_header()->SetBrowserTitle($s);
     }
     protected function UseStyleSheet($sName) {
-	$url = $this->GetStyleFolder().$sName.'.css';
+	$url = fcGlobals::Me()->GetWebPath_forStyleSheets().$sName.'.css';
 	$this->SetStyleSheetURL($url);
     }
-    abstract protected function GetStyleFolder();
+    //abstract protected function GetStyleFolder();
     protected function SetStyleSheetURL($url) {
 	$oHTML = $this->GetTagNode_html();
 	$oHdr = $oHTML->GetTagNode_header();

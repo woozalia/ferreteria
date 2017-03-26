@@ -41,6 +41,7 @@ $om = new fcCodeModule(__FILE__, 'form-data.php');
   $om->AddClass('fcForm_DB');
   $om->AddClass('fcForm_blob');
   $om->AddClass('fcBlobField');
+  $om->AddClass('fiEditableRecord');
 
 $om = new fcCodeModule(__FILE__, 'object-urls.php');
   $om->AddClass('ftLinkableRecord');
@@ -78,4 +79,5 @@ $om = new fcCodeModule(__FILE__, 'records/db-records-unique.php');
   $om->AddClass('ftUniqueRecords');
 $om = new fcCodeModule(__FILE__, 'events/event-plex.php');
   $om->AddClass('fctEventPlex');
+  $om->AddClass('fctEventPlex_standard');
   $om->AddClass('fctSubEvents_done');

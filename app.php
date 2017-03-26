@@ -7,6 +7,7 @@
     2013-10-23 stripped for use with ATC app (renamed as app.php)
     2013-11-11 re-adapted for general library
     2016-10-01 changes to work with db.v2
+    2017-03-25 moving user-security permission constants here
 */
 
 define('KWP_FERRETERIA_DOC','http://htyp.org/User:Woozle/Ferreteria');
@@ -18,6 +19,7 @@ define('KS_EVENT_SUCCESS','OK');
 define('KS_EVENT_FAILED','ERR');
 define('KS_EVENT_FERRETERIA_SUSPICIOUS_INPUT','fe.suspicious');
 define('KS_EVENT_FERRETERIA_EMAIL_SENT','fe.email.sent');
+define('KS_EVENT_FERRETERIA_SENDING_ADMIN_EMAIL','fe.email.req');
 
 /*::::
   PURPOSE: application framework base class -- container for the application
@@ -26,31 +28,22 @@ define('KS_EVENT_FERRETERIA_EMAIL_SENT','fe.email.sent');
     of fcApp's methods into a single-db App class, and/or supporting one or more separate DBs for users and sessions.
 */
 abstract class fcApp {
-    use ftVerbalObject;
+    use ftSingleton, ftVerbalObject;
 
-    // ++ SETUP ++ //
-    
-    static protected $me;
-    static public function Me(fcApp $oApp=NULL) {
-	if (!is_null($oApp)) {
-	    self::$me = $oApp;
-	}
-	if (!isset(self::$me)) {
-	    throw new exception('Ferreteria usage error: attempting to access App object before it has been set.');
-	}
-	return self::$me;
-    }
-    public function __construct() {
-	self::Me($this);	// there can be only one
-    }
-    
-    // -- SETUP -- //
     // ++ ACTION ++ //
     
     abstract public function Go();
     abstract public function AddContentString($s);
     
     // -- ACTION -- //
+    // ++ CLASSES ++ //
+    
+    abstract protected function GetSessionsClass();
+    abstract protected function GetPageClass();
+    abstract protected function GetKioskClass();
+    abstract protected function GetDropinManagerClass();
+
+    // -- CLASSES -- //
     // ++ OBJECTS ++ //
 
     abstract public function GetDatabase();
@@ -59,8 +52,16 @@ abstract class fcApp {
 	$sClass = $this->GetSessionsClass();
 	return $db->MakeTableWrapper($sClass);
     }
-    abstract public function GetSessionRecord();
-    abstract public function GetUserRecord();
+    public function GetSessionRecord() {
+	return $this->GetSessionTable()->MakeActiveRecord();
+    }
+    private $rcUser;
+    public function GetUserRecord() {
+	if (empty($this->rcUser)) {
+	    $this->rcUser = $this->GetSessionRecord()->UserRecord();
+	}
+	return $this->rcUser;
+    }
     private $oPage;
     public function GetPageObject() {
 	if (empty($this->oPage)) {
@@ -97,14 +98,6 @@ abstract class fcApp {
     }
     
     // -- OBJECTS -- //
-    // ++ CLASSES ++ //
-    
-    abstract protected function GetSessionsClass();
-    abstract protected function GetPageClass();
-    abstract protected function GetKioskClass();
-    abstract protected function GetDropinManagerClass();
-
-    // -- CLASSES -- //
     // ++ INFORMATION ++ //
     
     abstract public function UserIsLoggedIn();
@@ -222,16 +215,6 @@ abstract class fcAppStandard extends fcApp {
     // ++ RECORDS ++ //
 
 //    private $rcSess;
-    public function GetSessionRecord() {
-	return $this->GetSessionTable()->MakeActiveRecord();
-    }
-    private $rcUser;
-    public function GetUserRecord() {
-	if (empty($this->rcUser)) {
-	    $this->rcUser = $this->GetSessionRecord()->UserRecord();
-	}
-	return $this->rcUser;
-    }
 
     // -- RECORDS -- //
     // ++ STATUS ++ //
@@ -337,10 +320,19 @@ abstract class fcAppStandard extends fcApp {
 
 	$sHdr = 'From: '.$sAddrFrom;
 	$ok = mail($sAddrToFull,$sSubj,$sMsg,$sHdr);
-	
+
+	/* 2017-03-18 old
 	$idEv = fcApp::Me()->EventTable()->GetLastID();
 	$rcEvSub = $this->EventTable_Done();
 	$rcEvSub->CreateRecord($idEv,KS_EVENT_FERRETERIA_EMAIL_SENT);
+	*/
+	$arData = array(
+	    'to-addr'	=> $sToAddr,
+	    'to-name'	=> $sToName,
+	    'subject'	=> $sSubj,
+	    'message'	=> $sMsg
+	  );
+	$idEv = $this->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_EMAIL_SENT,'admin email sent',$arData);
 	
 	return $ok;
     }

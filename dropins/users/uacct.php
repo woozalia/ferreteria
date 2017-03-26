@@ -14,7 +14,7 @@
     * fctUserAccts_admin <- fctUserAccts (user-access)
     * fcrUserAcct_admin <- fcrUserAcct (user-access)
 */
-class fctUserAccts_admin extends fctUserAccts {
+class fctUserAccts_admin extends fctUserAccts implements fiLinkableTable {
     use ftLinkableTable;
 
     // ++ SETUP ++ //
@@ -74,7 +74,7 @@ class fctUserAccts_admin extends fctUserAccts {
 
     // -- WEB UI -- //
 }
-class fcrUserAcct_admin extends fcrUserAcct {
+class fcrUserAcct_admin extends fcrUserAcct implements fiLinkableRecord, fiEditableRecord {
     use ftShowableRecord;
     use ftSaveableRecord;
     use ftLinkableRecord;
@@ -100,7 +100,7 @@ class fcrUserAcct_admin extends fcrUserAcct {
     */
     public function MenuExec() {
 	$rcUser = fcApp::Me()->GetUserRecord();
-	if ($rcUser->CanDo(KS_PERM_SEC_USER_EDIT) || $this->IsLoggedIn()) {
+	if ($rcUser->CanDo(KS_USER_SEC_ACCT_EDIT) || $this->IsLoggedIn()) {
 	    $out = $this->AdminPage();
 	} else {
 	    $out = NULL;	// user doesn't have permission (TODO: tell them they don't have permission)
@@ -224,7 +224,7 @@ __END__;
 	  $arCtrls['!Groups'] = $this->AdminGroups();
 
 	// render the form
-	$oTplt->VariableValues($arCtrls);
+	$oTplt->SetVariableValues($arCtrls);
 	$htForm = $oTplt->Render();
 	
 	if ($doEdit) {
@@ -251,7 +251,7 @@ __END__;
 	    return TRUE;	// current user can always admin own account
 	} else {
 	    $rcCurr = fcApp::Me()->GetCurrentUser();
-	    return $rcCurr->CanDo(KS_PERM_SEC_USER_EDIT);
+	    return $rcCurr->CanDo(KS_USER_SEC_ACCT_EDIT);
 	}
     }
     protected function AdminPage_SaveGroups() {

@@ -289,12 +289,12 @@ __END__;
 	    $htListTxt = $this->Data_ListRaw();	// is sanitized (but apparently not quoted, at least not if blank)
 	    $stDescr = $this->GetOption('txtDescr',self::KS_DEFAULT_DESCR);
 	    $oTplt = new fcTemplate_array('[[',']]',$stDescr);
-	    $oTplt->VariableValue('cargo',$txtCargo);
+	    $oTplt->SetVariableValue('cargo',$txtCargo);
 	    $sDescr = $oTplt->Render();
 	    
 	    $stLayout = $this->OptionValue_Layout();
 	    $oTplt->Template($stLayout);
-	    $oTplt->VariableValues(
+	    $oTplt->SetVariableValues(
 	      array(
 		'input-text'	=> "<input size=40 name=$htNameNew value=$htListTxt>",
 		'input-instruct' => $sDescr,

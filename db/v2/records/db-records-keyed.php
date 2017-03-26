@@ -5,10 +5,11 @@
   2016-10-23 started (adapting from db.v1.data-records.fcRecs_keyed_abstract etc.)
     Will write code as needed...
 */
-
 abstract class fcRecord_keyed extends fcDataRecord {
     // TODO: Rename this to GetKeyValueString();
-    abstract public function GetKeyString();	// might represent more than one key field
+    //abstract public function GetKeyString();	// might represent more than one key field
+    abstract public function SetKeyValue($id);
+    abstract public function GetKeyValue();
     /*----
       RETURNS: array of recordsets:
 	array[ID] = Values()
@@ -19,13 +20,13 @@ abstract class fcRecord_keyed extends fcDataRecord {
 	$ar = array();
 	$this->RewindRows();	// rewind to before the first row
 	while ($this->NextRow()) {
-	    $id = $this->GetKeyString();
+	    $id = $this->GetKeyValue();
 	    $ar[$id] = $this->GetFieldValues();
 	}
 	return $ar;
     }
     public function IsNew() {
-	return is_null($this->GetKeyString());
+	return is_null($this->GetKeyValue());
     }
     abstract protected function GetSelfFilter();
     /*-----
@@ -61,10 +62,11 @@ abstract class fcRecord_keyed_single extends fcRecord_keyed {
 	$sKey = $this->GetTableWrapper()->GetKeyName();
 	$this->SetFieldValue($sKey,$id);
     }
+    /* 2017-03-24 There is no apparent need for this.
     public function GetKeyString() {	// TODO: maybe this should be GetKeyValue_asString()
 	$v = $this->GetKeyValue();
 	return is_null($v)?NULL:(string)$this->GetKeyValue();
-    }
+    } */
     protected function GetSelfFilter() {
 	return $this->GetTableWrapper()->GetKeyName().'='.$this->GetKeyValue_cooked();
     }

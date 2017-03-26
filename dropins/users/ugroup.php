@@ -5,7 +5,7 @@
     2013-12-19 started
     2017-01-04 This is going to need some updating to work with the Ferreteria revisions.
 */
-class acUserGroups extends fctUserGroups {
+class fctAdminUserGroups extends fctUserGroups implements fiLinkableTable {
     use ftLinkableTable;
 
     // OVERRIDE
@@ -65,9 +65,10 @@ class acUserGroups extends fctUserGroups {
 
     // -- ADMIN INTERFACE -- //
 }
-class acUserGroup extends fcrUserGroup {
+class fcrAdminUserGroup extends fcrUserGroup implements fiLinkableRecord, fiEditableRecord {
     use ftLinkableRecord;
     use ftShowableRecord;
+    use ftSaveableRecord;
 
     // ++ DATA TABLE ACCESS ++ //
 
@@ -113,7 +114,7 @@ class acUserGroup extends fcrUserGroup {
 	    }
 	    $ht .= "\n</table>";
 	} else {
-	    $ht = '<i>(no permissions assigned)</i>';
+	    $ht = '<i>(no permissions )</i>';
 	}
     }*/
     /*----
@@ -249,7 +250,7 @@ __END__;
 	$oMenu = fcApp::Me()->GetHeaderMenu();
 	  // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
 	  $oMenu->SetNode($ol = new fcMenuOptionLink('do','edit',NULL,'cancel','edit this supplier'));
-	    //$ol->SetBasePath($this->SelfURL());
+	    $doEditReq = $ol->GetIsSelected();
 	
 	/* 2017-01-26 old
 	$arActs = array(
@@ -257,7 +258,7 @@ __END__;
 	  );
 	$oPage->PageHeaderWidgets($arActs);*/
 
-	$doEdit = $oPathInput->GetBool('edit') || $this->IsNew();
+	$doEdit = $doEditReq || $this->IsNew();
 
 	// prepare the form
 
@@ -278,7 +279,7 @@ __END__;
 	  }
 
 	// render the form
-	$oTplt->VariableValues($arCtrls);
+	$oTplt->SetVariableValues($arCtrls);
 	$htForm = $oTplt->Render();
 
 	if ($doEdit) {
@@ -331,7 +332,7 @@ __END__;
     protected function PageTemplate() {
 	if (empty($this->tpPage)) {
 	    $sTplt = <<<__END__
-<table>
+<table class=content>
   <tr><td align=right><b>ID</b>:</td><td>{{ID}}</td></tr>
   <tr><td align=right><b>Name</b>:</td><td>{{Name}}</td></tr>
   <tr><td align=right><b>Description</b>:</td><td>{{Descr}}</td></tr>
@@ -350,7 +351,8 @@ __END__;
 
 	// set up header action-links
 	$sName = $this->NameString();
-	$oMenu = fcApp::Me()->GetHeaderMenu();
+	//$oMenu = fcApp::Me()->GetHeaderMenu();
+	$oMenu = new fcHeaderMenu();
 	  // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
 	  $oMenu->SetNode($ol = new fcMenuOptionLink(
 	    'do',				// $sGroupKey=NULL
@@ -363,7 +365,7 @@ __END__;
 	    $doEdit = $ol->GetIsSelected();
 
 	// set up section and menu
-	$oHdr = new fcSectionHeader('Permissions',$oMenu);
+	$oHdr = new fcSectionHeader('Group Permissions',$oMenu);
 	$out = $oHdr->Render();
 	    
 	/* 2017-01-27 old

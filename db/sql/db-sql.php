@@ -131,10 +131,6 @@ class fcSQL_Select extends fcSQL_base_element {
     }
 
     // -- PIECES -- //
-    // ++ CALCULATIONS ++ //
-
-
-    // -- CALCULATIONS -- //
     // ++ RENDERING ++ //
 
     public function Render() {

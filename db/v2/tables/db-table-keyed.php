@@ -19,6 +19,11 @@ abstract class fcTable_keyed_single extends fcTable_keyed {
 	}
 	return $rc;
     }
+    // 2017-03-18 created for EventPlex
+    public function GetRecords_forKeyList($sqlIDs) {
+	$sqlWhere = $this->GetKeyName().' IN ('.$sqlIDs.')';
+	return $this->SelectRecords($sqlWhere);
+    }
     public function Insert_andGet(array $arData) {
 	$id = $this->Insert($arData);
 	if ($id === FALSE) {

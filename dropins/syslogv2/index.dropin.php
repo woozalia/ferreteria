@@ -9,7 +9,7 @@
 
 // CONSTANTS
 
-define('KS_CLASS_EVENT_LOG','fctEvents_admin');
+define('KS_CLASS_EVENT_LOG','fctAdminEventPlex');
 
 define('KS_ACTION_SYSTEM_LOG','event');
 

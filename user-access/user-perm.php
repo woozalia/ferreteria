@@ -17,20 +17,34 @@ class fctUserPerms extends fcTable_keyed_single_standard {
     }
 
     // -- SETUP -- //
-    // ++ ARRAYS ++ //
+    // ++ STATUS ++ //
 
-    /* 2017-02-05 Call FetchRows_asKeyedArray() instead.
-    private $arData;
-    public function AsArray() {
-	throw new exception('2017-01-27 Does anything actually call this? Use FetchRows_asKeyedArray() instead.');
-	if (empty($this->arData)) {
-	    $rs = $this->GetData();
-	    $this->arData = $rs->AsArray();
-	}
-	return $this->arData;
-    } */
+    private $arNeeded = NULL;
+    public function SetNeededPermit($sName) {
+	fcArray::NzSum($this->arNeeded,$sName);
+	echo fcArray::Render($this->arNeeded);
+	echo "PERMISSION NEEDED: [$sName]<br>";
+	//throw new exception('Need to figure out what event gets us here.');
+    }
+    protected function GetNeededPermits() {
+	return $this->arNeeded;
+    }
+    protected function HasNeededPermits() {
+	echo 'PERMITS NEEDED: '.count($this->arNeeded).'<br>';
+	throw new exception('RENDER PHASE');
+	
+	return !is_null($this->arNeeded);
+    }
 
-    // -- ARRAYS -- //
+    // -- STATUS -- //
+    // ++ READ DATA ++ //
+    
+    // ASSUMES: $sName does not contain any characters that need escaping
+    public function PermitExists($sName) {
+	$sqlFilt = "Name='$sName'";
+	$rc = $this->SelectRecords($sqlFilt);
+	return $rc->HasRows();
+    }
 
 }
 class fcrUserPermit extends fcRecord_standard {
@@ -45,21 +59,4 @@ class fcrUserPermit extends fcRecord_standard {
     }
 
     // -- FIELD ACCESS -- //
-    // ++ DATA RECORDS ACCESS ++ //
-
-    /*----
-      RETURNS: The current recordset as an associative array, indexed by ID
-    */
-    /* 2017-02-05 Call asKeyedArray() instead.
-    public function AsArray() {
-	throw new exception("2016-10-28 Isn't there a base class function for this?");
-	$ar = array();
-	while ($this->NextRow()) {
-	    $id = $this->GetKeyValue();
-	    $ar[$id] = $this->Values();
-	}
-	return $ar;
-    } */
-
-    // -- DATA RECORDS ACCESS -- //
 }

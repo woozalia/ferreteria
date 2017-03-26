@@ -236,6 +236,7 @@ abstract class fcDataRecord extends fcSourcedDataRow {
 	$out = NULL;
 	$db = $this->GetConnection();
 	if ($this->HasRows()) {
+	    $this->RewindRows();
 	    while ($this->NextRow()) {
 		$s = $this->GetFieldValue($sField);
 		$out .= $db->Sanitize_andQuote($s).',';

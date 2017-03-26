@@ -16,19 +16,20 @@
   PURPOSE: Admin interface to system logs
   NOTE that this descends from the event *table* class, not the event *helper* class.
 */
-class fctEvents_admin extends fctEventPlex {
+class fctAdminEventPlex extends fctEventPlex_standard implements fiLinkableTable {
     use ftLinkableTable;
   
     // ++ SETUP ++ //
 
     // UNSTUB
     protected function InitVars() {
+	parent::InitVars();
 	$this->rsType = NULL;
 	$this->MaxLines(100);			// TODO: make this configurable
     }
     // OVERRIDE
     protected function SingularName() {
-	return 'fcrEventAdmin';
+	return 'fcrAdminEventPlect';
     }
     // CEMENT
     public function GetActionKey() {
@@ -58,7 +59,7 @@ class fctEvents_admin extends fctEventPlex {
 
     /*----
       HISTORY:
-	2017-01-15 adapted from db.v1; moved from fctEvents to fctEvents_admin
+	2017-01-15 adapted from db.v1; moved from fctEvents to fctAdminEventPlex (was fctEvents_admin)
       TODO: This should probably limit to, say, the most recent 100 records by default.
     */
     public function EventListing() {
@@ -66,10 +67,11 @@ class fctEvents_admin extends fctEventPlex {
 	$oHdr = new fcSectionHeader('System Events');
 	return 
 	  $oHdr->Render()
-	  .$rs->AdminRows(TRUE)
+	  .$rs->AdminRows()
 	  ;
     }
     protected function AdminPage() {
+	throw new exception('2017-03-15 Who calls this now?');
 	return $this->EventListing();	// 2017-02-06 see if that works
     
 	// 2017-01-15 WAIT -- this may be a duplicate of EventListing() or AdminRows().
@@ -84,10 +86,60 @@ class fctEvents_admin extends fctEventPlex {
 
     // -- ADMIN UI -- //
 }
-class fcrEventAdmin extends fcrEventPlex {
+class fcrAdminEventPlect extends fcrEventPlect_standard implements fiLinkableRecord {
     use ftLinkableRecord;
     use ftShowableRecord;
 
+    // ++ SETUP ++ //
+    
+    // REQUIRED
+    public function GetKeyValue() {
+	return (string)$this->GetFieldValue('ID');
+    }
+    
+    // -- SETUP -- //
+    // ++ FIELD CALCULATIONS ++ //
+    
+    protected function SessionLink() {
+	$rc = $this->SessionRecord();
+	return $rc->SelfLink();
+    }
+    protected function AccountLink() {
+	$rc = $this->AccountRecord();
+	return $rc->SelfLink_name();
+    }
+    
+    // -- FIELD CALCULATIONS -- //
+    // ++ CLASSES ++ //
+    
+    protected function SessionsClass() {
+	return KS_CLASS_ADMIN_USER_SESSIONS;
+    }
+    protected function AccountsClass() {
+	return KS_CLASS_ADMIN_USER_ACCOUNTS;
+    }
+    
+    // -- CLASSES -- //
+    // ++ TABLES ++ //
+    
+    protected function SessionTable($id=NULL) {
+	return $this->GetConnection()->MakeTableWrapper($this->SessionsClass(),$id);
+    }
+    protected function AccountTable($id=NULL) {
+	return $this->GetConnection()->MakeTableWrapper($this->AccountsClass(),$id);
+    }
+    
+    // -- TABLES -- //
+    // ++ RECORDS ++ //
+    
+    protected function SessionRecord() {
+	return $this->SessionTable($this->SessionID());
+    }
+    protected function AccountRecord() {
+	return $this->AccountTable($this->AccountID());
+    }
+    
+    // -- RECORDS -- //
     // ++ WEB ADMIN UI ++ //
 
     // CALLBACK from ftShowableRecord
@@ -96,6 +148,7 @@ class fcrEventAdmin extends fcrEventPlex {
 	  'ID'		=>	'ID',
 	  'WhenStart'	=>	'Start',
 	  'ID_Session'	=>	'Session',
+	  'ID_Account'	=>	'User',
 	  'TypeCode'	=> 	'Code',
 	  'Descrip'	=>	'Description',
 	  'Stash'	=> 	'Data'
@@ -105,6 +158,7 @@ class fcrEventAdmin extends fcrEventPlex {
       INPUT:
 	$doGeneral: TRUE = show Mod and Index columns
     */
+    /*
     protected static function AdminRowHeader($doGeneral) {
 	$out = "\n<table class=listing><tr><th>ID</th>";
 	if ($doGeneral) {
@@ -112,9 +166,8 @@ class fcrEventAdmin extends fcrEventPlex {
 	}
 	$out .= '<th>Start</th><th>Finish</th><th>Who/How</th><th>Where</th></tr>';
 	return $out;
-    }
+    }*/
     static $sUnknownField = '<span style="color: #888888;">?</span>';
-    static $sDateLast;
     /*----
       ASSUMES: there are rows (caller should check this)
       INPUT:
@@ -124,17 +177,18 @@ class fcrEventAdmin extends fcrEventPlex {
 	  Data is apparently too long to show all at once now; something Clever is needed.
 	2013-12-08 adapting from clsAdminEvent (MW event admin class)
     */
-    public function AdminRows() {
+    /*
+    public function AdminRows($doGeneral) {
 	if ($this->HasRows()) {
 	    //$htUnknown = '<span style="color: #888888;">?</span>';
-	    $out = self::AdminRowHeader();
+	    $out = self::AdminRowHeader($doGeneral);
 
 	    $isOdd = TRUE;
 	    $strDateLast = NULL;
 	    $nRows = 0;
 	    $nMax = $this->GetTableWrapper()->MaxLines();
 	    $isOver = FALSE;
-	    self::$sDateLast = NULL;
+	    //self::$sDateLast = NULL;
 	    while ($this->NextRow()) {
 		$nRows++;
 		if ($nRows > $nMax) {
@@ -142,10 +196,10 @@ class fcrEventAdmin extends fcrEventPlex {
 		    break;
 		}
 
-		$cssClass = $isOdd?'odd':'even';
-		$isOdd = !$isOdd;
+//		$cssClass = $isOdd?'odd':'even';
+//		$isOdd = !$isOdd;
 
-		$out .= $this->AdminRow($doGeneral,$cssClass);
+		$out .= $this->AdminRow($doGeneral);
 	    }
 	    $out .= "\n</table>";
 	    if ($isOver) {
@@ -158,10 +212,59 @@ class fcrEventAdmin extends fcrEventPlex {
 	$out .= '<br><span class="line-stats"><b>SQL</b>: '.$this->sql.'</span>';
 
 	return $out;
+    }*/
+    /*----
+      HISTORY:
+	2017-03-15 rewriting from scratch for syslogv2
+    */
+    private $sDateLast = NULL;
+    private $isOdd = FALSE;
+    protected function AdminRows_row() {
+	$cssClass = $this->isOdd?'odd':'even';
+	$this->isOdd = !$this->isOdd;
+
+	$sWhenStart = $this->WhenStarted();
+	$dtWhenStart = strtotime($sWhenStart);
+	$sDateStart = date('Y-m-d',$dtWhenStart);
+	$sTimeStart = date('H:i:s',$dtWhenStart);
+	
+	$htID = $this->SelfLink();
+	
+	$out = NULL;
+	if ($sDateStart != $this->sDateLast) {
+	    $this->sDateLast = $sDateStart;
+	    $out .= <<<__END__
+  <tr class=date-header>
+    <td colspan=5><b>$sDateStart</b></td>
+  </tr>
+__END__;
+	}
+	
+	$htSession = $this->SessionLink();
+	$htAccount = $this->AccountLink();
+	$sTypeCode = $this->TypeCode();
+	$sDescrip = $this->DescriptiveText();
+	$htStash = $this->StashCompact();
+		
+	// render the row
+	
+	$out .= <<<__END__
+  <tr class="$cssClass">
+    <td>$htID</td>
+    <td>$sTimeStart</td>
+    <td>$htSession</td>
+    <td>$htAccount</td>
+    <td>$sTypeCode</td>
+    <td>$sDescrip</td>
+    <td>$htStash</td>
+  </tr>
+__END__;
+	return $out;
     }
+    /* 2017-03-15 This is for syslogv1, I think...
     protected function AdminRow($doGeneral,$cssClass) {
 	$row = $this->GetFieldValues();
-
+echo '<div class=content>ROW:'.fcArray::Render($row);
 	$sSysUser	= $row['WhoAdmin'];	// aren't these two...
 	$sAppUser	= $row['WhoSystem'];	// ...reversed?
 	$sMachine	= $row['WhoNetwork'];
@@ -259,6 +362,7 @@ __END__;
 
 	return $out;
     }
+    */
 }
 /*
 class VC_Syslog_RecordSet_helper {

@@ -60,10 +60,10 @@ trait ftShowableRecord {
 	return clsArray::Nz($this->arAdminRows_options,$sName,$vDef);
     }
     protected function AdminRows_none() {
-	return fcArray::Nz($this->AdminRows_settings_options(),'no.rows.html','<i>none</i>');
+	return fcArray::Nz($this->AdminRows_settings_options(),'no.rows.html','<div class=content><i>none</i></div>');
     }
     protected function AdminRows_start() {
-	return "\n<table>";
+	return "\n<table class=listing>";	// maybe this should be class=ferreteria-listing
     }
     protected function AdminRows_finish() {
 	return "\n</table>";
