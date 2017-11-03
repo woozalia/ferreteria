@@ -68,27 +68,39 @@ class fcTime {
 	    return NULL;
 	}
     }
-
-    static public function DefaultDate($iTime,$iDate,$iSmallerPfx='<small>',$iSmallerSfx='</small>',$iDateFmt='n/j') {
-	if (empty($iDate)) {
+    /*----
+      PURPOSE: for displaying a timestamp in the most abbreviated possible way by leaving off the date when it may be assumed
+      ACTION: 
+	Displays $dtShow in a format which depends on whether it is on the same date as $dtKnown.
+	If they are the same date: displays just the hour and minute.
+	If they are different dates: also displays the date in $sDateFmt, and brackets the whole thing with $iSmallerPfx/$iSmallerSfx
+      NOTE: This is kind of crude. It should probably use templates or something for more flexibility and fewer parameters.
+	...and name it something more precise, like ShortestTime_forAssumedDate($dtShow,$dtAssume...)
+    */
+    static public function DefaultDate($dtShow,$dtKnown,$iSmallerPfx='<small>',$iSmallerSfx='</small>',$sDateFmt='n/j') {
+	if (empty($dtKnown)) {
 	    return NULL;
 	} else {
-	    $itTime = strtotime($iTime);	// time to show -- convert to seconds since epoch
-	    $itDate = strtotime($iDate);	// base date -- convert to seconds since epoch
+	    $itTime = strtotime($dtShow);	// time to show -- convert to seconds since epoch
+	    $itDate = strtotime($dtKnown);	// base date -- convert to seconds since epoch
 
 	    // convert dates (only) back to string (leave off time)
-	    $strTimeDate = date('Ymd',$itTime);
-	    $strDateDate = date('Ymd',$itDate);
+	    $sTimeDate = date('Ymd',$itTime);
+	    $sDateDate = date('Ymd',$itDate);
 
-	    $doDate = ($strTimeDate != $strDateDate);
+	    $doDate = ($sTimeDate != $sDateDate);
 	    $out = '';
+	    $sTime = date('H:i',$itTime); 
 	    if ($doDate) {
-		$out .= $iSmallerPfx;
-	    }
-	    $out .= date('H:i',$itTime);
-	    if ($doDate) {
-		$out .= '<br>'.date($iDateFmt,$itTime);
-		$out .= $iSmallerSfx;
+		$out .=
+		  $iSmallerPfx
+		  .$sTime
+		  .'<br>'
+		  .date($sDateFmt,$itTime)
+		  .$iSmallerSfx
+		  ;
+	    } else {
+		$out .= $sTime;
 	    }
 	    return $out;
 	}
@@ -228,21 +240,22 @@ class xtTime {
     }
     public function PartsArray($iArray=NULL) {
 	if (!is_null($iArray)) {
-	    $intYr = nz($iArray['year']);
-	    $intMo = nz($iArray['month']);
-	    $intDy = nz($iArray['day']);
-	    $intHr = nz($iArray['hour']);
-	    $intMi = nz($iArray['minute']);
-	    $intSe = nz($iArray['second']);
+	    $intYr = fcArray::nz($iArray,'year');
+	    $intMo = fcArray::nz($iArray,'month');
+	    $intDy = fcArray::nz($iArray,'day');
+	    $intHr = fcArray::nz($iArray,'hour');
+	    $intMi = fcArray::nz($iArray,'minute');
+	    $intSe = fcArray::nz($iArray,'second');
 	    $this->Parts($intYr,$intMo,$intDy,$intHr,$intMi,$intSe);
 	}
 	$arOut = array(
-	  'year'	=> nz($this->intYr),
-	  'month'	=> nz($this->intMo),
-	  'day'		=> nz($this->intDy),
-	  'hour'	=> nz($this->intHr),
-	  'minute'	=> nz($this->intMi),
-	  'second'	=> nz($this->intSe));
+	  'year'	=> $this->intYr,
+	  'month'	=> $this->intMo,
+	  'day'		=> $this->intDy,
+	  'hour'	=> $this->intHr,
+	  'minute'	=> $this->intMi,
+	  'second'	=> $this->intSe
+	  );
 	return $arOut;
     }
     public function Year($iYear=NULL) {

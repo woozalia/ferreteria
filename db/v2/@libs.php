@@ -31,8 +31,10 @@ $om = new fcCodeModule(__FILE__, 'db-ui.php');
 $om = new fcCodeModule(__FILE__, 'dbt-events.php');
   $om->AddClass('fctEvents');
   $om->AddClass('fcrEvent');
+  $om->AddClass('fiEventTable');
   $om->AddClass('ftLoggableTable');
   $om->AddClass('ftLoggableRecord');
+  $om->AddClass('ftLoggedRecord');
 $om = new fcCodeModule(__FILE__, 'dbt-settings.php');
   $om->AddClass('fcSettingsTable');
   $om->AddClass('fcSettingsTable_standard');
@@ -46,11 +48,18 @@ $om = new fcCodeModule(__FILE__, 'form-data.php');
 $om = new fcCodeModule(__FILE__, 'object-urls.php');
   $om->AddClass('ftLinkableRecord');
   $om->AddClass('ftLinkableTable');
+  
+// EVENTS folder
+$om = new fcCodeModule(__FILE__, 'events/event-plex.php');
+  $om->AddClass('fctEventPlex');
+  $om->AddClass('fctEventPlex_standard');
+  $om->AddClass('fctSubEvents');
+  $om->AddClass('fctSubEvents_done');
 
 // TABLES folder
 $om = new fcCodeModule(__FILE__, 'tables/db-table.php');
-  $om->AddClass('fcDataSource');
-  $om->AddClass('fcDataTable');
+  $om->AddClass('fcTable_wRecords');
+  $om->AddClass('fcTable_wName_wSource_wRecords');
  $om = new fcCodeModule(__FILE__, 'tables/db-table-cache.php');
   $om->AddClass('ftCacheableTable');
 $om = new fcCodeModule(__FILE__, 'tables/db-table-indexed.php');
@@ -77,7 +86,3 @@ $om = new fcCodeModule(__FILE__, 'records/db-records-savable.php');
   $om->AddClass('ftSaveableRecord');
 $om = new fcCodeModule(__FILE__, 'records/db-records-unique.php');
   $om->AddClass('ftUniqueRecords');
-$om = new fcCodeModule(__FILE__, 'events/event-plex.php');
-  $om->AddClass('fctEventPlex');
-  $om->AddClass('fctEventPlex_standard');
-  $om->AddClass('fctSubEvents_done');

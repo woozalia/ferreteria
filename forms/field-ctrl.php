@@ -202,14 +202,18 @@ class fcFormControl_HTML extends fcFormControl {
 	    $arOut['recd'] = $vPost;
 	    $arOut['native'] = $vVal;
 	    //echo 'SETTING NATIVE to ['.$vVal.']<br>';
-	    $this->NativeObject()->SetValue($vVal);
+	    $this->NativeObject()->SetValue($vVal,TRUE);
 	} else {
 	    // For some reason, we're not seeing form data for this control.
 	    if ($this->Editable()) {
 		// this field is editable, but the form isn't sending it:
 		$arOut['absent'] = TRUE;
 		$arOut['blank'] = NULL;
-		$sMsg = "Form error: Key [$sName] not found in post data: ".fcArray::Render($arData);
+		$sMsg = "Form error: Key [$sName] not found in submitted data: "
+		  .fcArray::Render($arData)
+		  .'REQUEST data:'
+		  .fcArray::Render($_REQUEST)
+		  ;
 		$this->FormObject()->AddMessage($sMsg);
 		// for debugging:
 		//echo $sMsg;
@@ -517,44 +521,44 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
     }
 
     // -- CONVERSION -- //
-    // ++ OVERRIDES ++ //
+    // ++ WEB UI ++ //
 
     /*----
+      OVERRIDE
       HISTORY:
 	2017-03-09 Rewriting to better handle no-data conditions
+	2017-03-11 Rewrote core logic more or less from scratch.
     */
     protected function RenderEditor() {
 
-    // 2017-03-11 The logic here is a bit precarious. May need further revision.
-	if ($this->HasRows()) {
-	    $doNoRows = FALSE;	// there are rows, but maybe no data
-	    
-	    if ($this->HasExtraChoices()) {
-		$doExtras = TRUE;
-	    } else {
-		$doExtras = FALSE;	// no extra rows
-	    }
-	    
-	    if ($this->HasRecords()) {
-		$doNoRecords = FALSE;	// there are data records
-	    } else {
-		$doNoRecords = TRUE;	// no data records
-		if (is_null($this->GetRecords())) {
-		    $doNoObject = TRUE;		// there is no recordset object at all
-		} else {
-		    $doNoObject = FALSE;	// there is at least a recordset object
-		}
-	    }
-
-        } else {
-	    $doNoRows = TRUE;	// no rows at all to display
+    // 2017-04-03 revising logic
+    // doRows = there are rows (could be data-records or extras)
+    // doRecords = there are data-records
+    // doExtra = there are extras
+    // doObject = there is a data-recordset object (might not have any data-rows)
+	$rs = $this->GetRecords();
+	if ($this->HasRecords()) {
+	    $doRecords = TRUE;
+	} else {
+	    $doRecords = FALSE;
+	    $hasObject = !is_null($rs);
 	}
-	  
-	if ($doNoRows) {
-	    if ($doNoObject) {
-		$out = $this->NoObjectString();
-	    } elseif ($doNoRecords) {
+	if ($this->HasExtraChoices()) {
+	    $doExtras = TRUE;
+	} else {
+	    $doExtras = FALSE;	// no extra rows
+	}
+	$doRows = $doRecords || $doExtras;
+	if ($doRows) {
+	    // we've confirmed there's something to display
+	    $htTag = 'select';
+	    $htCloser = '';
+	    $out = NULL;
+	} else {
+	    if ($hasObject) {
 		$out = $this->NoDataString();
+	    } else {
+		$out = $this->NoObjectString();
 	    }
 	    $htTag = 'input';
 	    $this->TagAttributes(
@@ -564,12 +568,8 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	      )
 	    );
 	    $htCloser = '/';
-	} else {
-	    // we've confirmed there's something to display
-	    $htTag = 'select';
-	    $htCloser = '';
-	    $out = NULL;
 	}
+    
 	$out .= "\n<$htTag"
 	  .$this->RenderEditor_mainAttribs()
 	  .$htCloser
@@ -586,19 +586,10 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 	    }
 	}
 
-	if (!$doNoRecords) {
-	    $rs = $this->GetRecords();
+	if ($doRecords) {
 	    $sClass = get_class($rs);
-	    if (method_exists($rs,'ListItem_Text')) {
+	    if (method_exists($rs,'ListItem_Text')) {	// TODO: this should be an interface
 
-/*
-		$arRecs = $this->RecordArray();
-		foreach ($arRecs as $id => $arRow) {
-		    $rs->Values($arRow);
-		    $oRow = new fcDropChoice($id,$rs->ListItem_Text());
-		    $out .= $oRow->RenderHTML($id == $vDeflt);
-		}
-*/
 		$arRecs = $this->RecordChoices();
 		foreach ($arRecs as $id => $oChoice) {
 		    $out .= $oChoice->RenderHTML($id == $vDeflt);
@@ -607,14 +598,14 @@ class fcFormControl_HTML_DropDown extends fcFormControl_HTML {
 		throw new exception("$sClass::ListItem_Text() needs to be defined.");
 	    }
 	}
-	if (!$doNoRows) {
+	if ($doRows) {
 	    $out .= "\n</select>\n";
 	}
 
 	return $out;
     }
 
-    // -- OVERRIDES -- //
+    // -- WEB UI -- //
 
 }
 class fcFormControl_HTML_CheckBox extends fcFormControl_HTML {
@@ -645,8 +636,15 @@ class fcFormControl_HTML_CheckBox extends fcFormControl_HTML {
     public function ReceiveForm(array $arData) {
 	$sName = $this->NameString();
 	// checkboxes are basically TRUE if the value is reported, FALSE otherwise
-	$vVal = array_key_exists($sName,$arData);
-	$this->NativeObject()->SetValue($vVal);
+	$vVal = array_key_exists($sName,$arData)?'1':'0';	// FALSE is treated like 'no value', but zero is seen.
+	$oNative = $this->NativeObject()->SetValue($vVal,TRUE);
+	
+	$arOut['absent'] = FALSE;	// technically, this is ambiguous for checkboxes
+	$arOut['blank'] = FALSE;	// same
+	// these are mainly for debugging:
+	$arOut['recd'] = fcArray::Nz($arData,$sName);	// not terribly useful
+	$arOut['native'] = $vVal;
+	return $arOut;
     }
     public function toNative($sVal) {
 	return ($sVal=='on');

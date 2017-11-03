@@ -175,7 +175,7 @@ class fcArray {
 	$nDepth = maximum depth to render (0 = no maximum)
     */
     static public function Render(array $ar=NULL,$nDepth=0) {
-	$out = self::GetRenderPrefix();
+	$out = static::GetRenderPrefix();
 	if (is_null($ar)) {
 	    $out .= 'NULL';
 	} else {
@@ -185,7 +185,7 @@ class fcArray {
 		$out .= self::RenderLayer($ar,0,$nDepth);
 	    //}
 	}
-	$out .= self::GetRenderSuffix();
+	$out .= static::GetRenderSuffix();
 	return $out;
     }
     static protected function RenderLayer($ar,$nDepthCur,$nDepthMax) {
@@ -234,3 +234,11 @@ class fcArray {
     // -- RENDERING -- //
 }
 class clsArray extends fcArray {}	// deprecated; alias for now
+class fcArrayText extends fcArray {
+    static protected function GetRenderPrefix() {
+	return '';
+    }
+    static protected function GetRenderSuffix() {
+	return '';
+    }
+}

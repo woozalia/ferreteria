@@ -4,15 +4,20 @@
   HISTORY:
     2017-01-06 started
     2017-03-24 some rearrangements to make GetRecord_forKeyString() possible
+    2017-04-04 moved multi-key stuff into ftMultiKeyedTable
 */
-/*::::
-  ABSTRACT because: n/i = TableName(), SingularName()
-*/
-abstract class fcTable_keyed_multi extends fcTable_keyed {
-    const ksINDEX_SEPARATOR_CHAR = '.';
+trait ftMultiKeyedTable {
+    use ftKeyedTable;
 
     // ++ SETUP ++ //
-    
+
+    /*----
+      RETURNS: character for separating multiple keys in a single string
+      PUBLIC so recordset can access it
+    */
+    public function GetSeparatorCharacter() {
+	return '.';
+    }
     /*----
       NEW
       PUBLIC so Records can access
@@ -24,13 +29,13 @@ abstract class fcTable_keyed_multi extends fcTable_keyed {
     // ++ RECORDS ++ //
 
     /*----
-      INPUT: $id = value which identifies the wanted row (primary keys combined in a separable way)
+      INPUT: $id = value which uniquely identifies the wanted row (primary keys combined in a separable way)
       ASSUMES: For now --
-	* values of keys in multi-key tables do not include self::ksINDEX_SEPARATOR_CHAR
-	* in key strings, key values will always be separated by self::ksINDEX_SEPARATOR_CHAR
+	* values of keys in multi-key tables do not include $this->GetSeparatorCharacter()
+	* in key strings, key values will always be separated by $this->GetSeparatorCharacter()
     */
     public function GetRecord_forKey($id) {
-	$arVals = explode(self::ksINDEX_SEPARATOR_CHAR,$id);
+	$arVals = explode($this->GetSeparatorCharacter(),$id);
 	$arNames = $this->GetKeyNames();
 	$sqlFilt = NULL;
 	$db = $this->GetConnection();
@@ -43,11 +48,22 @@ abstract class fcTable_keyed_multi extends fcTable_keyed {
 	    $sqlFilt .= "(`$sName`=$sqlVal)";
 	}
 	$rc = $this->SelectRecords($sqlFilt);
+	if ($rc->RowCount() == 0) {
+	    $rc->ClearFields();	// so HasRow() will return FALSE
+	} else {
+	    $rc->NextRow();	// advance to first (only) row
+	}
 	return $rc;
     }
 
     // -- RECORDS -- //
-    
+
+}
+/*::::
+  ABSTRACT because: n/i = TableName(), SingularName()
+*/
+abstract class fcTable_keyed_multi extends fcTable_keyed {
+    use ftMultiKeyedTable;
 }
 /*::::
   ABSTRACT because: abstract = GetKeyNames(), FieldNeedsQuote()
@@ -65,11 +81,16 @@ abstract class fcRecord_keyed_multi extends fcRecord_keyed {
     public function GetKeyValue() {
 	$out = NULL;
 	$arKeys = $this->GetKeyNames();
+	$chSep = $this->GetTableWrapper()->GetSeparatorCharacter();
 	foreach ($arKeys as $sKey) {
 	    if (!is_null($out)) {
-		$out .= fcTable_keyed_multi::ksINDEX_SEPARATOR_CHAR;
+		$out .= $chSep;
 	    }
-	    $out .= $this->GetFieldValueNz($sKey);
+	    $val = $this->GetFieldValueNz($sKey);
+	    if (is_null($val)) {
+		return NULL;	// for now, we're assuming both keys are NOT NULL
+	    }
+	    $out .= $val;
 	}
 	return $out;
     }
@@ -104,7 +125,7 @@ abstract class fcRecord_keyed_multi extends fcRecord_keyed {
     */
     protected function GetKeyValue_cooked($sName) {
 	if ($this->KeyNeedsQuote()) {
-	    $s = $this->GetConnection()->Sanitize($this->GetFieldValue($sName));
+	    $s = $this->GetConnection()->SanitizeString($this->GetFieldValue($sName));
 	    return "$s";
 	} else {
 	    return $this->GetFieldValue($sName);

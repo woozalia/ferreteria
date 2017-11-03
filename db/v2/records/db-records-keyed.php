@@ -6,6 +6,7 @@
     Will write code as needed...
 */
 abstract class fcRecord_keyed extends fcDataRecord {
+
     // TODO: Rename this to GetKeyValueString();
     //abstract public function GetKeyString();	// might represent more than one key field
     abstract public function SetKeyValue($id);
@@ -44,10 +45,7 @@ abstract class fcRecord_keyed extends fcDataRecord {
     }
 
 }
-// PAIRS WITH: fcTable_keyed_single
-abstract class fcRecord_keyed_single extends fcRecord_keyed {
-    abstract protected function GetKeyValue_cooked();
-    
+trait ftRecord_keyed_single {
     public function GetKeyValue() {
 	$tbl = $this->GetTableWrapper();
 	if (method_exists($tbl,'GetKeyName')) {
@@ -55,13 +53,20 @@ abstract class fcRecord_keyed_single extends fcRecord_keyed {
 	    return $this->GetFieldValueNz($sKey);
 	} else {
 	    // 2017-01-08 Not actually sure who is at fault here, the class or the caller.
-	    throw new exception('Class '.get_class($tbl).' does not implement GetKeyName().');
+	    throw new exception('Ferreteria usage error: Class '.get_class($tbl).' does not implement GetKeyName().');
 	}
     }
     public function SetKeyValue($id) {
 	$sKey = $this->GetTableWrapper()->GetKeyName();
 	$this->SetFieldValue($sKey,$id);
     }
+}
+// PAIRS WITH: fcTable_keyed_single
+abstract class fcRecord_keyed_single extends fcRecord_keyed {
+    use ftRecord_keyed_single;
+
+    abstract protected function GetKeyValue_cooked();
+    
     /* 2017-03-24 There is no apparent need for this.
     public function GetKeyString() {	// TODO: maybe this should be GetKeyValue_asString()
 	$v = $this->GetKeyValue();
@@ -77,10 +82,25 @@ abstract class fcRecord_keyed_single extends fcRecord_keyed {
     public function FetchRows_asKeyedArray() {
 	return $this->FetchRows_asArray($this->GetTableWrapper()->GetKeyName());
     }
-    public function Update(array $arChg) {
+    // PURPOSE: This is just an interface-checked version of GetTableWrapper().
+    protected function GetTableWrapper_Insertable() : fiInsertableTable {
+	return $this->GetTableWrapper();
+    }
+    public function Update(array $arChg,$isNativeData=FALSE) {
 	$sqlFilt = $this->GetSelfFilter();
-	$this->GetTableWrapper()->Update($arChg,$sqlFilt);
+	$this->GetTableWrapper()->Update($arChg,$sqlFilt,$isNativeData);
 	$this->sql = $this->GetTableWrapper()->sql;
+    }
+    protected function Insert(array $arRow) {
+	$tbl = $this->GetTableWrapper_Insertable();
+	$id = $tbl->Insert($arRow);
+	$this->sql = $tbl->sql;
+	if ($id === FALSE) {
+	    $id = NULL;
+	} else {
+	    $this->SetKeyValue($id);	// remember new record's ID
+	}
+	return $id;
     }
 }
 class fcRecord_keyed_single_integer extends fcRecord_keyed_single {
@@ -90,8 +110,7 @@ class fcRecord_keyed_single_integer extends fcRecord_keyed_single {
 }
 class fcRecord_keyed_single_string extends fcRecord_keyed_single {
     protected function GetKeyValue_cooked() {
-	$sID = $this->GetConnection()->Sanitize($this->GetKeyValue());
-	return "'$sID'";
+	return $this->GetConnection()->SanitizeValue($this->GetKeyValue());
     }
 }
 // PURPOSE: currently just a convenient alias

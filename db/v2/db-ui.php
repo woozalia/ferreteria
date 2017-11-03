@@ -24,11 +24,22 @@ trait ftShowableRecord {
 	      .$this->AdminRows_finish()
 	      ;
 	} else {
-	    $out = $this->AdminRows_none();
+	    $out = 
+	      $this->AdminRows_start()
+	      .$this->AdminRows_none()
+	      ;
 	}
 	$out .= $this->AdminRows_after();
 	return $out;
     }
+    /*----
+      HISTORY:
+	2017-04-13 Realized it's silly to have a function for setting and getting this information
+	  when I never actually set it, and always define AdminRows_settings_columns_default() instead.
+	  Old version commented out; new version is abstract.
+    */
+    abstract protected function AdminRows_settings_columns();
+    /*
     private $arAdminRows_fields;
     protected function AdminRows_settings_columns(array $ar=NULL) {
 	if (!is_null($ar)) {
@@ -45,6 +56,7 @@ trait ftShowableRecord {
 	}
 	return $this->arAdminRows_fields;
     }
+    */
     private $arAdminRows_options;
     protected function AdminRows_settings_options(array $ar=NULL) {
 	if (!is_null($ar)) {

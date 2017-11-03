@@ -4,7 +4,8 @@
   HISTORY:
     2013-11-28 started
     2014-12-27 split into two classes (one for each drop-in, and one for the drop-in manager)
-    2017-01-01 classes now descend from fcDataSource and fcSourcedDataRow
+    2017-01-01 classes now descend from fcTable_wRecords (was fcDataSource) and fcSourcedDataRow
+    2017-04-09 evidently this was later changed to fcDataTable_array / fcDataRow_array
 */
 
 define('KS_DROPIN_FIELD_FEATURES','features');
@@ -22,13 +23,13 @@ class fcDropInManager extends fcDataTable_array {
     // ++ CEMENT ++ //
     
     protected function SingularName() {
-	return 'fcDropInModule';
+	return 'fcrDropInModule';
     }
 
     // -- CEMENT -- //
     // ++ MODULES ++ //
     
-    protected function SetModule(fcDropInModule $oMod) {
+    protected function SetModule(fcrDropInModule $oMod) {
 	$this->SetRow($oMod->Name(),$oMod->GetFieldValues());
     }
     // PUBLIC because outside callers sometimes need to know if a module exists or not
@@ -132,7 +133,7 @@ class fcDropInManager extends fcDataTable_array {
     [date]: release date in YYYY/MM/DD format
     [URL]: URL for more information about the module
 */
-class fcDropInModule extends fcDataRow_array {
+class fcrDropInModule extends fcDataRow_array {
 
     // ++ FIELD ARRAY ++ //
     
@@ -180,16 +181,23 @@ class fcDropInModule extends fcDataRow_array {
 		if (!is_null($out)) {
 		    $out .= $sSep;
 		}
-		if (class_exists($sClass)) {
-		    $htCls = $sClass;
-		} else {
-		    $htCls = "<s>$sClass</s>";
-		}
-		$out .= $htCls;
+		$out .= static::RenderClassName($sClass);
 	    }
 	} else {
 	    // assume value is a single class name
-	    $out = $vClasses;
+	    $out = static::RenderClassName($vClasses);
+	}
+	return $out;
+    }
+    static protected function RenderClassName($sClass) {
+	if (class_exists($sClass)) {
+	    $out = "<b>C:</b>$sClass";
+	} elseif (trait_exists($sClass)) {
+	    $out = "<b>T:</b>$sClass";
+	} elseif (interface_exists($sClass)) {
+	    $out = "<b>I:</b>$sClass";
+	} else {
+	    $out = "<s title='class, trait, or interface not found'>$sClass</s>";
 	}
 	return $out;
     }

@@ -38,10 +38,11 @@
 
 // REQUIRED by ftLinkableObject
 interface fiLinkable {
+    function SelfURL(array $arAdd=NULL);
     function SelfLink_idArray();
 }
 // REQUIRED by fcLinkBuilder_table
-interface fiLinkableTable extends fiLinkable {
+interface fiLinkableTable extends fiLinkable{
 }
 // REQUIRED by 
 interface fiLinkableRecord extends fiLinkable {
@@ -50,6 +51,8 @@ interface fiLinkableRecord extends fiLinkable {
 }
 
 trait ftLinkableObject {
+    abstract public function SelfLink_idArray();
+    abstract protected function LinkBuilder();
     /*----
       USED BY: VbzAdmin::VbzAdminStkItems::Listing_forItem()
       HISTORY:

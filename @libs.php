@@ -34,7 +34,7 @@ $om = new fcCodeModule(__FILE__, 'crypt.php');
 $om = new fcCodeModule(__FILE__, 'dropin.php');
   $om->AddClass('fcDropInManager');
 $om = new fcCodeModule(__FILE__, 'dtree.php');
-  $om->AddClass('clsDTreeAPI');
+  $om->AddClass('fcDTreeAPI');
 $om = new fcCodeModule(__FILE__, 'exception.php');
   $om->AddClass('fcSilentException');
 $om = new fcCodeModule(__FILE__, 'globals.php');
@@ -91,6 +91,7 @@ $om = new fcCodeModule(__FILE__, 'menu/items.php');
   $om->AddClass('fcMenuFolder');
 $om = new fcCodeModule(__FILE__, 'menu/nav.php');
   $om->AddClass('fcNavFolder');
+  $om->AddClass('fcNavLinkFixed');
 
 /* 2016-12-31 and now these as well
 $om = new fcCodeModule(__FILE__, 'menu/menu-dropin.php');
@@ -116,6 +117,7 @@ $om = new fcCodeModule(__FILE__, 'page/page.php');
   $om->AddClass('fcpeSimple');
   $om->AddClass('fcTag_html');
   $om->AddClass('fcTag_header');
+  $om->AddClass('fiEventAware');
 $om = new fcCodeModule(__FILE__, 'page/page.login.php');
   $om->AddClass('ftLoginContainer_standard');
 /* 2016-12-05 This is being rewritten.
@@ -175,6 +177,7 @@ $om = new fcCodeModule(__FILE__, 'util/cache-file.php');
   $om->AddClass('fcCacheFile');
 $om = new fcCodeModule(__FILE__, 'util/debug.php');
   $om->AddClass('fcStackTrace');
+  $om->AddClass('ftInstanceCounter');
 $om = new fcCodeModule(__FILE__, 'util/html.php');
   $om->AddClass('fcHTML');
   $om->AddClass('fcHTML_Parser');

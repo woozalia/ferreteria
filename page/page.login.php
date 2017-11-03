@@ -48,6 +48,8 @@ define('KS_EVENT_FERRETERIA_RECV_PW_RESET','fe.login.PR2');
 
 abstract class fcpeLoginWidget extends fcpeSimple {
     use ftExecutableTwig;
+    
+    const ksFIELD_RETURN_URI = 'return';	// name of form field containing return URI (if any)
 
     // ++ EVENTS ++ //
     
@@ -167,7 +169,7 @@ abstract class fcpeLoginWidget extends fcpeSimple {
     protected function GetInput_EmailAddress() {
 	return trim(fcArray::Nz($_POST,KF_USER_EMAIL_ADDRESS));
     }
-    protected function GetInput_Username() {
+    protected function GetInput_LoginName() {
 	return trim(fcArray::Nz($_POST,KSF_USER_CTRL_USERNAME));
     }
     protected function GetInput_Password() {
@@ -276,68 +278,6 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	}
 	// If any of these are detected (except logout), set a state and Render() will do the rest.
 	
-    /* take 1
-	$nState = $this->GetStatus_DoNext();
-	
-	if ($this->GetInput_IsLoginAttempt()) {
-
-	    // try to authorize existing account
-	    $rcSess = fcApp::Me()->GetSessionRecord();
-	    $rcSess->UserLogin(
-	      $this->GetInput_Username(),
-	      $this->GetInput_Password()
-	      );
-	    if ($rcSess->UserIsLoggedIn()) {
-		$sUser = $rcSess->UserString();
-		$this->AddSuccessMessage("You are now logged in, $sUser.");
-// DEACTIVATE WHILE DEBUGGING		$this->SendEmail_forLoginSuccess();	// if appropriate, email the user a notif about the login
-		// redirect to non-login page
-		$this->RedirectToEraseRequest();
-	    } else {
-		$this->AddErrorMessage('Log-in attempt failed. Sorry!');
-		$this->SendEmail_forLoginFailure();	// email the user a notif about the failed attempt
-		$this->StoreSubmittedUsername();	// stash the submitted username
-		$this->RedirectToEraseRequest();
-	    }
-	} elseif ($this->GetInput_IsLoginFormRequest()) {
-	    $this->SetInput_ShowLoginForm();
-	} elseif ($nState == self::KS_STEP_SHOW_EMAIL_ADDR) {
-	    // PR STEP 1: generate authcode, look up username, send authcode to user's email
-	    $rcUser = $this->UserTable()->FindUser($this->GetInput_Username());
-	    if ($rcUser->RowCount == 1) {
-		$sEmail = $rcUser->EmailAddress();
-		$rcToken = $this->TokenTable()->MakeToken(KI_AUTH_TYPE_RESET_PASS,$sEmail);
-		$this->SendEmail_forPassReset($rcToken);
-	    } else {
-		$sUser = $rcUser->UserName();
-		throw new fcDebugException("Ferreteria Data Error: Multiple records found for username [$sUser].");
-	    }
-	} elseif ($this->GetInput_IsPasswordResetForm()) {
-	    // PR STEP 3: new password received: check authcode, reset password if everything is valid
-	    $this->SetFromInput_AuthCodeStatus();
-	    if ($this->GetStatus_AuthCodeValid()) {
-		if ($this->GetFromInput_NewPasswordOkay()) { 
-		    $this->SetFromInput_NewPassword();
-		}
-	    }
-	} elseif ($this->GetInput_IsNewAccountEmailForm()) {
-	    // NA STEP 1: receive email address for authcode; generate and send authcode
-	    // We have to check for this *before* checking the URL, otherwise we just keep getting the form (NA0).
-	    $sEmail = $this->GetInput_EmailAddress();
-	    $rcToken = $this->TokenTable()->MakeToken(KI_AUTH_TYPE_NEW_USER,$sEmail);
-	    $this->SendEmail_forNewUser($rcToken);
-	} elseif ($this->GetInput_IsNewAccountRequest()) {
-	    // NA STEP 0: display form to get email address for account request link
-	    $this->SetStatus_DoNext(self::KS_STEP_SHOW_EMAIL_ADDR);
-	} elseif ($this->GetInput_IsNewAccountCreateForm()) {
-	    // NA STEP 3: NA form received; if ok, create account
-	    $this->CheckInput_NewAccountCreateForm();
-	} elseif ($this->GetInput_AuthCodeFound()) {
-	    // have to do this last, because a lot of other steps require a valid authcode too
-	    // could be either PR STEP 2 or NA STEP 2
-	    $this->SetFromInput_AuthCodeStatus();
-	}
-	*/
     }
     protected function RedirectToDefaultPage() {
 	$this->GetElement_PageContent()->RedirectToDefaultPage();
@@ -345,10 +285,20 @@ abstract class fcpeLoginWidget extends fcpeSimple {
     protected function RedirectToSamePage() {
 	$this->GetElement_PageContent()->RedirectToSamePage();
     }
+    // PURPOSE: After a successful login, we want to go back to the page the user was trying to access (if any)
+    protected function RedirectAfterLogin() {
+	$oFormIn = fcHTTP::Request();
+	if ($oFormIn->KeyExists(self::ksFIELD_RETURN_URI)) {
+	    $uri = $oFormIn->GetString(self::ksFIELD_RETURN_URI);
+	    $oKiosk = fcApp::Me()->GetKioskObject();
+	    $url = fcApp::Me()->GetKioskObject()->MakeURLFromString($uri);
+	    $this->GetElement_PageContent()->DoStashedRedirect($url);
+	}
+    }
     protected function TryLogin_fromInput() {
 	$rcSess = fcApp::Me()->GetSessionRecord();
 	$rcSess->UserLogin(
-	  $this->GetInput_Username(),
+	  $this->GetInput_LoginName(),
 	  $this->GetInput_Password()
 	  );
 
@@ -357,11 +307,11 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	    $this->AddSuccessMessage("You are now logged in, $sUser.");
 	    $this->SendEmail_forLoginSuccess();	// if appropriate, email the user a notif about the login
 	    // redirect to non-login page
-	    $this->RedirectToDefaultPage();
+	    $this->RedirectAfterLogin();
 	} else {
 	    $this->AddErrorMessage('Log-in attempt failed. Sorry!');
 	    $this->SendEmail_forLoginFailure();	// email the user a notif about the failed attempt
-	    $this->StoreSubmittedUsername();	// stash the submitted username
+	    $this->StoreSubmittedLoginName();	// stash the submitted username
 	    $this->RedirectToSamePage();	// redirect to same URL -- let user try again
 	}
     }
@@ -372,7 +322,8 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	    // I'm not even sure this can actually happen, but why not check.
 	    $sErr = "suspicious input: password reset form recieved with wrong auth token type ($idType)";
 	    fcApp::Me()->CreateEvent(KS_EVENT_FERRETERIA_SUSPICIOUS_INPUT,$sErr);
-	    // TODO: unfortunately, we don't know who the real user is, so we can't send them an email.
+	    // TODO: send admin an email
+	    // unfortunately, we don't know who the real user is, so we can't send them an email.
 	    $this->RedirectToDefaultPage();	// leave the form
 	}
 	$idUser = $rcToken->GetTokenEntity();	// token entity for this type is user ID
@@ -381,7 +332,7 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	// log that a new password has been received
     
 	$arEv = array(
-	  'uname'	=> $rcUser->UserName(),
+	  'uname'	=> $rcUser->LoginName(),
 	  'uid'		=> $rcUser->GetKeyValue(),
 	  );
 	$idEv = fcApp::Me()->CreateEvent(KS_EVENT_FERRETERIA_RECV_PW_RESET,'new password received',$arEv);
@@ -393,7 +344,7 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	    // try to set password from input
 	    $sPass = $this->GetInput_PasswordOne();
 	    $rcUser->SetPassword($sPass);
-	    $sUser = $rcUser->UserName();
+	    $sUser = $rcUser->LoginName();
 	    $this->AddSuccessMessage("The password for '$sUser' has been updated.");
 	    
 	    $tEvSub->CreateRecord($idEv,KS_EVENT_SUCCESS,'password changed');
@@ -458,7 +409,7 @@ abstract class fcpeLoginWidget extends fcpeSimple {
     }
     // ASSUMES: token is valid
     protected function HandleInput_NewAccountForm() {
-	$sUser = $this->GetInput_Username();
+	$sUser = $this->GetInput_LoginName();
 	// check to see if username already exists
 	if ($this->IsGivenUsernameValid($sUser)) {
 	    if ($this->IsGivenUsernameAvailable($sUser)) {
@@ -512,11 +463,11 @@ abstract class fcpeLoginWidget extends fcpeSimple {
     protected function GetStatus_DoNext() {
 	return $this->nStep;
     }
-    protected function StoreSubmittedUsername() {
-	$sUser = $this->GetInput_Username();
+    protected function StoreSubmittedLoginName() {
+	$sUser = $this->GetInput_LoginName();
 	fcApp::Me()->GetSessionRecord()->SetStashValue('login-username',$sUser);
     }
-    protected function FetchSubmittedUsername() {
+    protected function FetchSubmittedLoginName() {
     	return fcApp::Me()->GetSessionRecord()->GetStashValue('login-username');
     }
     private $isUsernameValid;
@@ -735,6 +686,17 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	return $ht;
 */
     }
+    protected function Render_RedirectField() {
+	$oFormIn = fcHTTP::Request();
+	
+	if ($oFormIn->KeyExists(self::ksFIELD_RETURN_URI)) {
+	    $uriReturn = $oFormIn->GetString(self::ksFIELD_RETURN_URI);
+	    $ctReturn = "<input type=hidden name='".self::ksFIELD_RETURN_URI."' value='$uriReturn'>";
+	} else {
+	    $ctReturn = '';
+	}
+	return $ctReturn;
+    }
     /*----
       PURPOSE: indicates login status, provides link to log in if not already logged in
       USAGE: typically called from outside, because the layout depends on the Page design
@@ -764,7 +726,9 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	  ;
     }
     protected function Render_LoginRequestControl() {
-	$urlBase = fcApp::Me()->GetKioskObject()->GetBasePath();
+	$oKiosk = fcApp::Me()->GetKioskObject();
+	$urlBase = $oKiosk->GetBasePath();
+	$urlThis = $oKiosk->GetInputString();
 	return '<a href="'
 	  .$urlBase
 	  //.KS_CHAR_PATH_SEP		// /
@@ -772,9 +736,12 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	  .KS_CHAR_URL_ASSIGN		// :
 	  .KS_USER_PATH_REQ_LOGIN_FORM	// login
 	  .KS_CHAR_PATH_SEP		// /
+	  .'?return='
+	  .$urlThis
 	  .'" title="display the login form">log in</a>'	// TODO: make these strings config options too
 	  ;
     }
+    /* 2017-06-29 This seems to be redundant.
     // ACTION: renders the control for requesting the page for editing current user's profile
     protected function Render_ProfileRequestControl() {
 	$urlBase = fcApp::Me()->GetKioskObject()->GetBasePath();
@@ -787,7 +754,7 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	  .KS_CHAR_PATH_SEP			// /
 	  .'" title="display the login form">log in</a>'	// TODO: make these strings config options too
 	  ;
-    }
+    } */
     // ACTION: renders the control (usually a link) for starting the new account process
     protected function Render_NewAccountRequestControl() {
 	$oeLink = new fcUtilityLink(
@@ -835,7 +802,7 @@ __END__;
     }
     // TODO: Not sure how to make <title> tag display. Or maybe that's the wrong tag.
     protected function RenderForm_GetNewAccountSpecs() {
-	$sUser = $this->FetchSubmittedUsername();	// fetch submitted userame (if any) from session stash
+	$sUser = $this->FetchSubmittedLoginName();	// fetch submitted userame (if any) from session stash
 	$htvUser = htmlspecialchars($sUser);		// previous value of username (if any)
 	$htnUser = KSF_USER_CTRL_USERNAME;		// field name for username
 	$htnPass1 = KSF_USER_CTRL_SET_PASS1;		// desired password
@@ -937,7 +904,7 @@ __END__;
 
     protected function SendPasswordResetEmail_fromInput() {
 	$tUser = fcApp::Me()->UserTable();
-	$sUser = $this->GetInput_Username();
+	$sUser = $this->GetInput_LoginName();
 	$rcUser = $tUser->FindUser($sUser);
 	if (is_null($rcUser)) {
 	} else {
@@ -972,7 +939,7 @@ __END__;
 	  'action'	=> 'allow you to create a new user account',
 	  'url'		=> $url
 	  );
-	$oTplt->VariableValues($ar);
+	$oTplt->SetVariableValues($ar);
 
 	// generate the email
 	$oTplt->Template(KS_TPLT_EMAIL_TEXT_FOR_NEW_ACCOUNT);
@@ -1004,7 +971,7 @@ __END__;
 	$sAddr = $rcUser->EmailAddress();
 	$ar = array(
 	  'site'	=> KS_SITE_NAME,
-	  'user'	=> $rcUser->UserName(),
+	  'user'	=> $rcUser->LoginName(),
 	  //'addr'	=> $this->RedactedEmailAddress($sAddr),	// there is no reason to redact here
 	  'addr'	=> $sAddr,
 	  'action'	=> 'allow you to change your password',
@@ -1014,7 +981,7 @@ __END__;
 	
 	// log the email about to be sent
 	$arEv = array(
-	  'user'	=> $rcUser->UserName(),
+	  'user'	=> $rcUser->LoginName(),
 	  'addr'	=> $sAddr,
 	  );
 	fcApp::Me()->EventPlex()->CreateBaseEvent(KS_EVENT_FERRETERIA_SENDING_ADMIN_EMAIL,'lost password reset',$arEv);
@@ -1043,7 +1010,7 @@ __END__;
 	// for now, we'll always send email; later, this should probably be a user preference
 	$rcUser = fcApp::Me()->GetUserRecord();
 
-	$sUser = $rcUser->UserName();
+	$sUser = $rcUser->LoginName();
 	$sSiteName = KS_SITE_NAME;
 	$sAddress = $_SERVER['REMOTE_ADDR'];
 	$sBrowser = $_SERVER['HTTP_USER_AGENT'];
@@ -1096,18 +1063,16 @@ __END__;
     but it may have other uses.
 */
 class fcpeLoginWidget_inline extends fcpeLoginWidget {
-    /*----
-      NOTE: Can't seem to get the HTTP REFERER, otherwise I'd include it as a hidden input here
-	so a successful login could redirect there.
-    */
+
     protected function RenderForm_Login() {
-	$sUser = $this->FetchSubmittedUsername();	// fetch submitted userame (if any) from session stash
+	$sUser = $this->FetchSubmittedLoginName();	// fetch submitted userame (if any) from session stash
 	$htvUser = htmlspecialchars($sUser);		// previous value of username (if any)
 	$htnUser = KSF_USER_CTRL_USERNAME;		// field name for username
 	$htnPass = KSF_USER_CTRL_ENTER_PASS;		// field name for password
 	$htnBtn = KSF_USER_BTN_LOGIN;			// field name for login button
 	$htNewAcct = $this->Render_NewAccountRequestControl();		// link for creating an account
 	$htPWReset = $this->Render_ResetPasswordRequestControl();	// link for resetting password
+	$ctReturn = $this->Render_RedirectField();
 	return <<<__END__
 
 <table class="form-block-login"><tr><td><form method=post>
@@ -1116,6 +1081,7 @@ class fcpeLoginWidget_inline extends fcpeLoginWidget {
 <input type=submit value="Log In" name="$htnBtn">
 [$htNewAcct]
 [$htPWReset]
+$ctReturn
 </form></td></tr></table>
 __END__;
     }
@@ -1128,11 +1094,12 @@ __END__;
 class fcpeLoginWidget_block extends fcpeLoginWidget {
     protected function RenderForm_Login() {
 	// re-display submitted username, if any
-	$sName = $this->FetchSubmittedUsername();	// fetch submitted userame (if any) from session stash
+	$sName = $this->FetchSubmittedLoginName();	// fetch submitted userame (if any) from session stash
 	$htName = htmlspecialchars($sName);
 	$htBtn = KSF_USER_BTN_LOGIN;
 	$htNewAcct = $this->Render_NewAccountRequestControl();
 	$htPWReset = $this->Render_ResetPasswordRequestControl();	// link for resetting password
+	$ctReturn = $this->Render_RedirectField();
 	return <<<__END__
 
 <table class="form-block-login"><tr><td>
@@ -1143,6 +1110,7 @@ class fcpeLoginWidget_block extends fcpeLoginWidget {
 <tr><td align=center colspan=2>
   <input type=submit value="Log In" name="$htBtn">
   <div style="float: right;">[$htNewAcct] [$htPWReset]</div>
+  $ctReturn
 </td></tr>
 </table>
 </form></td></tr></table>

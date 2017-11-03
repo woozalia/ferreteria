@@ -4,8 +4,9 @@
   HISTORY:
     2010-10-17 created
 */
-class fctAdminUserSessions extends fctUserSessions implements fiLinkableTable {
+class fctAdminUserSessions extends fctUserSessions implements fiEventAware, fiLinkableTable {
     use ftLinkableTable;
+    use ftExecutableTwig;
 
     // ++ SETUP ++ //
 
@@ -17,20 +18,43 @@ class fctAdminUserSessions extends fctUserSessions implements fiLinkableTable {
     }
     
     // -- SETUP -- //
-    // ++ DROP-IN API ++ //
-
-    /*----
-      PURPOSE: execution method called by dropin menu
-    */
-    public function MenuExec(array $arArgs=NULL) {
+    // ++ EVENTS ++ //
+  
+    protected function OnCreateElements() {}
+    protected function OnRunCalculations() {
+	$oPage = fcApp::Me()->GetPageObject();
+	$oPage->SetPageTitle('User Sessions');
+	//$oPage->SetBrowserTitle('(browser)');
+	//$oPage->SetContentTitle('(content)');
+    }
+    public function Render() {
 	return $this->AdminListing();
     }
+     /*----
+      PURPOSE: execution method called by dropin menu
+    */ /*
+    public function MenuExec(array $arArgs=NULL) {
+	return $this->AdminListing();
+    } */
 
-    // -- DROP-IN API -- //
+    // -- EVENTS -- //
     // ++ WEB UI ++ //
 
     protected function AdminListing() {
 	$rs = $this->SelectRecords();
+	$out = $rs->AdminRows();
+	return $out;
+    }
+}
+class fcrAdminUserSession extends fcrUserSession implements fiLinkableRecord {
+    use ftLinkableRecord;
+    use ftShowableRecord;
+    use ftSaveableRecord;
+    use ftExecutableTwig;
+
+    // ++ SETUP ++ //
+    
+    protected function AdminRows_settings_columns() {
 	$arCols = array(
 	  'ID'		=> 'ID',
 	  'ID_Client'	=> 'Client',
@@ -40,25 +64,30 @@ class fctAdminUserSessions extends fctUserSessions implements fiLinkableTable {
 	  'WhenUsed'	=> 'Used',
 	  'WhenExpires'	=> 'Exp',
 	  );
-	$out = $rs->AdminRows($arCols);
-	return $out;
+	return $arCols;
     }
-}
-class fcrAdminUserSession extends fcrUserSession implements fiLinkableRecord {
-    use ftLinkableRecord;
-    use ftShowableRecord;
-    use ftSaveableRecord;
-
-    // ++ DROP-IN API ++ //
-
+    
+    // -- SETUP -- //
+    // ++ EVENTS ++ //
+  
+    protected function OnCreateElements() {}
+    protected function OnRunCalculations() {
+	$oPage = fcApp::Me()->GetPageObject();
+	$oPage->SetPageTitle('User Session #'.$this->GetKeyValue());
+	//$oPage->SetBrowserTitle('Suppliers (browser)');
+	//$oPage->SetContentTitle('Suppliers (content)');
+    }
+    public function Render() {
+	$out = $this->AdminPage();
+    }
     /*----
       PURPOSE: execution method called by dropin menu
-    */
+    */ /*
     public function MenuExec(array $arArgs=NULL) {
 	return $this->AdminPage();
-    }
+    } */
 
-    // -- DROP-IN API -- //
+    // -- EVENTS -- //
     // ++ CLASS NAMES ++ //
 
     protected function ClientsClass() {

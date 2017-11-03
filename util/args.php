@@ -26,8 +26,9 @@ abstract class fcInputData {
     but we don't yet know how to access it.
 */
 abstract class fcInputData_array extends fcInputData {
+    // ACTION: Retrieve the value for a given name
     protected function Value($sName) {
-	if (!is_string($sName) || is_integer($sName)) {
+	if (!is_string($sName) && !is_integer($sName)) {
 	    throw new exception('Ferreteria usage error: Value() expects a string or integer, but received something else.');
 	}
 	$ar = $this->Values();

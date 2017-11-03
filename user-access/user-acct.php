@@ -192,7 +192,7 @@ class fcrUserAcct extends fcRecord_standard {
     // -- STATUS -- //
     // ++ FIELD VALUES ++ //
 
-    public function UserName() {
+    public function LoginName() {
 	return $this->GetFieldValue('UserName');
     }
     /*----
@@ -338,7 +338,7 @@ class fcrUserAcct extends fcRecord_standard {
 	    }
 	} else {
 	    if ($hasRoot) {
-		$this->PermitTable()->SetNeededPermit($sPerm);	// make a note that code expects this to exist
+		$this->PermitTable()->SetMissingPermit($sPerm);	// make a note that code expects this to exist
 		return TRUE;
 	    } else {
 		throw new exception("Ferreteria configuration error: permission '$sPerm' does not exist in database.");

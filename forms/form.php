@@ -44,7 +44,7 @@ class fcForm {
     }
 
     // -- CONFIG -- //
-    // ++ CONTROLS ++ //
+    // ++ CONTROL OBJECTS ++ //
 
     protected function ControlArray() {
 	foreach ($this->arFlds as $key => $fld) {
@@ -74,7 +74,23 @@ class fcForm {
 	}
     }
 
-    // -- CONTROLS -- //
+    // -- CONTROL OBJECTS -- //
+    // ++ STORAGE OBJECTS ++ //
+    
+    protected function GetStorageObject($sName) {
+	return $this->FieldObject($sName)->StorageObject();
+    }
+    /* 2017-05-26 written yesterday, turns out to be unnecessary
+    protected function NativeArray_toStorageArray(array $arNative) {
+	foreach ($arNative as $sKey => $val) {
+	    $oStor = $this->GetStorageObject($sKey);
+	    $sqlVal = $oStor->fromNativeSane($val);
+	    $arSQL[$sKey] = $sqlVal;
+	}
+	return $arSQL;
+    } */
+    
+    // -- STORAGE OBJECT S-- //
     // ++ FIELDS ++ //
 
     /*----
@@ -109,7 +125,14 @@ class fcForm {
 	}
 	return $arOut;
     }
-    protected function FieldArray_toWrite_native() {
+    /*----
+      PUBLIC for event logging
+      TODO: Should there be a form variant which automatically logs events?
+	Then this could be protected again.
+      HISTORY:
+	2017-04-14 changed from protected to public
+    */
+    public function FieldArray_toWrite_native() {
 	$ar = $this->FieldArray();
 	$arOut = NULL;
 	foreach ($ar as $key => $oField) {
@@ -119,18 +142,22 @@ class fcForm {
 	}
 	return $arOut;
     }
-    /* 2016-10-13 written but apparently unneeded
-    // RETURNS: SQL-formatted values to be written to the database
+    /*----
+      RETURNS: SQL-formatted values to be written to the database
+      HISTORY:
+	2016-10-13 written but apparently unneeded
+	2017-09-15 Actually, we do need it.
+    */
     protected function FieldArray_toWrite_storage() {
 	$ar = $this->FieldArray();
 	$arOut = NULL;
 	foreach ($ar as $key => $oField) {
 	    if ($oField->ShouldWrite()) {
-		$arOut[$key] = $oField->StorageObject()->GetValue();
+		$arOut[$key] = $oField->StorageObject()->GetValueRaw();	// 2017-09-15 not sure if should be "raw" or "sane"
 	    }
 	}
 	return $arOut;
-    }*/
+    }
     // DEBUGGING
     public function DumpChanged($txt) {
 	$ar = $this->FieldArray_changed();
@@ -158,52 +185,6 @@ class fcForm {
 	    $this->arRec = $arVals;
 	}
 	return $this->arRec;
-    }
-    /*----
-      PURPOSE: set record fields from all passed values
-      INPUT: $arVals = array[field name, native-format value]
-      OUTPUT: Internal - record array, storage format (uncooked SQL)
-      USAGE:
-	* when loading record from db into memory (unknown fields are discarded)
-	* when saving edited record from form into db
-      HISTORY:
-	2016-03-03 Now writes new values back to memory-record object as well.
-	  This is needed especially when editing the value of a key, so that
-	  we can redirect to the record's new home. Using the old values will
-	  attempt to pull up a record that doesn't exist.
-	2016-03-25 Empty fields in new records caused a code-trap because
-	  setting $rc->Value() with a NULL $val means it tries to read
-	  from a nonexistent record. I've replaced ->Value() with ->SetValue(),
-	  which I then had to write...
-    */
-    protected function RecordValues_asNative_set(array $arVals=NULL) {
-	$arFlds = $this->FieldArray();
-	$rc = $this->GetRecordsObject();
-	foreach ($arVals as $key => $val) {
-	    if (array_key_exists($key,$arFlds)) {
-		// ignore data fields for which there is no Field object
-		$oField = $arFlds[$key];
-		// set memory-field in native format
-		$oField->SetValue($val);
-		// get storage format
-		$sStor = $oField->StorageObject()->GetValueRaw();
-		// save storage format to memory-record-object's field
-		$rc->SetFieldValue($key,$sStor);
-	    }
-	}
-    }
-    /*----
-      PURPOSE: retrieve all values in record (native format)
-      USAGE: not sure; was being used incorrectly (2016-10-11)
-      PUBLIC for vcCartDataManager.UpdateBlob() - maybe there's a better way?
-    */
-    public function RecordValues_asNative_get() {
-	$arFlds = $this->FieldArray();
-	$arOut = NULL;
-	foreach ($arFlds as $key => $oField) {
-	    $arOut[$key] = $oField->GetValue();
-	}
-	return $arOut;
     }
     /*----
       USAGE: When form data is being saved, this retrieves the SQL values to write
@@ -422,8 +403,7 @@ abstract class fcForm_keyed extends fcForm {
 		}
 
 		// get native values from Controls
-		$arSet = $this->FieldArray_toWrite_native();
-		//echo 'arSet:'.fcArray::Render($arSet);
+		$arSet = $this->FieldArray_toWrite_storage();
 		//die('END DEBUG READOUT');
 		// save native values to database (SaveRecord() will use Storage objects to convert)
 		$id = $this->SaveRecord($arSet);

@@ -156,10 +156,10 @@ abstract class fcFormField {
 	2015-11-24 now sets "isSet" flag
 	2016-04-17 When $val is blank, does not override default.
 	  If this behavior is ever undesirable, we'll need an option flag...
+	2017-06-15 It's undesirable, because sometimes we want to overwrite a saved value with a blank.
     */
-    public function SetValue($val) {
-	if (!fcString::IsBlank($val)) {
-//echo "RECEIVED NEW VALUE FOR ".$this->NameString()."]: [$val]<br>";
+    public function SetValue($val,$bAlways) {
+	if (!fcString::IsBlank($val) or $bAlways) {
 	    $this->vValue = $val;
 	    $this->MarkChanged();
 	}
@@ -182,7 +182,7 @@ abstract class fcFormField {
     public function SetDefault($val) {
         $this->vDefault = $val;
         if (!$this->IsChanged()) {
-	    $this->SetValue($val);
+	    $this->SetValue($val,TRUE);
 	}
     }
     protected function GetDefault() {
@@ -193,7 +193,7 @@ abstract class fcFormField {
       USAGE: when initializing a field for editing a new record
     */
     public function UseDefault() {
-        $this->SetValue($this->GetDefault());
+        $this->SetValue($this->GetDefault(),TRUE);
     }
 
     // -- -- DEFAULT -- -- //
@@ -229,7 +229,7 @@ class fcFormField_Num extends fcFormField_Text {
     // -- CEMENTING -- //
 
 }
-/*%%%%
+/*::::
   IMPLEMENTATION: SQL seems to use a displayed date format
     I'm assuming that 'Y-m-d H:i:s' will work for all SQL engines.
   LATER:
@@ -240,12 +240,15 @@ class fcFormField_Time extends fcFormField_Text {
 // debugging (temporary):
     public function GetValue() {
 	$v = parent::GetValue();
-	//echo "GETTING VALUE ($v)<br>";
+	echo "GETTING VALUE ($v)<br>";
 	return $v;
     }
-    public function SetValue($val) {
-	//echo "SETTING VALUE ($val)<br>";
-	parent::SetValue($val);
+    public function SetValue($val,$bAlways) {
+	echo "SETTING VALUE ($val)<br>";
+	if ($val == '2017-09-14 00:00:00') {
+	    throw new exception('Who is sending us this tripe? Wrong format, loser.');
+	}
+	parent::SetValue($val,$bAlways);
     }
 //*/
 
@@ -270,10 +273,13 @@ trait ftFormField_Boolean {
     /*
       NOTES:
 	* With booleans, a blank value is considered "set" if the value has been changed or the value had not been set previously.
+	* $bAlways is therefore ignored.
 	* However, the way this is set up, we don't load values from the disk before calculating what to save -- so until there's
 	  some way to query the disk value, we'll just say any time this is called, that's considered setting the value.
+      TODO: (2017-09-03) Document circumstances under which $bAlways would be FALSE. If there aren't any, then remove the argument and
+	modify code to assume TRUE.
     */
-    public function SetValue($val) {
+    public function SetValue($val,$bAlways) {
 	$this->ForceValue($val);
 	$this->MarkChanged();
     }

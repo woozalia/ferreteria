@@ -54,14 +54,31 @@ abstract class fcGlobals {
 	** If you end all paths with a slash:
 	*** You have to remember to request BasePath as '/' and terminate all RelPaths with '/' as well.
 	*** ...and ending all paths with a slash causes issues elsewhere
-	Solution:
+	Solution 1:
 	  * Use blank for root.
 	  * Prepend slash to all constructed paths.
 	  * Specify nonblank BasePath with ending slash, no beginning slash
 	  * Request RelPath with ending '/', even if blank (i.e. you're actually requesting BasePath)
 	  * Implement MakeWebPath_forAppPath_noSlash() which removes ending slashes, in case this is needed
+	Refinement (2017-05-14):
+	  * We have to distinguish between paths and URLs --
+	    the initial slash must only be added when converting from path to URL,
+	    otherwise we end up with multiple initial slashes.
+	  * The simplest way I could think of to do this is to always return an fcURL object.
+	    When adding stuff to the path, use AddValue_Path(); when ready for the final result,
+	    use GetValue().
+	  * I *think* this means MakeWebPath_forAppPath() and MakeWebPath_forAppPath_noSlash() are no longer needed.
+	  
+	Solution 2: end all paths in a slash, find out what the problem is and DOCUMENT IT.
     */
+    /*
     protected function MakeWebPath_forAppPath($fp) {
+	if (substr($fp,-1) != '/') {
+	    throw new exception("Ferreteria usage error: requested relative path [$fp] does not end with a '/'.");
+	}
+	if (substr($fp,0,1) == '/') {
+	    throw new exception("Ferreteria usage error: requested relative path [$fp] begins with a '/'.");
+	}
 	$fpBase = $this->GetWebPath_forAppBase();
 	return '/'.$fpBase.$fp;
     }
@@ -71,11 +88,11 @@ abstract class fcGlobals {
 	}
 	$fpBase = $this->GetWebPath_forAppBase();
 	return $fpBase.substr($fp,0,-1);	// omit the last character, which must be a slash
-    }
+    }*/
     
     // -- individual files
     
-    abstract public function GetWebPath_forSuccessIcon();
-    abstract public function GetWebPath_forWarningIcon();
-    abstract public function GetWebPath_forErrorIcon();
+    abstract public function GetWebSpec_forSuccessIcon();
+    abstract public function GetWebSpec_forWarningIcon();
+    abstract public function GetWebSpec_forErrorIcon();
 }

@@ -20,13 +20,14 @@ class fcHTML {
     // -- COMPONENTS -- //
     // ++ ARRAYS ++ //
 
-    static public function ArrayToAttrs(array $iarAttr=NULL) {
+    static public function ArrayToAttrs(array $arAttr=NULL) {
 	$htAttr = '';
-	if (is_array($iarAttr)) {
-	    foreach ($iarAttr as $key => $val) {
+	if (is_array($arAttr)) {
+	    foreach ($arAttr as $key => $val) {
 		if (is_scalar($val)) {
 		    $htAttr .= ' '.$key.'="'.$val.'"';
 		} else {
+		    echo 'arAttr:'.fcArray::Render($arAttr);
 		    throw new fcDebugException("Ferreteria Usage Error: Array value for [$key] is not a scalar. Type=".gettype($val));
 		}
 	    }
@@ -113,6 +114,10 @@ class fcHTML {
     // NOTE: This is actually specifically for use in attribute values, and should probably be renamed to reflect that.
     static public function FormatString_forTag($s) {
 	return htmlspecialchars($s,ENT_QUOTES);
+    }
+    // RETURNS: string with brackets converted to entities so they are visible
+    static public function FormatString_SafeToOutput($s) {
+	return htmlspecialchars($s);
     }
     
     // -- FORMATS -- //

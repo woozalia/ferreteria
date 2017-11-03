@@ -3,6 +3,7 @@
   PURPOSE: nav/menu information classes
   HISTORY:
     2017-01-10 extracted from items.php for easier reference
+    2017-05-14 removed class fcMenuKiosk_keyed_standard because it no longer does anything (as of 2017-01-23)
 */
 /*::::
   PURPOSE: API for creating URLs and determining significant values within them
@@ -45,32 +46,13 @@ abstract class fcMenuKiosk_keyed extends fcMenuKiosk {
     abstract public function GetInputObject();
 }
 /*::::
-  PURPOSE: Keyed Kiosk that implements some conventions which have turned out to be useful:
-    * standard key for invoking a table
-    * standard key for pulling up a record from a table
-    It's up to the calling class to determine if a table is actually being invoked.
-*/
-abstract class fcMenuKiosk_keyed_standard extends fcMenuKiosk_keyed {
-    /* 2017-01-23 This stuff goes in the dropin link class
-    abstract protected function GetTableKeyName();
-    abstract protected function GetRecordKeyName();
-    public function GetInputTableKey() {
-	return $this->GetInputObject()->GetString($this->GetTableKeyName());
-    }
-    public function GetInputRecordKey() {
-	return $this->GetInputObject()->GetString($this->GetRecordKeyName());
-    }
-    abstract public function MakeURLForTable($sTable,$sRecord=NULL);
-    */
-}
-/*::::
   PURPOSE: admin-style navigation -- /key:value/key:value
   NOTE: There seems to be some overlap in functionality between this and
     * fcLinkBuilder
     * (fcInputData_array_local - now integrated)
     ...but perhaps this is illusory. Re-evaluate when things are working.
 */
-abstract class fcMenuKiosk_admin extends fcMenuKiosk_keyed_standard {
+abstract class fcMenuKiosk_admin extends fcMenuKiosk_keyed {
 
     // ++ CEMENT ++ //
 
@@ -85,26 +67,6 @@ abstract class fcMenuKiosk_admin extends fcMenuKiosk_keyed_standard {
 	$oReq = new fcInputData_array_local($arPath);
 	return $oReq;
     }
-    /* 2017-01-23 belongs in record key class
-    public function GetTableKeyName() {
-	return 'page';
-    }
-    public function GetRecordKeyName() {
-	return 'id';
-    } */
-    // NOTE: Not sure if this will actually be needed; if not; fold back into MakeURLForTable().
-    /*
-    public function MakeLinkArrayForTable($sTable,$sRecord=NULL) {
-	return array(
-	  $this->GetTableKeyName()	=> $sTable,
-	  $this->GetRecordKeyName()	=> $sRecord
-	  );
-    }
-    public function MakeURLForTable($sTable,$sRecord=NULL) {
-	$arPath = $this->MakeLinkArrayForTable($sTable,$sRecord);
-	$sPathString = fcURL::FromArray($arPath);
-	return $this->MakeURLFromString($sPathString);
-    } */
 
     // -- CEMENT -- //
 

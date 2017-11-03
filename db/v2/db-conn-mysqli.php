@@ -35,8 +35,22 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     public function ErrorString() {
 	return $this->NativeObject()->error;
     }
-    public function Sanitize($sSQL) {
+    public function SanitizeString($sSQL) {
 	return $this->NativeObject()->escape_string($sSQL);
+    }
+    public function SanitizeValue($val) {
+	if (is_null($val)) {
+	    return 'NULL';
+	} else {
+	    if (is_numeric($val)) {
+		return $val;
+	    } elseif (is_bool($val)) {
+		return $val?'TRUE':'FALSE';
+	    } else {
+		$s = $this->SanitizeString($val);
+		return "'$s'";
+	    }
+	}
     }
     /*----
       ACTION: Sanitizes, and encloses in quotes if needed;
@@ -49,16 +63,19 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
       TODO: Should probably be named something that implies general SQLification.
     */
     public function Sanitize_andQuote($sSQL) {
+	return $this->SanitizeValue($sSQL);
+    /*
 	if (is_null($sSQL)) {
 	    return 'NULL';
 	} else {
 	    if (is_numeric($sSQL)) {
 		return $sSQL;
 	    } else {
-		$s = $this->Sanitize($sSQL);
+		$s = $this->SanitizeString($sSQL);
 		return "'$s'";
 	    }
 	}
+    */
     }
 
     // -- INFORMATION -- //
@@ -84,7 +101,10 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	$this->sql = $sSQL;
 	return $this->NativeObject()->query($sSQL);
     }
-    public function FetchRecordset($sSQL,fcDataSource $tbl) {
+    public function CountOfAffectedRows() {
+	return $this->NativeObject()->affected_rows;
+    }
+    public function FetchRecordset($sSQL,fcTable_wRecords $tbl) {
 	$poRes = $this->NativeObject()->query($sSQL);	// returns a mysqli_result if successful
 	$this->sql = $sSQL;
 	return $this->ProcessResultset($poRes,$tbl,$sSQL);
@@ -97,7 +117,7 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	* If query successful, Recordset wrapper object will be linked to a Table wrapper object, and will include the query results.
 	* If query failed, Recordset wrapper object will have 0 rows.
     */
-    protected function ProcessResultset($poRes,fcDataSource $tbl,$sql) {
+    protected function ProcessResultset($poRes,fcTable_wRecords $tbl,$sql) {
 	$rcNew = $tbl->SpawnRecordset();		// spawn a blank Recordset wrapper object
 	if (is_object($poRes)) {
 	    $rcNew->SetDriverBlob($poRes);		// store mysqli_result in Recordset object

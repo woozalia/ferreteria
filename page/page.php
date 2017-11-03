@@ -23,8 +23,9 @@
 define('KI_NODE_EVENT_DO_BUILDING',1);	// set up node structure
 define('KI_NODE_EVENT_DO_FIGURING',2);	// do any necessary communication between nodes
 
-interface fiEventConsumer {
+interface fiEventAware {
     function DoEvent($nEvent);
+    function Render();
 }
 
 // PURPOSE: So a node can respond to events (does not pass them down to subnodes)
@@ -455,16 +456,23 @@ abstract class fcPageContent extends fcpeSimple {
 	  .$this->GetValue()
 	  ;
     }
+    // PURPOSE: Render any content that was stashed for a redirect (typically result-status messages)
     protected function RenderStashed() {
 	$rcSess = $this->GetSessionRecord();
 	$out = $rcSess->PullStashValue('page contents');
-	$rcSess->Save();
+	// 2017-05-25 At this point, I totally don't get why this is being called here:
+	//$rcSess->Save();	maybe it should actually LOAD the data?
 	return $out;
     }
     /*----
       ACTION: Save anything which should be preserved across a redirect, and then do the redirect.
       PUBLIC so linkable objects can redirect without losing content
       NEW
+      HISTORY:
+	2017-05-25 I previously did $rcSess->Save() after $rcSess->SetStashValue(), but this has proven to be
+	  awkward since we don't have storage objects (at this level) to do the translation. I'm hoping this
+	  is unnecessary in the short term; in the long term, it looks like we need a way to have storage objects
+	  without a form.
     */
     public function DoStashedRedirect($url) {
 	// save the current page contents for redisplay after redirect
@@ -473,7 +481,7 @@ abstract class fcPageContent extends fcpeSimple {
 
 	// debugging
 	$rcSess->SetStashValue('page contents',$s);
-	$rcSess->Save();	// write to persistent storage
+	//$rcSess->Save();	// write to persistent storage
 
 	// now actually redirect
 	fcHTTP::Redirect($url);
@@ -507,15 +515,15 @@ trait ftContentMessages {
 	switch ($nType) {
 	  case 1:
 	    $sType = 'error';
-	    $urlIcon = fcGlobals::Me()->GetWebPath_forErrorIcon();
+	    $urlIcon = fcGlobals::Me()->GetWebSpec_forErrorIcon();
 	    break;
 	  case 2:
 	    $sType = 'warning';
-	    $urlIcon = fcGlobals::Me()->GetWebPath_forWarningIcon();
+	    $urlIcon = fcGlobals::Me()->GetWebSpec_forWarningIcon();
 	    break;
 	  case 3:
 	    $sType = 'success';
-	    $urlIcon = fcGlobals::Me()->GetWebPath_forSuccessIcon();
+	    $urlIcon = fcGlobals::Me()->GetWebSpec_forSuccessIcon();
 	    break;
 	  default:
 	    throw new exception('Ferreteria internal error: Unknown message type.');
@@ -627,7 +635,7 @@ abstract class fcHTMLPage extends fcPage {
     // -- SUB-ELEMENTS -- //
     // ++ CLASSES ++ //
     
-    abstract protected function Class_forTagHTML();
+    abstract protected function Class_forTagHTML() : string;
 
     // -- CLASSES -- //
     

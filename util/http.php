@@ -6,8 +6,7 @@
     2014-04-04 defined HTTP_REDIRECT_POST (is it supposed to be defined somewhere else?)
     2016-02-22 replaced clsHTTPInput with fcInputData_array_local, and created fcHTTP_REQUEST.
       TODO: There should probably also be fcHTTP_GET and fcHTTP_POST classes.
-      TODO: fcInputData, fcInputData_array, and fcInputData_array_local probably belong somewhere else.
-      TODO: rename clsHTTP to fcHTTP.
+    2017-04-26 moved http_redirect() here from VbzCart
 */
 
 define('HTTP_REDIRECT_POST',303);
@@ -96,5 +95,14 @@ class clsHTTP extends fcHTTP {}	// alias; deprecate later
 class fcHTTP_REQUEST extends fcInputData_array {
     protected function Values() {
 	return $_REQUEST;
+    }
+}
+
+// the PECL library for this function might not be installed
+if (!function_exists('http_redirect')) {
+    function http_redirect($iURL,$iMsg='Redirecting') {
+	//header('Status: 301 Moved Permanently',TRUE);
+	header('Status: 303 '.$iMsg);
+	header('Location: '.$iURL,TRUE);
     }
 }

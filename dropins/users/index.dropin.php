@@ -39,7 +39,6 @@ $om = $oRoot->SetNode(new fcMenuFolder('User Permissions','User Access Managemen
     KS_CLASS_ADMIN_USER_ACCOUNTS,
     'Users','user account management'));
     
-    $omi->SetPageTitle('User Accounts');
     $omi->SetRequiredPrivilege(KS_PERM_SEC_USER_VIEW);
     //$omi->SetRequiredPrivilege(NULL);
 
@@ -48,7 +47,6 @@ $om = $oRoot->SetNode(new fcMenuFolder('User Permissions','User Access Managemen
     KS_CLASS_ADMIN_USER_GROUPS,
     'Groups','security groups to which users can belong'));
 
-    $omi->SetPageTitle('Security Groups');
     $omi->SetRequiredPrivilege(KS_USER_SEC_GROUP_VIEW);
 
   $omi = $om->SetNode(new fcDropinLink(
@@ -56,7 +54,6 @@ $om = $oRoot->SetNode(new fcMenuFolder('User Permissions','User Access Managemen
     KS_CLASS_ADMIN_USER_PERMISSIONS,
     'Perms','security permissions assignable to groups'));
 
-    $omi->SetPageTitle('Security Permissions');
     $omi->SetRequiredPrivilege(KS_USER_SEC_PERM_VIEW);
 
   $omi = $om->SetNode(new fcDropinLink(
@@ -64,7 +61,6 @@ $om = $oRoot->SetNode(new fcMenuFolder('User Permissions','User Access Managemen
     KS_CLASS_ADMIN_USER_SESSIONS,
     'Sess','user session records'));
 
-    $omi->SetPageTitle('User Sessions');
     $omi->SetRequiredPrivilege(KS_PERM_USER_CONN_DATA);
 
   $omi = $om->SetNode(new fcDropinLink(
@@ -72,7 +68,6 @@ $om = $oRoot->SetNode(new fcMenuFolder('User Permissions','User Access Managemen
     KS_CLASS_ADMIN_USER_CLIENTS,
     'Clients','user web client records'));
 
-    $omi->SetPageTitle('User Clients');
     $omi->SetRequiredPrivilege(KS_PERM_USER_CONN_DATA);
 
 // MODULE SPEC ARRAY

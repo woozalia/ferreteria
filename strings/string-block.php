@@ -62,13 +62,15 @@ class fcStringBlock extends xtString {
 	    Wasn't working properly in inventory entry.
 	2016-01-19 Fixed bug in keyed-array return, then fixed bug this caused in numeric-array return.
 	  You have to use a different type of merge depending on whether we're in line=arr[x] mode or not.
+	2017-05-29 Was retrieving value from $this->Value, referencing a local-override variable which was never set.
+	  Changed all of those to $this->GetValue().
     */
     public function ParseTextLines(array $iOpts=NULL) {
-	$this->chsComment	= clsArray::Nz($iOpts,'comment','!;');
-	$this->chsBlanks	= clsArray::Nz($iOpts,'blanks'," \t");
-	$this->strSep		= clsArray::Nz($iOpts,'sep',' ');
-	$this->strDefVal	= clsArray::Nz($iOpts,'def val');
-	$sLineOpt		= clsArray::Nz($iOpts,'line');
+	$this->chsComment	= fcArray::Nz($iOpts,'comment','!;');
+	$this->chsBlanks	= fcArray::Nz($iOpts,'blanks'," \t");
+	$this->strSep		= fcArray::Nz($iOpts,'sep',' ');
+	$this->strDefVal	= fcArray::Nz($iOpts,'def val');
+	$sLineOpt		= fcArray::Nz($iOpts,'line');
 	$this->doArrX = ($sLineOpt == 'arrx');
 	$this->doArr = $this->doArrX || ($sLineOpt == 'arr');
 	//$this->doKeys = ($sLineOpt == 'keys');
@@ -76,10 +78,11 @@ class fcStringBlock extends xtString {
 	$strLineSep = "\n";	// make this an option later
 
 	// check for single line
-	if (strpos($this->Value,$strLineSep) === FALSE) {
-	    return $this->SplitLine($this->Value);
+	$sVal = $this->GetValue();
+	if (strpos($sVal,$strLineSep) === FALSE) {
+	    return $this->SplitLine($sVal);
 	} else {
-	    $arLines = preg_split("/$strLineSep/",$this->Value);
+	    $arLines = preg_split("/$strLineSep/",$sVal);
 //echo 'LINES:<pre>'.print_r($arLines,TRUE).'</pre>';
 	    if (is_array($arLines)) {
 		$this->InitLineArray();
@@ -124,7 +127,7 @@ class fcStringBlock extends xtString {
 	  because this wasn't working)
 	2016-02-05 Fixed bug in the condition where there's only one column. (Looks like there
 	  might have been an earlier rewrite in progress, but not completed.)
-      TODO: This could probably be rewritten a bit more succinctly if we store $sFnd in $this->Value
+      TODO: This could probably be rewritten a bit more succinctly if we store $sFnd in $this->SetValue()
 	and maybe use some options in common (e.g. for SplitFirst()).
     */
     protected function SplitLine($sLine) {

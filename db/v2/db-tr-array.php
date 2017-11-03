@@ -7,7 +7,7 @@
   HISTORY:
     2017-01-02 started, to better support the admin UI for Dropins
 */
-class fcDataTable_array extends fcDataSource {
+class fcDataTable_array extends fcTable_wRecords {
 
     // ++ CEMENT ++ //
     

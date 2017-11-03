@@ -3,9 +3,11 @@
   PURPOSE: user access control classes: available security permissions
   HISTORY:
     2013-12-29 started
+    2017-03-28 y2017 remediation
 */
-class fctAdminUserPermits extends fctUserPerms implements fiLinkableTable {
+class fctAdminUserPermits extends fctUserPerms implements fiEventAware, fiLinkableTable {
     use ftLinkableTable;
+    use ftExecutableTwig;
 
     // ++ SETUP ++ //
 
@@ -19,16 +21,26 @@ class fctAdminUserPermits extends fctUserPerms implements fiLinkableTable {
     }
 
     // -- SETUP -- //
-    // ++ DROP-IN API ++ //
-
-    /*----
-      PURPOSE: execution method called by dropin menu
-    */
-    public function MenuExec() {
+    // ++ EVENTS ++ //
+  
+    protected function OnCreateElements() {}
+    protected function OnRunCalculations() {
+	$oPage = fcApp::Me()->GetPageObject();
+	$oPage->SetPageTitle('User Permits');
+	//$oPage->SetBrowserTitle('Suppliers (browser)');
+	//$oPage->SetContentTitle('Suppliers (content)');
+    }
+    public function Render() {
 	return $this->AdminListing();
     }
+    /*----
+      PURPOSE: execution method called by dropin menu
+    */ /*
+    public function MenuExec() {
+	return $this->AdminListing();
+    } */
 
-    // -- DROP-IN API -- //
+    // -- EVENTS -- //
     // ++ ADMIN INTERFACE ++ //
 
     protected function AdminListing() {
@@ -62,9 +74,8 @@ class fctAdminUserPermits extends fctUserPerms implements fiLinkableTable {
 	
 	// report any permits that need to be created
 	
-	echo 'GOT TO THE PART WHERE WE SHOW THE NEEDED PERMITS<br>';
-	if ($this->HasNeededPermits()) {
-	    $arNeed = $this->GetNeededPermits();
+	if ($this->PermitsAreMissing()) {
+	    $arNeed = $this->GetMissingPermits();
 	    $nNeed = count($arNeed);
 	    $out .= '<div class=content>'
 	      .$nNeed
@@ -73,8 +84,8 @@ class fctAdminUserPermits extends fctUserPerms implements fiLinkableTable {
 	      .' needed:'
 	      ;
 	
-	    foreach ($arNeed as $sName) {
-		$out .= " <b>$sName</b>";
+	    foreach ($arNeed as $sName => $nCount) {
+		$out .= " <b>$sName</b> ($nCount)";
 	    }
 	    $out .= '</div>';
 	}
@@ -84,9 +95,10 @@ class fctAdminUserPermits extends fctUserPerms implements fiLinkableTable {
 
     // -- ADMIN INTERFACE -- //
 }
-class fcrAdminUserPermit extends fcrUserPermit implements fiLinkableRecord, fiEditableRecord {
+class fcrAdminUserPermit extends fcrUserPermit implements fiLinkableRecord, fiEditableRecord , fiEventAware {
     use ftLinkableRecord;
     use ftSaveableRecord;
+    use ftExecutableTwig;
 
     // ++ STATIC ++ //
 
@@ -104,16 +116,55 @@ __END__;
     }
 
     // -- STATIC -- //
-    // ++ DROP-IN API ++ //
-
-    /*----
-      PURPOSE: execution method called by dropin menu
-    */
-    public function MenuExec(array $arArgs=NULL) {
+    // ++ EVENTS ++ //
+  
+    protected function OnCreateElements() {}
+    protected function OnRunCalculations() {
+	$oPage = fcApp::Me()->GetPageObject();
+	$isNew = $this->IsNew();
+	
+	// set up header action-links
+	
+	if ($isNew) {
+	    $sTitle = 'new Permit';
+	    $htTitle = 'create new Security Permission';
+	    $doEdit = TRUE;
+	} else {
+	    $sTitle = 'Permit #'.$this->GetKeyValue();
+	    $htTitle = 'edit Security permit #'.$this->SelfLink();
+	    $oMenu = fcApp::Me()->GetHeaderMenu();
+	      // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
+	      $oMenu->SetNode($ol = new fcMenuOptionLink('edit'));
+		$doEdit = $ol->GetIsSelected();
+	}
+	$this->SetDoEdit($doEdit);
+	$oPage->SetBrowserTitle($sTitle);
+	$oPage->SetContentTitle($htTitle);
+	//$oPage->SetPageTitle('User Permits');	// TODO: should be singular
+	//$oPage->SetBrowserTitle('Suppliers (browser)');
+	//$oPage->SetContentTitle('Suppliers (content)');
+    }
+    public function Render() {
 	return $this->AdminPage();
     }
+    /*----
+      PURPOSE: execution method called by dropin menu
+    */ /*
+    public function MenuExec(array $arArgs=NULL) {
+	return $this->AdminPage();
+    } */
 
-    // -- DROP-IN API -- //
+    // -- EVENTS -- //
+    // ++ INTERNAL STATES ++ //
+    
+    private $doEdit;
+    protected function SetDoEdit($b) {
+	$this->doEdit = $b;
+    }
+    protected function GetDoEdit() {
+	return $this->doEdit;
+    }
+  
     // ++ RENDER UI COMPONENTS ++ //
 
     /*----
@@ -190,18 +241,20 @@ __END__;
 	$arAll = $tbl->SelectRecords()->FetchRows_asKeyedArray();
 	if (count($arAll) > 0) {
 
-	    $ht = "\n<form method=post>"
+	    $ht = "\n<table class=content><tr><td>"
+	      ."\n<form method=post>"
 	      ."\n<table class=listing>"
 	      .static::AdminLine_header();
 	    foreach ($arAll as $id => $row) {
 		$isActive = array_key_exists($id,$arCur);
-		$this->SetRowValues($row);
+		$this->SetFieldValues($row);
 		$ht .= $this->AdminLine($sName,$isActive);
 	    }
 	    $sqBtnName = '"'.self::BTN_SAVE.'"';
 	    $ht .= "\n</table>"
 	      ."\n<input type=submit name=$sqBtnName value='Save'>"
 	      ."\n</form>"
+	      ."\n</td></tr></table>"
 	      ;
 	} else {
 	    $ht = '<i>(no permissions defined)</i>';
@@ -243,25 +296,9 @@ __END__;
 	    $this->AdminPageSave();
 	}
 
-	$isNew = $this->IsNew();
+	$doEdit = $this->GetDoEdit();
+	echo "DO EDIT=[$doEdit]";
 	
-	// set up header action-links
-	
-	if ($isNew) {
-	    $sTitle = 'new Permit';
-	    $htTitle = 'create new Security Permission';
-	    $doEdit = TRUE;
-	} else {
-	    $sTitle = 'Permit #'.$this->GetKeyValue();
-	    $htTitle = 'edit Security permit #'.$this->SelfLink();
-	    $oMenu = fcApp::Me()->GetHeaderMenu();
-	      // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
-	      $oMenu->SetNode($ol = new fcMenuOptionLink('edit'));
-		$doEdit = $ol->GetIsSelected();
-	}
-	fcApp::Me()->GetPageObject()->SetBrowserTitle($sTitle);
-	fcApp::Me()->GetPageObject()->SetContentTitle($htTitle);
-
 	// prepare the form
 
 	$frmEdit = $this->PageForm();

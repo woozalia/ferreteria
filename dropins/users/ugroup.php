@@ -4,9 +4,11 @@
   HISTORY:
     2013-12-19 started
     2017-01-04 This is going to need some updating to work with the Ferreteria revisions.
+    2017-03-28 y2017 remediation
 */
-class fctAdminUserGroups extends fctUserGroups implements fiLinkableTable {
+class fctAdminUserGroups extends fctUserGroups implements fiEventAware, fiLinkableTable {
     use ftLinkableTable;
+    use ftExecutableTwig;
 
     // OVERRIDE
     protected function SingularName() {
@@ -17,16 +19,26 @@ class fctAdminUserGroups extends fctUserGroups implements fiLinkableTable {
 	return KS_ACTION_USER_GROUP;
     }
 
-    // ++ DROP-IN API ++ //
-
-    /*----
-      PURPOSE: execution method called by dropin menu
-    */
-    public function MenuExec() {
+    // ++ EVENTS ++ //
+  
+    protected function OnCreateElements() {}
+    protected function OnRunCalculations() {
+	$oPage = fcApp::Me()->GetPageObject();
+	$oPage->SetPageTitle('Security Groups');
+	//$oPage->SetBrowserTitle('Suppliers (browser)');
+	//$oPage->SetContentTitle('Suppliers (content)');
+    }
+    public function Render() {
 	return $this->AdminListing();
     }
+    /*----
+      PURPOSE: execution method called by dropin menu
+    */ /*
+    public function MenuExec() {
+	return $this->AdminListing();
+    } */
 
-    // -- DROP-IN API -- //
+    // -- EVENTS -- //
     // ++ ADMIN INTERFACE ++ //
 
     protected function AdminListing() {
@@ -50,13 +62,7 @@ class fctAdminUserGroups extends fctUserGroups implements fiLinkableTable {
 	*/
 
 	if ($rs->HasRows()) {
-	    $arCols = array(
-	      'ID'	=> 'ID',
-	      'Name'	=> 'Name',
-	      'Descr'	=> 'Description',
-	      'WhenCreated'	=> 'Created',
-	      );
-	    $out = $rs->AdminRows($arCols);
+	    $out = $rs->AdminRows();
 	} else {
 	    $out = '<i>(none defined)</i>';
 	}
@@ -65,29 +71,61 @@ class fctAdminUserGroups extends fctUserGroups implements fiLinkableTable {
 
     // -- ADMIN INTERFACE -- //
 }
-class fcrAdminUserGroup extends fcrUserGroup implements fiLinkableRecord, fiEditableRecord {
+class fcrAdminUserGroup extends fcrUserGroup implements fiLinkableRecord, fiEditableRecord, fiEventAware {
     use ftLinkableRecord;
     use ftShowableRecord;
     use ftSaveableRecord;
+    use ftExecutableTwig;
 
-    // ++ DATA TABLE ACCESS ++ //
+    // ++ SETUP ++ //
+    
+    protected function AdminRows_settings_columns() {
+	$arCols = array(
+	  'ID'	=> 'ID',
+	  'Name'	=> 'Name',
+	  'Descr'	=> 'Description',
+	  'WhenCreated'	=> 'Created',
+	  );
+	return $arCols;
+    }
+    
+    // -- SETUP -- //
+    // ++ EVENTS ++ //
+  
+    protected function OnCreateElements() {}
+    protected function OnRunCalculations() {
+	if ($this->IsNew()) {
+	    $sTitle = 'New Security Group';
+	} else {
+	    $id = $this->GetKeyValue();
+	    $sTitle = 'Security Group #'.$id;
+	}
+    
+	$oPage = fcApp::Me()->GetPageObject();
+	$oPage->SetPageTitle($sTitle);
+	//$oPage->SetBrowserTitle('Suppliers (browser)');
+	//$oPage->SetContentTitle('Suppliers (content)');
+    }
+    public function Render() {
+	return $this->AdminPage();
+    }
+    /*----
+      PURPOSE: execution method called by dropin menu
+    */
+    /*
+    public function MenuExec(array $arArgs=NULL) {
+	return $this->AdminPage();
+    }*/
+
+    // -- EVENTS -- //
+    // ++ TABLES ++ //
 
     protected function XPermitsClass() {
 	return KS_CLASS_ADMIN_UPERMITS_FOR_UGROUP;
     }
 
-    // -- DATA TABLE ACCESS -- //
-    // ++ DROP-IN API ++ //
-
-    /*----
-      PURPOSE: execution method called by dropin menu
-    */
-    public function MenuExec(array $arArgs=NULL) {
-	return $this->AdminPage();
-    }
-
-    // -- DROP-IN API -- //
-    // ++ RENDER UI COMPONENTS ++ //
+    // -- TABLES -- //
+    // ++ UI COMPONENTS ++ //
 
     protected function AdminRows_start(array $arOptions = NULL) {
 	return "\n<table class=listing>";
@@ -161,22 +199,27 @@ class fcrAdminUserGroup extends fcrUserGroup implements fiLinkableRecord, fiEdit
 	$arAll = $rsAll->asKeyedArray();
 	if (count($arAll) > 0) {
 
-	    $ht = "\n<table class=listing>"
-	      .static::AdminLine_header();
+	    $ht = 
+	      "\n<table><tr><td>"
+	      ."\n<table class=listing>"
+	      .static::AdminLine_header()
+	      ;
 	    foreach ($arAll as $id => $row) {
 		$isActive = array_key_exists($id,$arCur);
 		$this->SetFieldValues($row);
 		$ht .= $this->AdminLine_edit($sName,$isActive);
 	    }
 	    $ht .= "\n</table>"
-	      ."\n<input type=submit name=btnSaveGrps value='Save'>";
+	      ."\n<input type=submit name=btnSaveGrps value='Save'>"
+	      ."\n</td></tr></table>"
+	      ;
 	} else {
 	    $ht = '<i>(no groups defined)</i>';
 	}
 	return $ht;
     }
 
-    // -- RENDER UI COMPONENTS -- //
+    // -- UI COMPONENTS -- //
     // ++ ADMIN INTERFACE ++ //
 
     /*----
@@ -283,12 +326,17 @@ __END__;
 	$htForm = $oTplt->Render();
 
 	if ($doEdit) {
-	    $out .= "\n<form method=post id='ugroup.AdminPage'>";
+	    $out .= 
+	      "\n<div class=content>"
+	      ."\n<form method=post id='ugroup.AdminPage'>"
+	      ;
 	}
 	$out .= $htForm.$this->AdminPerms();
 	if ($doEdit) {
 	    $out .= "\n<input type=submit name=btnSave value='Save'>"
-	      .'</form>';
+	      .'</form>'
+	      ."\n</div>"
+	      ;
 	}
 	return $out;
     }

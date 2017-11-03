@@ -4,6 +4,8 @@
     2014-04-02 Created clsURL from methods in clsHTTP
     2016-11-20 Renamed clsURL to fcURL.
     2017-02-04 Removed RemoveBasePath() (deprecated alias for PathRelativeTo()).
+    2017-05-13 Changing internals: now stores parsed value instead of raw value.
+      This makes it easier to operate on the pieces.
   TODO:
     fcURL is currently mainly about URLs that contain data in the path.
       That should be a descendant; fcURL should be basic URL functions.
@@ -18,6 +20,11 @@ class fcURL {
     public function __construct($url) {
 	$this->SetValue($url);
     }
+    
+    // -- SETUP -- //
+    // ++ VALUE ++ //
+
+    
     private $url;
     public function SetValue($url) {
 	$this->url = $url;
@@ -25,15 +32,43 @@ class fcURL {
     public function GetValue() {
 	return $this->url;
     }
-    
-    // -- SETUP -- //
-    // ++ PARSING ++ //
-    
-    public function GetValuePath() {
+    /*
+    private $arURL;
+    public function SetValue($url) {
+	$this->arURL = parse_url($url);
+    }
+    public function GetValue() {
+	$parsed_url = $this->arURL;
+	// copied verbatim from http://php.net/manual/en/function.parse-url.php#106731
+	// This will probably need modification so it prepends '/' to the path.
+	$scheme   = isset($parsed_url['scheme']) ? $parsed_url['scheme'] . '://' : '';
+	$host     = isset($parsed_url['host']) ? $parsed_url['host'] : '';
+	$port     = isset($parsed_url['port']) ? ':' . $parsed_url['port'] : '';
+	$user     = isset($parsed_url['user']) ? $parsed_url['user'] : '';
+	$pass     = isset($parsed_url['pass']) ? ':' . $parsed_url['pass']  : '';
+	$pass     = ($user || $pass) ? "$pass@" : '';
+	$path     = isset($parsed_url['path']) ? $parsed_url['path'] : '';
+	$query    = isset($parsed_url['query']) ? '?' . $parsed_url['query'] : '';
+	$fragment = isset($parsed_url['fragment']) ? '#' . $parsed_url['fragment'] : '';
+	return "$scheme$user$pass$host$port$path$query$fragment";
+    }
+    */
+    public function GetValue_Path() {
 	return parse_url($this->GetValue(),PHP_URL_PATH);
     }
+    
+    /* 2017-05-14 Tentatively, this actually isn't needed.
+    public function SetValue_Path($fp) {
+	$this->arURL['path'] = $fp;
+    }
+    public function GetValue_Path() {
+	return $this->arURL['path'];
+    }
+    public function AddValue_Path($fp) {
+	$this->arURL['path'] .= $fp;
+    } */
 
-    // -- PARSING -- //
+    // -- VALUE -- //
 
   // // -- DYNAMIC -- // //
   // // ++ STATIC ++ // // 
@@ -73,8 +108,9 @@ class fcURL {
       TODO: Do we need special handling for $urlBase='/', or does it work out ok?
     */
     static public function PathRelativeTo($urlBase) {
-	$wpFull = self::GetCurrentObject()->GetValuePath();
+	$wpFull = self::GetCurrentObject()->GetValue_Path();
 	if ($urlBase == '') {
+	    echo ' - no change needed<br>';
 	    // base is root = nothing to calculate
 	    $wpOut = $wpFull;
 	} else {
@@ -136,7 +172,6 @@ class fcURL {
 	    }
 	    $arOut[$key] = $val;
 	}
-
 	return $arOut;
     }
 

@@ -66,8 +66,11 @@ abstract class fcFieldStorage {
       INPUT: internal (native) format
       RETURNS: raw value in db-writable format -- but may still need sanitization
       METHOD: DB-sanitizes the raw converted value
+      PUBLIC so Form object can use it to convert arrays of native values before saving
+      HISTORY:
+	2017-05-25 made publib
     */
-    protected function fromNativeSane($sVal) {
+    public function fromNativeSane($sVal) {
 	return $this->FormObject()->CookRawValue($this->fromNativeRaw($sVal));
     }
     /*----
@@ -75,7 +78,7 @@ abstract class fcFieldStorage {
     */
     public function SetValue($vStore) {
 	$vNative = $this->toNative($vStore);
-	$this->NativeObject()->SetValue($vNative);
+	$this->NativeObject()->SetValue($vNative,TRUE);
     }
     /*----
       NOTE: This method may only need to exist just to keep it *mentally* clear
@@ -122,6 +125,7 @@ class fcFieldStorage_Text extends fcFieldStorage {
 class fcFieldStorage_Num extends fcFieldStorage {
 }
 
+// FORMAT: "native" means integer UNIX time
 class fcFieldStorage_Time extends fcFieldStorage {
     protected function toNative($sVal) {
 	if (is_null($sVal)) {
@@ -131,11 +135,16 @@ class fcFieldStorage_Time extends fcFieldStorage {
 	}
 	return $out;
     }
-    protected function fromNativeRaw($sVal) {
-	if (is_null($sVal) or ($sVal=='')) {
-	    $out = NULL;
+    protected function fromNativeRaw($nVal) {
+	if (empty($nVal)) {
+	    $out = NULL;	// '' or 0 -> NULL
 	} else {
-	    $out = date('Y-m-d H:i:s',$sVal);
+	    if (is_integer($nVal)) {
+		$out = date('Y-m-d H:i:s',$nVal);
+	    } else {
+		echo "Received non-integer as native date value: [$nVal]";
+		throw new exception('Where is this problem coming from?');
+	    }
 	}
 	return $out;
     }
@@ -162,10 +171,13 @@ class fcFieldStorage_Bit extends fcFieldStorage {
     // ++ UTILITY ++ //
     
     // ACTION: convert from storage format to native
+    // TODO: Who uses this externally? Why?
     static public function FromStorage($ch) {
-	return (ord($ch) != 0);
+	//return (ord($ch) != 0);
+	return $ch != 0;	// OFF value seems to be stored as '0' (2017-04-14)
     }
     // ACTION: convert from native to storage format
+    // TODO: Who uses this externally? Why?
     static public function ToStorage($b) {
 	return $b?"b'1'":"b'0'";
     }
@@ -188,7 +200,7 @@ class fcFieldStorage_Bit extends fcFieldStorage {
 	the same as what is received when reading from the db (i.e. the input to
 	toNative()), but isn't human-readable (for debugging).
     */
-    protected function fromNativeSane($bVal) {
+    public function fromNativeSane($bVal) {
 	return self::ToStorage($bVal);
     }
 

@@ -19,6 +19,7 @@
       actually use SubEvent recordset types, unfortunately.
       
       POSSIBLE SOLUTION: Is there a way to add methods to an object or class at runtime?
+    2017-04-14 Renamed fctPlex_Table to fctPlex_EventTable to reduce confusion with fctSubEvents_InTable.
 */
 
 // TODO: 2017-02-11 Need to document all the error codes somewhere
@@ -31,11 +32,19 @@ define('KS_EVENT_FERRETERIA_DB_INTEGRITY_ERROR','ferreteria.error.db.integrity')
 */
 class fctEventPlex extends fcDataTable_array {
     use ftSource_forTable;
+    use ftSingleKeyedTable;
 
+    // ++ SETUP ++ //
+
+    protected function GetKeyName() {
+	return $this->BaseTable()->GetKeyName();
+    }
+    
+    // -- SETUP -- //
     // ++ SUB-EVENTS ++ //
     
     private $arTypes=NULL;
-    public function RegisterEventTable(fctPlex_Table $tSubType) {
+    public function RegisterEventTable(fctPlex_EventTable $tSubType) {
 	// add table wrapper object to types index
 	$sType = $tSubType->GetTypeKey();
 	$this->arTypes[$sType] = $tSubType;
@@ -106,15 +115,14 @@ class fctEventPlex extends fcDataTable_array {
 	    $arTypes = $this->GetEventTypes();
 	    foreach ($arTypes as $sKey => $tSub) {
 		$sqlTable = $tSub->TableName_cooked();
-		//echo "BEFORE - JOIN=[$sqlJoin]<br>";
 		$sqlJoin = "($sqlJoin) LEFT JOIN $sqlTable AS $sKey ON $sKey.ID_Event=e.ID";
-		//echo "AFTER - JOIN=[$sqlJoin]<br>";
-		$sqlFields .= ', '.$tSub->FieldsSQL();
+		$sqlHas = "($sKey.ID_Event IS NOT NULL) AS has_$sKey";
+		$sqlFields .= ', '.$sqlHas.', '.$tSub->FieldsSQL();
 	    }
 	}
 	
 	$sqlWhere = is_null($sqlFilt)?'':(' WHERE '.$sqlFilt);
-	$sql = "SELECT $sqlFields FROM $sqlJoin$sqlWhere ORDER BY $sqlSort";
+	$sql = "SELECT e.ID, $sqlFields FROM $sqlJoin$sqlWhere ORDER BY $sqlSort";
 	//die ('SQL: '.$sql);
 	$rs = $this->FetchRecords($sql);
 	return $rs;
@@ -129,42 +137,85 @@ class fctEventPlex extends fcDataTable_array {
     }
     // -- READ DATA -- //
 }
-//class fcrEventPlect extends fcDataRow_array {
 class fcrEventPlect extends fcDataRecord {
+    
+    const kEVENT_TYPE_KEY_DONE = 'done';
+    const kEVENT_TYPE_KEY_INTABLE = 'tbl';
+    const kEVENT_TYPE_KEY_NOTE = 'note';
 
     // ++ FIELD VALUES ++ //	- from the base event type
 
     protected function WhenStarted() {
-	return $this->GetFieldValue('WhenStart');
+	return $this->GetFieldValue('e_WhenStart');
     }
     protected function SessionID() {
-	return $this->GetFieldValue('ID_Session');
+	return $this->GetFieldValue('e_ID_Session');
     }
     protected function AccountID() {
-	return $this->GetFieldValue('ID_Acct');
+	return $this->GetFieldValue('e_ID_Acct');
     }
     protected function TypeCode() {
-	return $this->GetFieldValue('TypeCode');
+	return $this->GetFieldValue('e_TypeCode');
     }
-    protected function DescriptiveText() {
-	return $this->GetFieldValue('Descrip');
+    protected function BaseDescriptiveText() {
+	return $this->GetFieldValue('e_Descrip');
     }
-    protected function StashString() {
-	return $this->GetFieldValue('Stash');
+    protected function BaseStashString() {
+	return $this->GetFieldValue('e_Stash');
     }
 
     // -- FIELD VALUES -- //
     // ++ FIELD CALCULATIONS ++ //	- from the base event type
 
-    // TODO: put more info in a <span> title
-    protected function StashCompact() {
-	$sStash = $this->StashString();
+    protected function HasSession() {
+	return !is_null($this->SessionID());
+    }
+    protected function HasAccount() {
+	return !is_null($this->AccountID());
+    }
+    static protected function StashString_to_ShortText($sStash) {
 	$arStash = unserialize($sStash);
 	$nStash = count($arStash);
 	return $nStash.' item'.fcString::Pluralize($nStash);
     }
+    protected function BaseStashCompact() {
+	return self::StashString_to_ShortText($this->BaseStashString());
+    }
 
     // -- FIELD CALCULATIONS -- //
+    // ++ SUBEVENT FIELDS ++ //
+
+    protected function HasDoneFields() {
+	return $this->GetFieldValue('has_'.self::kEVENT_TYPE_KEY_DONE);
+    }
+    protected function WhenFinished() {
+	return $this->GetFieldValue(self::kEVENT_TYPE_KEY_DONE.'_WhenFinish');
+    }
+    protected function DoneStateCode() {
+	return $this->GetFieldValue(self::kEVENT_TYPE_KEY_DONE.'_StateCode');
+    }
+    protected function DoneDescription() {
+	return $this->GetFieldValue(self::kEVENT_TYPE_KEY_DONE.'_Descrip');
+    }
+    protected function DoneStashString() {
+	return $this->GetFieldValue(self::kEVENT_TYPE_KEY_DONE.'_Stash');
+    }
+    protected function DoneStashCompact() {
+	return self::StashString_to_ShortText($this->DoneStashString());
+    }
+    
+    protected function HasTableFields() {
+	return $this->GetFieldValue('has_'.self::kEVENT_TYPE_KEY_INTABLE);
+    }
+    
+    protected function HasNoteField() {
+	return $this->GetFieldValue('has_'.self::kEVENT_TYPE_KEY_NOTE);
+    }
+    protected function NoteString() {
+	return $this->GetFieldValue(self::kEVENT_TYPE_KEY_NOTE.'_Notes');
+    }
+
+    // -- SUBEVENT FIELDS -- //
 }
 
 class fctEventPlex_standard extends fctEventPlex {
@@ -179,9 +230,15 @@ class fctEventPlex_standard extends fctEventPlex {
     
     // -- SETUP -- //
     // ++ TABLES ++ //
-    
+
+    public function TableWrapper_forDone() {
+	return $this->GetWrapperFor(fcrEventPlect::kEVENT_TYPE_KEY_DONE);
+    }
     public function TableWrapper_forInTable() {
-	return $this->GetWrapperFor(fctSubEvents::kEVENT_TYPE_KEY_INTABLE);
+	return $this->GetWrapperFor(fcrEventPlect::kEVENT_TYPE_KEY_INTABLE);
+    }
+    public function TableWrapper_forNotes() {
+	return $this->GetWrapperFor(fcrEventPlect::kEVENT_TYPE_KEY_NOTE);
     }
     
     // -- TABLES -- //
@@ -190,7 +247,8 @@ class fcrEventPlect_standard extends fcrEventPlect {
   // TODO: field access methods for subevents
 }
 
-abstract class fctPlex_Table extends fcTable_keyed_single_standard {
+// NOTE: not to be confused with fctSubEvents_InTable
+abstract class fctPlex_EventTable extends fcTable_keyed_single_standard {
     /*----
       RETURNS: key for type of event -- like an ActionKey, but only unique within Event sub-types
 	This is used in the SQL SELECT statement as an alias for each sub-event table.
@@ -208,12 +266,12 @@ abstract class fctPlex_Table extends fcTable_keyed_single_standard {
 	    if (!is_null($sql)) {
 		$sql .= ', ';
 	    }
-	    $sql .= $sKey.'.'.$sField;
+	    $sql .= "$sKey.$sField AS ".$sKey.'_'.$sField;
 	}
 	return $sql;
     }
 }
-class fctPlex_BaseEvents extends fctPlex_Table {
+class fctPlex_BaseEvents extends fctPlex_EventTable {
 
     // ++ SETUP ++ //
     
@@ -227,7 +285,7 @@ class fctPlex_BaseEvents extends fctPlex_Table {
 	return 'e';
     }
     protected function FieldArray() {
-	return array('ID','WhenStart','ID_Session','ID_Acct','TypeCode','Descrip','Stash');
+	return array('WhenStart','ID_Session','ID_Acct','TypeCode','Descrip','Stash');
     }
 
     // -- SETUP -- //
@@ -237,7 +295,7 @@ class fctPlex_BaseEvents extends fctPlex_Table {
 	$oApp = fcApp::Me();
 	$db = $oApp->GetDatabase();
 	$sqlUser = $oApp->UserIsLoggedIn() ? $oApp->GetUserID() : 'NULL' ;
-	$sqlData = is_null($arData)? 'NULL' : ($db->Sanitize_andQuote(serialize($arData))) ;
+	$sqlData = is_null($arData)? 'NULL' : ($db->Sanitize_andQuote(serialize($arData)));
 	$ar = array(
 	  'WhenStart'	=> 'NOW()',
 	  'ID_Session'	=> $oApp->GetSessionRecord()->GetKeyValue(),
@@ -261,10 +319,7 @@ class fctPlex_BaseEvents extends fctPlex_Table {
 class fcrPlex_BaseEvent extends fcRecord_keyed_single_integer {
 }
 // ABSTRACT: n/i = SingularName(), TableName()
-abstract class fctSubEvents extends fctPlex_Table {
-    const kEVENT_TYPE_KEY_INTABLE = 'tbl';
-    const kEVENT_TYPE_KEY_DONE = 'done';
-    const kEVENT_TYPE_KEY_NOTE = 'note';
+abstract class fctSubEvents extends fctPlex_EventTable {
 }
 
 class fctSubEvents_Done extends fctSubEvents {
@@ -281,23 +336,25 @@ class fctSubEvents_Done extends fctSubEvents {
     }
     // CEMENT
     public function GetTypeKey() {
-	return self::kEVENT_TYPE_KEY_DONE;
+	return fcrEventPlect::kEVENT_TYPE_KEY_DONE;
     }
     // CEMENT
     protected function FieldArray() {
-	return array('WhenFinish','State','Descrip');
+	return array('WhenFinish','StateCode','Descrip','Stash');
     }
 
     // -- SETUP -- //
     // ++ WRITE DATA ++ //
     
-    public function CreateRecord($idEvent,$sState,$sText=NULL) {
+    public function CreateRecord($idEvent,$sState,$sText=NULL,array $arData=NULL) {
 	$db = $this->GetConnection();
+	$sqlData = is_null($arData)? 'NULL' : ($db->Sanitize_andQuote(serialize($arData))) ;
 	$ar = array(
 	  'ID_Event'	=> $idEvent,
 	  'WhenFinish'	=> 'NOW()',
-	  'State'	=> $db->Sanitize_andQuote($sState),
-	  'Descrip'	=> $db->Sanitize_andQuote($sText)
+	  'StateCode'	=> $db->Sanitize_andQuote($sState),
+	  'Descrip'	=> $db->Sanitize_andQuote($sText),
+	  'Stash'	=> $sqlData
 	  );
 	$id = $this->Insert($ar);
 	return $id;
@@ -318,7 +375,7 @@ class fctSubEvents_InTable extends fctSubEvents {
     }
     // CEMENT
     public function GetTypeKey() {
-	return self::kEVENT_TYPE_KEY_INTABLE;
+	return fcrEventPlect::kEVENT_TYPE_KEY_INTABLE;
     }
     // CEMENT
     protected function FieldArray() {
@@ -327,6 +384,9 @@ class fctSubEvents_InTable extends fctSubEvents {
     
     // ++ WRITING ++ //
     
+    public function CreateEvent($idEvent,$sTable,$sRow=NULL) {
+	throw new exception('Oops! Call CreateRecord() instead.');
+    }
     public function CreateRecord($idEvent,$sTable,$idRow=NULL) {
 	$db = $this->GetConnection();
 	$ar = array(
@@ -345,6 +405,8 @@ class fcrSubEvent_InTable extends fcRecord_keyed_single_integer {
 }
 class fctSubEvents_Note extends fctSubEvents {
 
+    // ++ SETUP ++ //
+
     // CEMENT
     protected function SingularName() {
 	return 'fcrSubEvent_Note';
@@ -355,12 +417,27 @@ class fctSubEvents_Note extends fctSubEvents {
     }
     // CEMENT
     public function GetTypeKey() {
-	return self::kEVENT_TYPE_KEY_NOTE;
+	return fcrEventPlect::kEVENT_TYPE_KEY_NOTE;
     }
     // CEMENT
     protected function FieldArray() {
 	return array('Notes');
     }
+
+    // -- SETUP -- //
+    // ++ DATA WRITE ++ //
+
+    public function CreateRecord($idEvent,$sNotes) {
+	$db = $this->GetConnection();
+	$ar = array(
+	  'ID_Event'	=> $idEvent,
+	  'Notes'	=> $db->Sanitize_andQuote($sNotes),
+	  );
+	$id = $this->Insert($ar);
+	return $id;
+    }
+
+    // -- DATA WRITE -- //
 }
 class fcrSubEvent_Note extends fcRecord_keyed_single_integer {
 }

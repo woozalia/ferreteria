@@ -15,8 +15,11 @@ define('KWP_FERRETERIA_DOC_ERRORS',KWP_FERRETERIA_DOC.'/errors');
 
 // ++ EVENTS ++ //
 
-define('KS_EVENT_SUCCESS','OK');
-define('KS_EVENT_FAILED','ERR');
+define('KS_EVENT_SUCCESS','fe.OK');
+define('KS_EVENT_FAILED','fe.ERR');
+define('KS_EVENT_NO_CHANGE','fe.STET');	// data left unaltered
+define('KS_EVENT_NEW_RECORD','fe.NEW');
+define('KS_EVENT_CHANGE_RECORD','fe.CHG');
 define('KS_EVENT_FERRETERIA_SUSPICIOUS_INPUT','fe.suspicious');
 define('KS_EVENT_FERRETERIA_EMAIL_SENT','fe.email.sent');
 define('KS_EVENT_FERRETERIA_SENDING_ADMIN_EMAIL','fe.email.req');
@@ -185,8 +188,12 @@ abstract class fcAppStandard extends fcApp {
     protected function GetUsersClass() {
 	return KS_CLASS_ADMIN_USER_ACCOUNTS;
     }
+    private $sClassEvents='fctEventPlex';	// default/base
     protected function GetEventsClass() {
-	return 'fctEventPlex';
+	return $this->sClassEvents;
+    }
+    public function SetEventsClass($s) {
+	$this->sClassEvents = $s;
     }
     protected function GetEventsDoneClass() {
 	return 'fctSubEvents_done';
@@ -198,25 +205,23 @@ abstract class fcAppStandard extends fcApp {
     // -- CLASS NAMES -- //
     // ++ TABLES ++ //
 
+    // TODO 2017-06-11: rename to GetUserTable()
     public function UserTable($id=NULL) {
 	$db = $this->GetDatabase();
 	return $db->MakeTableWrapper($this->GetUsersClass(),$id);
     }
+    // TODO 2017-06-11: rename to GetEventTable()
     public function EventTable($id=NULL) {
 	$db = $this->GetDatabase();
 	return $db->MakeTableWrapper($this->GetEventsClass(),$id);
     }
+    // TODO 2017-06-11: rename to GetEventTable_Done() 
     public function EventTable_Done() {
 	$db = $this->GetDatabase();
 	return $db->MakeTableWrapper($this->GetEventsDoneClass());
     }
 
     // -- TABLES -- //
-    // ++ RECORDS ++ //
-
-//    private $rcSess;
-
-    // -- RECORDS -- //
     // ++ STATUS ++ //
 
     /*----
@@ -231,8 +236,12 @@ abstract class fcAppStandard extends fcApp {
 
     public function CreateEvent($sCode,$sText,array $arData=NULL) {
 	$t = $this->EventTable();
-	$id = $t->CreateEvent($sCode,$sText,$arData);
+	$id = $t->CreateBaseEvent($sCode,$sText,$arData);
 	return $id;
+    }
+    public function FinishEvent($idEvent,$sState,$sText=NULL,array $arData=NULL) {
+	$t = $this->EventTable_Done();
+	$t->CreateRecord($idEvent,$sState,$sText,$arData);
     }
 
     // -- LOGGING -- //
@@ -256,9 +265,9 @@ abstract class fcAppStandard extends fcApp {
 	2014-07-27 Written because this seems to be where it belongs.
 	  May duplicate functionality in Page object. Why is that there?
     */
-    public function UserName() {
+    public function LoginName() {
 	if ($this->UserIsLoggedIn()) {
-	    return $this->GetUserRecord()->UserName();
+	    return $this->GetUserRecord()->LoginName();
 	} else {
 	    return NULL;
 	}
@@ -332,7 +341,8 @@ abstract class fcAppStandard extends fcApp {
 	    'subject'	=> $sSubj,
 	    'message'	=> $sMsg
 	  );
-	$idEv = $this->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_EMAIL_SENT,'admin email sent',$arData);
+	//$idEv = $this->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_EMAIL_SENT,'admin email sent',$arData);
+	$this->CreateEvent(KS_EVENT_FERRETERIA_EMAIL_SENT,'admin email sent',$arData);
 	
 	return $ok;
     }
@@ -342,9 +352,13 @@ abstract class fcAppStandard extends fcApp {
 }
 /*----
   PURPOSE: easy access to objects provided by fcApp descendants
-  NOTE: 2016-10-23 This doesn't seem very elegant. I want to make it a static class,
-    but then I have to wonder why I don't just call fcApp static methods. And why does
-    fcApp* ever need to be instantiated, anyway? Shouldn't it be all-static?
+  NOTES:
+    * 2017-05-01 This is looking increasingly unnecessary, but for now I'm just commenting out EventTable()
+      because it conflicts with another trait. TODO: find out how extensively this is actually used, and
+      possibly kill it.
+    * 2016-10-23 This doesn't seem very elegant. I want to make it a static class,
+      but then I have to wonder why I don't just call fcApp static methods. And why does
+      fcApp* ever need to be instantiated, anyway? Shouldn't it be all-static?
   TODO: Assuming we keep this methodology, maybe all method names should be prefixed with "App", e.g. AppPageObject(),
     to make it clear where they come from.
 */
@@ -364,13 +378,9 @@ trait ftFrameworkAccess {
     protected function SessionRecord() {
 	return $this->AppObject()->GetSessionRecord();
     }
-}
-
-// WORKS WITH: fcAppStandard
-trait ftFrameworkAccess_standard {
-    use ftFrameworkAccess;
-
+    /* 2017-05-01 conflicts with ftLoggableObject
     protected function EventTable() {
 	return $this->AppObject()->EventTable();
     }
+    */
 }

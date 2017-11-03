@@ -31,15 +31,27 @@ abstract class fcDataConn {
     // -- STATUS -- //
     // ++ DATA PREPROCESSING ++ //
     
-    abstract public function Sanitize($sSQL);
-    abstract public function Sanitize_andQuote($sSQL);
+    /*----
+      INPUT: non-NULL string value
+      OUTPUT: string value with quotes escaped, but not quoted
+    */
+    abstract public function SanitizeString($s);
+    /*----
+      INPUT: any scalar value
+      OUTPUT: non-blank SQL-compatible string that equates to the input value
+	quoted if necessary
+    */
+    abstract public function SanitizeValue($v);
+    // DEPRECATED
+    abstract public function Sanitize_andQuote($s);
     
     // -- DATA PREPROCESSING -- //
     // ++ DATA READ/WRITE ++ //
 
     abstract public function MakeTableWrapper($sTableClass,$id=NULL);
-    abstract public function FetchRecordset($sSQL,fcDataSource $tbl);
+    abstract public function FetchRecordset($sSQL,fcTable_wRecords $tbl);
     abstract public function ExecuteAction($sSQL);
+    abstract public function CountOfAffectedRows();
     abstract public function CreatedID();
 
     // -- DATA READ/WRITE -- //
@@ -63,7 +75,7 @@ abstract class fcDataConn {
     // -- UTILITY -- //
 }
 
-/*%%%%%
+/*::::
   PURPOSE: database Engine that has a client-server architecture
     This type will always need host and schema names, username, and password.
 */
@@ -71,6 +83,13 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
     private $sHost,$sUser,$sPass,$sSchema;
 
     // ++ SETUP ++ //
+    static private $nInst=0;
+    public function __construct() {
+	self::$nInst++;
+    }
+    public function InstanceCount() {
+	return self::$nInst;
+    }
 
     /*----
       RULES: spec includes everything after the "<type>:"
@@ -136,13 +155,18 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
     
     /*----
       NOTE: Adapted from Make() in db.v1
+      TODO: see notes on SetMissingPermit() - sometimes we want to upgrade an object rather than making a new one
       ASSUMES:
 	* Table will connect itself to this database. (TODO: fix this assumption)
-	* If $id is not NULL, then $sTableClass must be a *single-keyed* table class.
+	* If $id is not NULL, then $sTableClass must be a *single-keyed* table class and we will return a recordset object.
+	  The table will be told to load the recordset whose row ID is $id (table->GetRecord_forKey($id)).
+	  ...unless $id is KS_NEW_REC, in which case we will return a blank recordset.
+      HISTORY:
+	2017-08-28 Added KS_NEW_REC functionality -- but surely this must exist somewhere already.
     */
-    private $arTables;
+    private $arTables = array();
     public function MakeTableWrapper($sTableClass,$id=NULL) {
-	if (empty($this->arTables)) { $this->arTables = array(); }
+	//if (empty($this->arTables)) { $this->arTables = array(); }
 	if (array_key_exists($sTableClass,$this->arTables)) {
 	    // a Table of that class has already been created
 	    $t = $this->arTables[$sTableClass];
@@ -173,6 +197,8 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
 	if (is_null($id)) {
 	    // table-wrapper result wanted
 	    return $t;
+	} elseif ($id == KS_NEW_REC) {
+	    return $t->SpawnRecordset();
 	} else {
 	    // recordset-wrapper result wanted
 	    return $t->GetRecord_forKey($id);

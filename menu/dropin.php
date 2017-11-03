@@ -18,6 +18,7 @@
       to be added here.
 */
 class fcDropinLink extends fcDynamicLink {
+    use ftRequiresPermit;
 
     // ++ SETUP ++ //
     
@@ -39,12 +40,25 @@ class fcDropinLink extends fcDynamicLink {
 
     // OVERRIDE
     protected function SetupDefaults() {
-	$this->SetRequiredPrivilege('*');
-	// if '*' ever means anything, that will be "root".
-	// For now, it implies "nobody has permission", because there is no permission named '*'
-	// ...although the site admin could just define one.
+	$this->SetRequiredPrivilege(KS_PERM_FE_ROOT);
 	$this->SetKeyName(KS_PATHARG_NAME_TABLE);
 	$this->SetIndexName(KS_PATHARG_NAME_INDEX);	// same
+    }
+    /*----
+      NOTE: This has to intercept Render() rather than RenderContent() because fcNavBase::RenderContent()
+	is only called if GetShouldDisplay() is true, and we might want to render the Page content to which
+	this menu item is attached even if the menu item itself should not be rendered.
+    */
+    public function Render() {
+	if ($this->GetIsSelected() && $this->GetIsAuthorized()) {
+	    $this->PageRender();
+	}
+	return parent::Render();
+    }
+    protected function OnEventAfter($nEvent){
+	if ($this->GetIsSelected() && $this->GetIsAuthorized()) {
+	    $this->PageEvent($nEvent);
+	}
     }
 
     // -- EVENTS -- //
@@ -64,30 +78,23 @@ class fcDropinLink extends fcDynamicLink {
     protected function GetIndexName() {
 	return $this->sIndexName;
     }
-    /* 2017-01-23 Actually, parent version should work fine now
-    protected function GetIsSelected() {
-	$sKeyValue = $this->GetKeyValue();
-	$oKiosk = $this->GetKioskObject();
-	$isSel = $oKiosk->GetInputTableKey() == $sKeyValue;
-	return $isSel;
-    } */
     
       //--internal--//
     // -- SETUP FIELDS -- //
-    // ++ EVENTS ++ //
-
-    protected function OnRunCalculations() {
-	parent::OnRunCalculations();
-	if ($this->GetIsSelected() && $this->GetIsAuthorized()) {
-	    $this->DoSelect();
-	}
-    }
-
-    // -- EVENTS -- //
     // ++ OBJECTS ++ //
 
-    // NOTE: This could presumably be overridden to invoke things other than tables.
-    protected function MakeActionObject() {
+    /*----
+      NOTE: (2017-03-27) Having this returned in two stages is a kluge for requiring both fiLinkable and fiEventAware.
+	There's got to be a better way to do this, short of creating an fiLinkableEventConsumer interface and maintaining
+	it manually. Maybe the two interfaces don't actually need to be separate? (04-13) Or maybe the _raw one can
+	be more general, somehow.
+      HISTORY:
+	2017-04-13 Added caching, because otherwise we end up doing rendering on a different object than
+	  the one we passed the build and figure events. Aside from being inefficient, this means that
+	  any calculations or building are actually lost.
+    */
+    private $arObj=array();
+    protected function MakeActionObject_raw() : fiLinkable {
 	$oKiosk = $this->GetKioskObject();
 	$sClass = $this->GetActionClass();
 	if (empty($sClass)) {
@@ -96,7 +103,20 @@ class fcDropinLink extends fcDynamicLink {
 
 	$id = $oKiosk->GetInputObject()->GetString($this->GetIndexName());
 	//$id = $oKiosk->GetInputRecordKey();	// TODO: this belongs in the dropin link, not the kiosk
-	return fcApp::Me()->GetDatabase()->MakeTableWrapper($sClass,$id);
+	
+	$sCache = $sClass.'.'.$id;
+	if (array_key_exists($sCache,$this->arObj)) {
+	    $o = $this->arObj[$sCache];
+	} else {
+	    $o = fcApp::Me()->GetDatabase()->MakeTableWrapper($sClass,$id);
+	    $this->arObj[$sCache] = $o;
+	}
+	return $o;
+    }
+    protected function MakeActionObject() : fiEventAware {
+	$o = $this->MakeActionObject_raw();
+	fcApp::Me()->GetKioskObject()->SetPagePath($o->SelfURL());
+	return $o;
     }
 
     // -- OBJECTS -- //
@@ -106,14 +126,35 @@ class fcDropinLink extends fcDynamicLink {
     protected function GetBasePath_toUse() {
 	return fcApp::Me()->GetKioskObject()->GetBasePath();
     }
+    // OVERRIDE
+    protected function GetShouldDisplay() {
+	return $this->GetIsAuthorized();
+    }
 
     // -- CALCULATIONS -- //
+    // ++ EVENTS ++ //
+    
+    protected function PageEvent($nEvent) {
+	$o = $this->MakeActionObject();
+	fcApp::Me()->GetKioskObject()->SetPagePath($o->SelfURL());
+	$o->DoEvent($nEvent);
+    }
+    protected function PageRender() {
+	$oPage = fcApp::Me()->GetPageObject();
+	if ($this->HasPageTitle()) {
+	    $oPage->SetPageTitle($this->GetPageTitle());
+	}
+	$o = $this->MakeActionObject();
+	fcApp::Me()->AddContentString($o->Render());
+    }
+    
     // ++ ACTIONS ++ //
     
     /*----
       ACTION: Do whatever needs to be done when this menu entry is selected
       OVERRIDE
     */
+    /* 2017-03-26 replacing this with Event and Render calls
     protected function DoSelect() {
 	$oPage = fcApp::Me()->GetPageObject();
 	if ($this->HasPageTitle()) {
@@ -121,11 +162,12 @@ class fcDropinLink extends fcDynamicLink {
 	}
 	$o = $this->MakeActionObject();
 	$this->DoObjectAction($o);
-    }
+    } */
     /*----
       NOTE: This could presumably be overridden to invoke a different method.
       TODO: Require an interface for $o
     */
+    /* 2017-03-26 replacing this with Event and Render calls
     protected function DoObjectAction($o) {
 	$oApp = fcApp::Me();
 	if (method_exists($o,'SelfURL')) {
@@ -134,7 +176,7 @@ class fcDropinLink extends fcDynamicLink {
 	} else {
 	    throw new exception('Ferreteria usage error: class "'.get_class($o).'" needs to use ftLinkableTable.');
 	}
-    }
+    } */
 
     // -- ACTIONS -- //
     // ++ OUTPUT ++ //

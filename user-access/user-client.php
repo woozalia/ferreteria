@@ -44,8 +44,15 @@ class fctUserClients extends fcTable_keyed_single_standard {
 	} else {
 	    // need to create a new session record
 	    $db = $this->GetConnection();
-	    $sqlAddress = $db->Sanitize_andQuote(self::ActiveAddress());
-	    $sqlDomain = $db->Sanitize_andQuote(self::ActiveDomain());
+	    $sAddr = self::ActiveAddress();
+	    $sDom = self::ActiveDomain();
+	    
+	    $sqlAddress = $db->Sanitize_andQuote($sAddr);
+	    if ($sAddr == $sDom) {
+		$sqlDomain = 'NULL';
+	    } else {
+		$sqlDomain = $db->Sanitize_andQuote($sDom);
+	    }
 	    $sqlBrowser = $db->Sanitize_andQuote(self::ActiveBrowser());
 	    $ar = array(
 	      'CRC'		=> $db->Sanitize_andQuote($sCRC),

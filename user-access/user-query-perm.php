@@ -5,7 +5,7 @@
     2017-01-07 adapting from code in user-acct.php
 */
 
-class fcqtUserPerms extends fcConnectedData {
+class fcqtUserPerms extends fcTable_wSource_wRecords {
 
     // ++ SETUP ++ //
     

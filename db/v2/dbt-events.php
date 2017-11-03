@@ -24,27 +24,38 @@ define('KS_EVENT_ARG_IS_ERROR'		,'error');
 define('KS_EVENT_ARG_IS_SEVERE'		,'severe');
 */
 
+interface fiEventTable {
+    function EventListing();
+}
+/*
+interface fiEventTable_forTable extends fiEventTable {
+    function SelectRecords_forTable($sKey,$idRow=NULL)
+}*/
 /*::::
-  REQUIRES: object must implement EventTable()
-    This is required by both ftLoggableTable and ftLoggableRecord.
+  NOTE: For EventTable(), use ftFrameworkAccess
 */
 trait ftLoggableObject {
 
-    protected function EventListing_SectionHeader() {
-	$oHdr = new fcSectionHeader('System Events');
+    protected function EventTable() {
+	return fcApp::Me()->EventTable();
+    }
+    protected function EventListing_SectionHeader($sSuffix) {
+	$oHdr = new fcSectionHeader('Ferreteria Events'.$sSuffix);
 	return $oHdr;
     }
     // TODO: this needs to be different for recordsets and tables
     protected function EventListing() {
 	$tEv = $this->EventTable();
-	if (method_exists($tEv,'EventListing')) {
+	//if (method_exists($tEv,'EventListing')) {
 	    return $tEv->EventListing();
-	} else {
-	    throw new exception('Ferreteria usage error: you need to be using the admin UI (dropin) descendant of the event table class which defines EventListing(). The event table class received from EventTable() was '.get_class($tEv).'.');
-	}
+	//} else {
+	//    throw new exception('Ferreteria usage error: you need to be using the admin UI (dropin) descendant of the event table class //which defines EventListing(). The event table class received from EventTable() was '.get_class($tEv).'.');
+	//}
     }
-    protected function EventTable() {
-	return $this->GetConnection()->MakeTableWrapper($this->SystemEventsClass());
+    protected function CreateEvent_Notes($idEvent,$sNotes) {
+	$tBase = $this->EventTable();
+	$tSub = $tBase->TableWrapper_forNotes();
+	$tSub->CreateRecord($idEvent,$sNotes);
     }
 }
 /*::::
@@ -68,9 +79,13 @@ trait ftLoggableTable {
 	$arEdits (optional) = list of changes being made to the data record's values
       RETURNS: Event record
     */
-    public function CreateEvent(array $arArgs,$arEdits=NULL) {
-	$arArgs[fcrEvent::KF_MOD_TYPE] = $this->GetActionKey();
-	return $this->EventTable()->CreateEvent($arArgs,$arEdits);
+    public function CreateEvent($sCode,$sText,array $arData=NULL) {
+	$tBase = $this->EventTable();
+	$id = $tBase->CreateBaseEvent($sCode,$sText,$arData);
+	// create sub-event for current record
+	$tSub = $tBase->TableWrapper_forInTable();
+	$tSub->CreateRecord($id,$this->GetActionKey());
+	return $id;
     }
     
     // -- WRITE DATA -- //
@@ -78,11 +93,16 @@ trait ftLoggableTable {
 
     protected function EventListing() {
 	$tEv = $this->EventTable();
+	$sTbl = $this->GetActionKey();
+	$sFor = ' for table '.$sTbl;
 	// TODO: define an interface for this
-	$rs = $tEv->SelectRecords_forTable($this->GetActionKey());
-	return $this->EventListing_SectionHeader()->Render()
+	$rs = $tEv->SelectRecords_forTable($sTbl);
+	
+	$out = $this->EventListing_SectionHeader($sFor)->Render()
 	  .$rs->AdminRows()
+	  .'<div class=content><b>SQL</b>: '.$tEv->sql.'</div>'
 	  ;
+	return $out;
     }
     
     // -- READ DATA -- //
@@ -94,35 +114,90 @@ trait ftLoggableTable {
 trait ftLoggableRecord {
     use ftLoggableObject;
 
-    /* sysevents v1
-    public function CreateEvent(array $arArgs,$arEdits=NULL) {
-	$arArgs[fcrEvent::KF_MOD_TYPE] = $this->GetTableWrapper()->GetActionKey();
-	$arArgs[fcrEvent::KF_MOD_INDEX] = $this->GetKeyValue();
-	return $this->EventTable()->CreateEvent($arArgs,$arEdits);
-    } */
     public function CreateEvent($sCode,$sText,array $arData=NULL) {
-	$t = $this->EventTable();
-	$id = $t->CreateBaseEvent($sCode,$sText,$arData);
+	$tBase = $this->EventTable();
+	$id = $tBase->CreateBaseEvent($sCode,$sText,$arData);
+	// create sub-event for current record
+	$tSub = $tBase->TableWrapper_forInTable();
+	$tSub->CreateRecord($id,$this->GetTableWrapper()->GetActionKey(),$this->GetKeyValue());
+	return $id;
     }
-    protected function EventTable() {
-	return $this->GetConnection()->MakeTableWrapper($this->SystemEventsClass());
-    }
-    abstract protected function SystemEventsClass();
     
     // ++ READ DATA ++ //
 
     protected function EventListing() {
 	$tEv = $this->EventTable();
-	// TODO: define an interface for this
-	$rs = $tEv->SelectRecords_forTable($this->GetActionKey(),$this->GetKeyValue());
-	return $this->EventListing_SectionHeader()->Render()
+	$sTbl = $this->GetActionKey();
+	$id = $this->GetKeyValue();
+	$sFor = " for $sTbl $id";
+	$rs = $tEv->SelectRecords_forTable($sTbl,$id);
+	return $this->EventListing_SectionHeader($sFor)->Render()
 	  .$rs->AdminRows()
+	  .'<div class=content><span class=line-stats><b>Events SQL</b>: '.$tEv->sql.'</span></div>'
 	  ;
     }
     
     // -- READ DATA -- //
 }
+/*----
+  PURPOSE: Records every update and insert in the Ferreteria event log, laying in the basis for eventual "undo" capability.
+  USES: fx() in ftLoggableRecord - maybe should be required? Can traits require an interface?
+*/
+define('KS_EVENT_FERRETERIA_AUTOLOG_INSERT','fe.ins');
+define('KS_EVENT_FERRETERIA_AUTOLOG_UPDATE','fe.upd');
+define('KS_FERRETERIA_STASH_AREA_BEFORE','before');	// stashed record values before the edit
+define('KS_FERRETERIA_STASH_AREA_AFTER','after');	// stashed record values after the edit
+define('KS_FERRETERIA_STASH_AREA_CHANGE','change');	// stashed values of changes to field values
+define('KS_FERRETERIA_STASH_AREA_NEW','new');	// stashed values of new record
+define('KS_FERRETERIA_FIELD_EDIT_NOTES','EvNotes');	// field for editor's notes about the edit
 
+// REQUIRES: CreateEvent() (defined in ftLoggableTable, ftLoggableRecord)
+trait ftLoggedRecord {
+    protected function Insert(array $arRow) {
+	$arData = array(
+	  KS_FERRETERIA_STASH_AREA_NEW	=> $arRow
+	  );
+	//$idEv = fcApp::Me()->CreateEvent(KS_EVENT_FERRETERIA_AUTOLOG_INSERT,'insert',$arData);
+	$idEv = $this->CreateEvent(KS_EVENT_FERRETERIA_AUTOLOG_INSERT,'insert',$arData);
+	$idNew = parent::Insert($arRow,$isNativeData);
+	$this->LogEventCompletion($idEv,array('id'=>$idNew));
+	return $idNew;
+    }
+    public function Update(array $arChg,$isNativeData = false) {
+	$arOld = $this->GetFieldValues();
+	$arData = array(
+	  KS_FERRETERIA_STASH_AREA_BEFORE	=> $arOld,
+	  KS_FERRETERIA_STASH_AREA_CHANGE	=> $arChg
+	  );
+	//$idEv = fcApp::Me()->CreateEvent(KS_EVENT_FERRETERIA_AUTOLOG_UPDATE,'update',$arData);
+	$idEv = $this->CreateEvent(KS_EVENT_FERRETERIA_AUTOLOG_UPDATE,'update',$arData);
+	parent::Update($arChg,$isNativeData);
+	$this->LogEventCompletion($idEv);
+    }
+    protected function LogEventCompletion($idEvent,array $arData=NULL) {
+	$db = $this->GetConnection();
+	$tBase = $this->EventTable();
+
+	// This is done in ftLoggableRecord::CreateEvent()
+	//$tSub = $tBase->TableWrapper_forInTable();
+	//$tSub->CreateRecord($idEvent,$this->GetTableWrapper()->GetActionKey(),$this->GetKeyValue());
+	
+	$tSub = $tBase->TableWrapper_forDone();
+	if ($db->IsOkay()) {
+	    $tSub->CreateRecord($idEvent,KS_EVENT_SUCCESS,NULL,$arData);
+	} else {
+	    $tSub->CreateRecord($idEvent,KS_EVENT_FAILED,NULL,$arData);
+	}
+	
+	// log edit notes, if any
+	$oFormIn = fcHTTP::Request();
+	$sNotes = $oFormIn->GetString(KS_FERRETERIA_FIELD_EDIT_NOTES);
+	if (!is_null($sNotes)) {
+	    $tSub = $tBase->TableWrapper_forNotes();
+	    $tSub->CreateRecord($idEvent,$sNotes);
+	}
+    }
+}
 abstract class fctEvents_base extends fcTable_keyed_single_standard {
 
     // ++ CLASSES ++ //
@@ -188,7 +263,7 @@ abstract class fctEvents_base extends fcTable_keyed_single_standard {
 	if (is_null($rcUser)) {
 	    $out = '(n/a)';
 	} else {
-	    $sUser = $rcUser->UserName();
+	    $sUser = $rcUser->LoginName();
 	    $nUser = $rcUser->GetKeyValue();
 	    $out = "$sUser (#$nUser)";
 	}

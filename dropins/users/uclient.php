@@ -4,26 +4,54 @@
     2014-09-18 Created in order to allow administering of client records.
 */
 
-class fctUserClientsAdmin extends fctUserClients {
+class fctUserClientsAdmin extends fctUserClients implements fiEventAware, fiLinkableTable {
+    use ftLinkableTable;
+    use ftExecutableTwig;
 
     // ++ SETUP ++ //
 
     protected function SingularName() {
 	return KS_CLASS_ADMIN_USER_CLIENT;
     }
+    public function GetActionKey() {
+	return KS_ACTION_USER_CLIENT;
+    }
     
     // -- SETUP -- //
-    // ++ CALLBACKS ++ //
-    
-    public function MenuExec() {
+    // ++ EVENTS ++ //
+  
+    protected function OnCreateElements() {}
+    protected function OnRunCalculations() {
+	$oPage = fcApp::Me()->GetPageObject();
+	$oPage->SetPageTitle('User Clients');
+	//$oPage->SetBrowserTitle('Suppliers (browser)');
+	//$oPage->SetContentTitle('Suppliers (content)');
+    }
+    public function Render() {
 	return $this->AdminListing();
     }
+    /*
+    public function MenuExec() {
+	return $this->AdminListing();
+    } */
 
-    // -- CALLBACKS -- //
+    // -- EVENTS -- //
     // ++ WEB UI ++ //
 
     protected function AdminListing() {
 	$rs = $this->SelectRecords();
+	$out = $rs->AdminRows();
+	return $out;
+    }
+
+    // -- WEB UI -- //
+}
+class fcrUserClientAdmin extends fcrUserClient {
+    use ftShowableRecord;
+
+    // ++ SETUP ++ //
+
+    protected function AdminRows_settings_columns() {
 	$arCols = array(
 	  'ID'		=> 'ID',
 	  'Address'	=> 'Address',
@@ -32,14 +60,8 @@ class fctUserClientsAdmin extends fctUserClients {
 	  'WhenFirst'	=> 'First',
 	  'WhenFinal'	=> 'Final',
 	  );
-	$out = $rs->AdminRows($arCols);
-	return $out;
+	return $arCols;
     }
-
-    // -- WEB UI -- //
-}
-class fcrUserClientAdmin extends fcrUserClient {
-    use ftShowableRecord;
 
     // ++ BOILERPLATE ++ //
 

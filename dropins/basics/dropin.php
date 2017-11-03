@@ -8,24 +8,38 @@
     2017-01-03 A bit of class reorganization is required. We need to have two separate table classes - one for the loading, and one for the admin UI.
       This one should just grab data from the singleton loader-version.
       Tentatively, the recordset admin class can be descended from the recordset loading class as before.
+    2017-03-28 y2017 remediation; not sure what I meant about the class reorg. Maybe the interfaces accomplished this?
 */
-class fcaDropInManager extends fcDataTable_array {
+class fctDropInManager extends fcDataTable_array implements fiEventAware, fiLinkableTable {
+    use ftLinkableTable;
+    use ftExecutableTwig;
+    
+    // ++ SETUP ++ //
 
     // OVERRIDE
     protected function SingularName() {
-	return 'fcaDropInModule';
+	return 'fcrAdminDropInModule';
+    }
+    // CEMENT
+    public function GetActionKey() {
+	return KS_ACTION_KEY_DROPINS;
     }
 
-    // ++ DROP-IN API ++ //
-
-    /*----
-      PURPOSE: execution method called by dropin menu
-    */
-    public function MenuExec() {
+    // -- SETUP -- //
+    // ++ EVENTS ++ //
+  
+    protected function OnCreateElements() {}
+    protected function OnRunCalculations() {
+	$oPage = fcApp::Me()->GetPageObject();
+	$oPage->SetPageTitle('Installed Drop-ins');
+	//$oPage->SetBrowserTitle('Suppliers (browser)');
+	//$oPage->SetContentTitle('Suppliers (content)');
+    }
+    public function Render() {
 	return $this->AdminPage();
     }
 
-    // -- DROP-IN API -- //
+    // -- EVENTS -- //
     // ++ ADMIN UI ++ //
 
     /*----
@@ -45,7 +59,7 @@ class fcaDropInManager extends fcDataTable_array {
     // -- ADMIN IU -- //
 }
 
-class fcaDropInModule extends fcDropInModule {
+class fcrAdminDropInModule extends fcrDropInModule {
 
     /*----
       PUBLIC because it is called from the Table wrapper object
@@ -53,7 +67,9 @@ class fcaDropInModule extends fcDropInModule {
     public function AdminRows() {
 	$nRows = $this->RowCount();
 	if ($nRows > 0) {
-	    $out = "$nRows dropin".fcString::Pluralize($nRows)
+	    $out = "<div class=content>$nRows dropin"
+	      .fcString::Pluralize($nRows)
+	      .'</div>'
 	      ."\n<table class=listing>"
 	      ;
 	    $this->RewindRows();

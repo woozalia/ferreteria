@@ -6,26 +6,18 @@
     2017-01-02 fcRowArray has now been replaced by fcDataRow_array
 */
 
-/* 2017-01-02 replaced by fcDataRow_array
-class fcRowArray extends fcDataRow {
-
-    // ++ CEMENTING ++ //
-
-    private $arRows,$nRow;
-    public function RowCount() {
-	return count($this->arRows);
-    }
+trait ftInstanceCounter {
+    private static $nInstance = 0;
     
-    // -- CEMENTING -- //
-    // ++ NEW ++ //
-    
-    protected function SetAllRows(array $ar) {
-	$this->arRows = $ar;
+    protected function ConstructInstance() {
+	self::$nInstance++;
+	return self::$nInstance;
     }
+    protected function InstanceCount() {
+	return self::$nInstance;
+    }
+}
 
-    // -- NEW -- //
-
-}*/
 /*::::
   SAMPLE USAGE:
     $oTrace = new fcStackTrace();
@@ -82,6 +74,9 @@ class fcStackTrace extends fcDataRow_array {
 	    }
 	    if (is_scalar($arg)) {
 		$out .= $arg;
+	    } elseif (is_array($arg)) {
+		$nElem = count($arg);
+		$out .= "(array: $nElem".fcString::Pluralize($nElem).')';
 	    } else {
 		$out .= '('.get_class($arg).' object)';
 	    }

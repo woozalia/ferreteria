@@ -21,7 +21,28 @@
       removed ftLinkableNode
     2017-01-10 extracted kiosk classes to kiosk.php for easier reference; renamed this from manu-base.php -> items.php
 */
+trait ftRequiresPermit {
 
+    // ++ EVENTS ++ //
+
+    protected function OnRunCalculations(){
+	parent::OnRunCalculations();
+	$this->SetIsAuthorized($this->FigureIfAuthorized());
+    }
+
+    // -- EVENTS -- //
+    // ++ INTERNALS ++ //
+
+    private $isAuth;
+    protected function SetIsAuthorized($b) {
+	$this->isAuth = $b;
+    }
+    protected function GetIsAuthorized() {
+	return $this->isAuth;
+    }
+
+    // -- INTERNALS -- //
+}
 
 /*::::
   NOTE: Just an alias for now, so I don't have to do yet another search-and-replace.
@@ -39,7 +60,7 @@ class fcMenuFolder extends fcNavFolder {
     2017-02-08 Can't see any reason for ActionClass methods to be defined here; moving them to Dropin Link class
       (in dropin.php).
     2017-03-26 Figuring authorization at RunCalculations time now, instead of at Render time, because in the latter case
-      we don't have the list of needed permits at render time (when we might want to display them).
+      we don't have the list of missing permits at render time (when we might want to display them).
 */
 abstract class fcMenuLink extends fcNavLink {
 
@@ -100,23 +121,26 @@ abstract class fcMenuLink extends fcNavLink {
     // -- SETUP -- //
     // ++ EVENTS ++ //
 /*
-    protected function OnEventDispatch($nEvent) {
-	echo "EVENT [$nEvent] RECEIVED by [".$this->GetKeyValue()."].<br>";
-	//parent::OnEventDispatch($nEvent);
-    }
-*/
     protected function OnRunCalculations(){
 	parent::OnRunCalculations();
-	echo "EVENT ".__METHOD__.' for ['.$this->GetKeyValue().'] CLASS '.get_class($this).'<br>';
 	$this->SetIsAuthorized($this->FigureIfAuthorized());
+    } */
+    /*----
+      NOTE: This has to intercept Render() rather than RenderContent() because fcNavBase::RenderContent()
+	is only called if GetShouldDisplay() is true, and we might want to render the Page content to which
+	this menu item is attached even if the menu item itself should not be rendered.
+    */ /* moving to dropin.php
+    public function Render() {
+	if ($this->GetIsSelected() && $this->GetIsAuthorized()) {
+	    //$this->DoSelect();
+	    $this->PageRender();
+	}
+	return parent::Render();
     }
-    /*
     protected function OnEventAfter($nEvent){
-	echo "EVENT $nEvent IN ".__METHOD__.' for ['.$this->GetKeyValue().'] CLASS '.get_class($this).'<br>';
-	parent::OnEventAfter($nEvent);
-	$this->OnEventDispatch($nEvent);
-    }*/
-
+	$this->PageEvent($nEvent);
+    }
+*/
     // -- EVENTS -- //
     // ++ STATUS ++ //
     
@@ -138,13 +162,14 @@ abstract class fcMenuLink extends fcNavLink {
     protected function GetKeyName() {
 	return $this->sKeyName;
     }
+    /*
     private $isAuth;
     protected function SetIsAuthorized($b) {
 	$this->isAuth = $b;
     }
     protected function GetIsAuthorized() {
 	return $this->isAuth;
-    }
+    }*/
     
     // -- STATUS -- //
     // ++ CALCULATIONS ++ //
@@ -193,8 +218,12 @@ abstract class fcMenuLink extends fcNavLink {
     protected function GetIsActive() {
 	return $this->isActive;
     }
+    /*----
+      PURPOSE: This is essentially a stub routine for descendents to override
+	if they want to impose conditions.
+    */
     protected function GetShouldDisplay() {
-	return $this->GetIsAuthorized();
+	return TRUE;
     }
 
     // -- INPUT-TO-OUTPUT STATES -- //

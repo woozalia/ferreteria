@@ -271,18 +271,3 @@ class clsStringTemplate_array extends clsStringTemplate {
 	    }
 	}
 }
-/*
-class xtString {
-    public $Value;
-    public function GetArray() {
-	$tok = substr ( $this->Value, 0, 1);	// token for splitting
-	if ($tok) {
-		$tks = substr ( $this->Value, 1 );	// tokenized string
-		$list = explode ( $tok, $tks );	// split the string
-		return $list;
-	} else {
-		return NULL;
-	}
-    }
-}
-*/

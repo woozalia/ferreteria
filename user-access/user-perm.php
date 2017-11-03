@@ -4,7 +4,9 @@
   HISTORY:
     2013-12-29 started
     2017-01-04 This will need some updating to work with Ferreteria revisions.
+    2017-03-30 Working; making '*' permission into a constant
 */
+
 class fctUserPerms extends fcTable_keyed_single_standard {
 
     // ++ SETUP ++ //
@@ -19,21 +21,28 @@ class fctUserPerms extends fcTable_keyed_single_standard {
     // -- SETUP -- //
     // ++ STATUS ++ //
 
-    private $arNeeded = NULL;
-    public function SetNeededPermit($sName) {
-	fcArray::NzSum($this->arNeeded,$sName);
-	echo fcArray::Render($this->arNeeded);
-	echo "PERMISSION NEEDED: [$sName]<br>";
-	//throw new exception('Need to figure out what event gets us here.');
-    }
-    protected function GetNeededPermits() {
-	return $this->arNeeded;
-    }
-    protected function HasNeededPermits() {
-	echo 'PERMITS NEEDED: '.count($this->arNeeded).'<br>';
-	throw new exception('RENDER PHASE');
+    /*----
+      NOTE 2017-03-28: I originally made this a dynamic variable, but the value was being lost
+	somehow between fctUserPerms and fctAdminUserPermits. Probably what is happening is
+	that MakeTableWrapper() sees that fctAdminUserPermits is a different class, so creates
+	a different instance. It should probably *upgrade the old instance* instead.
 	
-	return !is_null($this->arNeeded);
+	The problem lies in identifying where a descendant class already has an instantiated ancestor.
+	
+	We might want to do something like moving GetActionKey() up in the hierarchy of creatable "wrapper classes"
+	and using it as the identifier -- but that's for a later revision.
+    */
+    static private $arMissing;
+    public function SetMissingPermit($sName) {
+	if ($sName != KS_PERM_FE_ROOT) {
+	    fcArray::NzSum(self::$arMissing,$sName);
+	}
+    }
+    protected function GetMissingPermits() {
+	return self::$arMissing;
+    }
+    protected function PermitsAreMissing() {
+	return !is_null(self::$arMissing);
     }
 
     // -- STATUS -- //

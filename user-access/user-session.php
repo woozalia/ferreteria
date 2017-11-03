@@ -638,10 +638,11 @@ class fcrUserSession extends fcRecord_standard {
     }
     /*----
       RETURNS: User's login name, or NULL if user not logged in
+      TODO: Rename this to LoginString()
     */
     public function UserString() {
 	if ($this->UserIsLoggedIn()) {
-	    return $this->UserRecord()->UserName();
+	    return $this->UserRecord()->LoginName();
 	} else {
 	    return NULL;
 	}
@@ -731,23 +732,53 @@ class fcrUserSession extends fcRecord_standard {
 	    $this->ClearUserRecord();
 	    $sErr = $tUsers->GetErrorCode();
 	    $sText = $sUser.' not logged in, error '.$sErr;
-	    fcApp::Me()->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_LOGIN_FAIL,$sText,$arData);
+	    fcApp::Me()->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_LOGIN_BAD,$sText,$arData);
 	}
     }
     /*----
       ACTION: Logs the current user out. (Clears ID_Acct in session record.)
     */
     public function UserLogout() {
-	$sName = $this->UserRecord()->UserName();
-	$arData = array(
-	  'user'	=> $sUser
-	  );
-	fcApp::Me()->EventTable()->CreateEvent(KS_EVENT_FERRETERIA_LOGOUT,$sName.' logged out',$arData);
-	$this->SetFieldValue('ID_Acct',NULL);
-	$arUpd = array(
-	  'ID_Acct'=>'NULL'
-	  );
-	$this->Update($arUpd);
+	$oApp = fcApp::Me();
+	$db = $this->GetConnection();
+	$rcUser = $this->UserRecord();
+	if (is_null($rcUser)) {
+	    $idEvent = $oApp->CreateEvent(KS_EVENT_FERRETERIA_LOGOUT,'redundant logout');
+	} else {
+	    $sLogin = $rcUser->LoginName();
+	    $arData = array(
+	      'user.login'	=> $sLogin,
+	      'user.id'	=> $rcUser->GetKeyValue(),
+	      );
+	    //$oApp->EventTable()->CreateEvent(KS_EVENT_FERRETERIA_LOGOUT,$sLogin.' logged out',$arData);
+	    $idEvent = $oApp->CreateEvent(KS_EVENT_FERRETERIA_LOGOUT,$sLogin.' logged out',$arData);
+	    if (!$db->IsOkay()) {
+		echo 'SQL: '.$db->sql;
+		throw new exception('Ferreteria event-logging error recording user logout: "'.$db->ErrorString());
+	    }
+	    $this->SetFieldValue('ID_Acct',NULL);
+	    $arUpd = array(
+	      'ID_Acct'=>'NULL'
+	      );
+	    $this->Update($arUpd);
+	    if ($db->IsOkay()) {
+		$sState = KS_EVENT_SUCCESS;
+		$sText = 'ok';
+		$arData = NULL;
+	    } else {
+		$sState = KS_EVENT_FAILED;
+		$sText = 'failed because of db error';
+		$arData = array(
+		  'err code'	=> $db->ErrorNumber(),
+		  'err text'	=> $db->ErrorString(),
+		  );
+	    }
+	    $oApp->EventTable_Done()->CreateRecord($idEvent,$sState,$sText,$arData);    
+	    if (!$db->IsOkay()) {
+		echo 'SQL: '.$db->sql;
+		throw new exception('Ferreteria event-logging error recording completion of user logout: "'.$db->ErrorString());
+	    }
+	}
     }
     /*----
       TODO: convert this to use UpdateArray() and Save().

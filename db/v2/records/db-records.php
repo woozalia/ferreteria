@@ -3,7 +3,13 @@
   TERMINOLOGY:
     "rows" are sets of field data stored in a database
     "fields" are in-memory storage of an individual row.
+  HISTORY:
+    2017-10-13 added ftTabledDataRow
 */
+
+interface fiInsertableTable {
+    function Insert(array $arData);
+}
 
 /*::::
   PURPOSE: base class for recordset-like objects
@@ -121,9 +127,22 @@ class fcDataRow {
 }
 abstract class fcSourcedDataRow extends fcDataRow {
 
+    // ++ STATUS ++ //
+
     public function HasRows() {
 	return ($this->RowCount() != 0);
     }
+    abstract public function RowCount();
+
+    // -- STATUS -- //
+    // ++ CONTROL ++ //
+    
+    abstract public function RewindRows();
+    abstract public function NextRow();
+
+    // -- CONTROL -- //
+    // ++ DATA READ ++ //
+
     /*----
       ACTION: For each record in the current record source, the field values
 	are added to an array which is keyed by the given field.
@@ -141,25 +160,29 @@ abstract class fcSourcedDataRow extends fcDataRow {
 	    return array();
 	}
     }
+    /*----
+      RETURNS: Array consisting of just the values of the given field as found within the current recordset
+      HISTORY:
+	2017-05-27 written for title-topic display in VbzCart, because I couldn't find a replacement for ColumnValues_array().
+	  This should be equivalent to what ColumnValues_array() used to do.
+    */
+    public function FetchColumnValues_asArray($sField) {
+	$ar = array();
+	if ($this->HasRows()) {
+	    while ($this->NextRow()) {
+		$ar[] = $this->GetFieldValue($sField);
+	    }
+	}
+	return $ar;
+    }
     
-    // ++ ABSTRACT ++ //
-    
-    abstract public function RowCount();
-    abstract public function RewindRows();
-    abstract public function NextRow();
-
-    // -- ABSTRACT -- //
+    // -- DATA READ -- //
 }
-
-/*::::
-  PURPOSE: Database Recordset class
-    This class can manage multiple records and access them individually in order.
-*/
-abstract class fcDataRecord extends fcSourcedDataRow {
+trait ftTabledDataRow {
 
     // ++ SETUP ++ //
 
-    public function __construct(fcDataSource $t) {
+    public function __construct(fcTable_wRecords $t) {
 	$this->SetTableWrapper($t);
 	$this->InitVars();
     }
@@ -167,10 +190,7 @@ abstract class fcDataRecord extends fcSourcedDataRow {
 
     // -- SETUP -- //
     // ++ OBJECT FAMILY ++ //
-
-    protected function GetConnection() {
-	return $this->GetTableWrapper()->GetConnection();
-    }
+    
     private $tw;
     protected function SetTableWrapper($t) {
 	$this->tw = $t;
@@ -178,6 +198,22 @@ abstract class fcDataRecord extends fcSourcedDataRow {
     // PUBLIC so Form classes can access it
     protected function GetTableWrapper() {
 	return $this->tw;
+    }
+
+    // -- OBJECT FAMILY -- //
+}
+/*::::
+  PURPOSE: Database Recordset class
+    This class can manage multiple records and access them individually in order.
+*/
+abstract class fcDataRecord extends fcSourcedDataRow {
+    use ftTabledDataRow;
+
+    // ++ OBJECT FAMILY ++ //
+
+    // PUBLIC because other objects that work with recordsets might need to interact with the same Connection object
+    public function GetConnection() {
+	return $this->GetTableWrapper()->GetConnection();
     }
 
     // -- OBJECT FAMILY -- //

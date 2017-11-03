@@ -6,7 +6,7 @@
     2011-01-12 Somewhat working
     2012-02-12 Fixed bug with non-numeric IDs; all node fields printed in JS are now properly escaped (in theory)
 */
-class clsDTreeAPI {
+class fcDTreeAPI {
     protected $wpFiles;
     private $objRoot;
     private $fnCSS;
@@ -21,7 +21,7 @@ class clsDTreeAPI {
     }
     public function RootNode() {
 	if (is_null($this->objRoot)) {
-	    $this->objRoot = new clsDTreeNode(-1,$this,NULL,'root');
+	    $this->objRoot = new fcDTreeNode(-1,$this,NULL,'root');
 	}
 	return $this->objRoot;
     }
@@ -79,14 +79,14 @@ __END__;
 */
 }
 
-class clsDTreeNode extends clsTreeNode {
+class fcDTreeNode extends fcTreeNode {
     public $ID, $Parent, $TextTwig, $URL, $TextPopup, $NameTarget, $IconSpecOpen, $IconSpecShut;
     protected $objMgr;
 
     public function __construct(
       $iID,
-      clsDTreeAPI $iMgr,
-      clsDTreeNode $iParent=NULL,
+      fcDTreeAPI $iMgr,
+      fcDTreeNode $iParent=NULL,
       $iTextTwig,
       $iURL=NULL,
       $iTextPopup=NULL,
@@ -119,16 +119,16 @@ class clsDTreeNode extends clsTreeNode {
 	return $this->objMgr;
     }
     public function Add(
-      $iID,
+      $idNew,
       $iTextTwig,
       $iURL=NULL,
       $iTextPopup=NULL,
       $iNameTarget=NULL,
       $iIconSpecOpen=NULL,
       $iIconSpecShut=NULL) {
-	$objNew = new clsDTreeNode($iID,$this->Mgr(),$this,$iTextTwig,$iURL,$iTextPopup,$iNameTarget,$iIconSpecOpen,$iIconSpecShut);
-	$this->Node($iID,$objNew);	// add new node to sub-array
-	return $objNew;
+	$oNodeNew = new fcDTreeNode($idNew,$this->Mgr(),$this,$iTextTwig,$iURL,$iTextPopup,$iNameTarget,$iIconSpecOpen,$iIconSpecShut);
+	$this->SetNode($oNodeNew,$idNew);	// add new node to sub-array
+	return $oNodeNew;
     }
     public function Render() {
 	return "\nd.add("

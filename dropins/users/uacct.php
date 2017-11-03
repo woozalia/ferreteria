@@ -9,13 +9,15 @@
       fctUserAccts_admin (then scUserAccts) now descends from ftcUserAccts (was clsVbzUserTable) 
       fcrUserAcct_admin (then scUserAcct) now descends from frcUserAcct (was clsVbzUserRec)
     2017-01-27 adjustments to work with Ferreteria revisions
+    2017-03-28 more y2017 remediation
 
   FAMILY:
     * fctUserAccts_admin <- fctUserAccts (user-access)
     * fcrUserAcct_admin <- fcrUserAcct (user-access)
 */
-class fctUserAccts_admin extends fctUserAccts implements fiLinkableTable {
+class fctUserAccts_admin extends fctUserAccts implements fiEventAware, fiLinkableTable {
     use ftLinkableTable;
+    use ftExecutableTwig;
 
     // ++ SETUP ++ //
 
@@ -27,23 +29,34 @@ class fctUserAccts_admin extends fctUserAccts implements fiLinkableTable {
     }
 
     // -- SETUP -- //
-    // ++ CLASS NAMES ++ //
-
-    protected function ClassName_Perms() {
-	return KS_CLASS_ADMIN_USER_PERMISSIONS;
+    // ++ EVENTS ++ //
+  
+    protected function OnCreateElements() {}
+    protected function OnRunCalculations() {
+	$oPage = fcApp::Me()->GetPageObject();
+	$oPage->SetPageTitle('User Accounts');
+	//$oPage->SetBrowserTitle('Suppliers (browser)');
+	//$oPage->SetContentTitle('Suppliers (content)');
     }
-    protected function ClassName_Perm() {
-	return KS_CLASS_ADMIN_USER_PERMISSION;
-    }
-
-    // -- CLASS NAMES -- //
-    // ++ DROP-IN API ++ //
-
+    /*----
+      NOTE: App()->GetUserRecord() may return the non-dropin class (TODO: FIX), so
+	we have to upgrade it here.
+    */
+    public function Render() {
+	$rcUser_base = fcApp::Me()->GetUserRecord();
+	$rcUser = $this->GetRecord_forKey($rcUser_base->GetKeyValue());	// TODO: copy fields instead of reloading
+	if ($rcUser->CanDo(KS_PERM_SEC_USER_VIEW)) {
+	    $out = $this->AdminListing();
+	} else {
+	    $rcUser->SelfRedirect();	// redirect to user's record
+	}
+	return $out;
+     }
     /*----
       PURPOSE: execution method called by dropin menu
       NOTE: App()->User() may return the non-dropin class (TODO: FIX), so
 	we have to upgrade it here.
-    */
+    */ /*
     public function MenuExec() {
 	$rcUser_base = fcApp::Me()->GetUserRecord();
 	$rcUser = $this->GetRecord_forKey($rcUser_base->GetKeyValue());
@@ -53,13 +66,38 @@ class fctUserAccts_admin extends fctUserAccts implements fiLinkableTable {
 	    $rcUser->SelfRedirect();	// redirect to user's record
 	}
 	return $out;
-    }
+    } */
 
     // -- DROP-IN API -- //
+    // ++ CLASSES ++ //
+
+    protected function ClassName_Perms() {
+	return KS_CLASS_ADMIN_USER_PERMISSIONS;
+    }
+    protected function ClassName_Perm() {
+	return KS_CLASS_ADMIN_USER_PERMISSION;
+    }
+
+    // -- CLASSES -- //
     // ++ WEB UI ++ //
 
     protected function AdminListing() {
 	$rs = $this->SelectRecords();
+	$out = $rs->AdminRows();
+	return $out;
+    }
+
+    // -- WEB UI -- //
+}
+class fcrUserAcct_admin extends fcrUserAcct implements fiLinkableRecord, fiEditableRecord, fiEventAware {
+    use ftShowableRecord;
+    use ftSaveableRecord;
+    use ftLinkableRecord;
+    use ftExecutableTwig;
+
+    // ++ SETUP ++ //
+
+    protected function AdminRows_settings_columns() {
 	$arCols = array(
 	  'ID'		=> 'ID',
 	  'UserName'	=> 'Login',
@@ -68,17 +106,33 @@ class fctUserAccts_admin extends fctUserAccts implements fiLinkableTable {
 	  'WhenCreated'	=> 'Created',
 	  '!grps'	=> 'Groups',
 	  );
-	$out = $rs->AdminRows($arCols);
+	return $arCols;
+    }
+    
+    // -- SETUP -- //
+    // ++ EVENTS ++ //
+
+    protected function OnCreateElements() {}
+    protected function OnRunCalculations() {
+	$id = $this->GetKeyValue();
+	$sTitle = 'User Account #'.$id;
+    
+	$oPage = fcApp::Me()->GetPageObject();
+	$oPage->SetPageTitle($sTitle);
+	//$oPage->SetBrowserTitle('Suppliers (browser)');
+	//$oPage->SetContentTitle('Suppliers (content)');
+    }
+    public function Render() {
+	$rcUser = fcApp::Me()->GetUserRecord();
+	if ($rcUser->CanDo(KS_USER_SEC_ACCT_EDIT) || $this->IsLoggedIn()) {
+	    $out = $this->AdminPage();
+	} else {
+	    $out = NULL;	// user doesn't have permission (TODO: tell them they don't have permission)
+	}
 	return $out;
     }
 
-    // -- WEB UI -- //
-}
-class fcrUserAcct_admin extends fcrUserAcct implements fiLinkableRecord, fiEditableRecord {
-    use ftShowableRecord;
-    use ftSaveableRecord;
-    use ftLinkableRecord;
-
+    // -- EVENTS -- //
     // ++ CLASSES ++ //
 
     protected function XGroupClass() {
@@ -93,27 +147,11 @@ class fcrUserAcct_admin extends fcrUserAcct implements fiLinkableRecord, fiEdita
     }
 
     // -- TABLES -- //
-    // ++ DROP-IN API ++ //
-
-    /*----
-      PURPOSE: execution method called by dropin menu
-    */
-    public function MenuExec() {
-	$rcUser = fcApp::Me()->GetUserRecord();
-	if ($rcUser->CanDo(KS_USER_SEC_ACCT_EDIT) || $this->IsLoggedIn()) {
-	    $out = $this->AdminPage();
-	} else {
-	    $out = NULL;	// user doesn't have permission (TODO: tell them they don't have permission)
-	}
-	return $out;
-    }
-
-    // -- DROP-IN API -- //
     // ++ FIELD CALCULATIONS ++ //
     
     // TAGS: ADMIN, TRAIT HELPER, CEMENT
     public function SelfLink_name() {
-	$sName = $this->UserName();
+	$sName = $this->LoginName();
 	return $this->SelfLink($sName);
     }
 
@@ -307,55 +345,28 @@ __END__;
 	$oApp = fcApp::Me();
 	$oPage = $oApp->GetPageObject();
 	
-	if ($this->IsNew()) {
-	    // don't display or edit groups if user is new -- there can't be any yet
-	    $oApp->AddContentString('<i>(new user - no groups)</i>');
-	    $oPage->SetPageTitle('New User');
+	$oInput = $oApp->GetKioskObject()->GetInputObject();
+	$doEdit = $oInput->GetBool('edit.grp');
+	$rs = $this->UGroupRecords();
+	if ($doEdit) {
+	    $out =
+	      "\n<form method=post>"
+	      .$rs->RenderEditableList()
+	      ."\n</form>"
+	      ;
 	} else {
-	    // page title
-	    $sName = $this->UserName();
-	    $id = $this->GetKeyValue();
-	    $oPage->SetPageTitle("User &ldquo;$sName&rdquo; (ID=$id)");
-	    
-	    /* 2017-01-14 actually, we don't need a section-header, but this code currently works:
-	    // section-header
-	    $oMenu = $oPage->GetElement_HeaderMenu();
-	      // (sLinkKey,sGroupKey=NULL,sDispOff=NULL,sDispOn=NULL,sPopup=NULL)
-	      $oMenu->SetNode(new fcMenuOptionLink('edit.grp',NULL,'edit'));
-	    $oHdr = new fcSectionHeader('Groups',$oMenu);
-	    $oPage->AddImmediateRender($oHdr);	// render the section header
-	    
-	    // What we *do* want is an edit link for the groups -- and we can use the same menu link objects for that, below.
-	    
-	    */
-	    	    
-	    //$out = $oPage->ActionHeader('Groups',$arActs);
-	    
-	    $oInput = $oApp->GetKioskObject()->GetInputObject();
-	    $doEdit = $oInput->GetBool('edit.grp');
-	    $rs = $this->UGroupRecords();
-	    if ($doEdit) {
-		$out =
-		  "\n<form method=post>"
-		  .$rs->RenderEditableList()
-		  ."\n</form>"
-		  ;
+	    $oMenu = new fcHeaderMenu();
+	      // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
+	      $oMenu->SetNode(new fcMenuOptionLink('edit.grp',TRUE,'edit'));
+	      
+	    if ($rs->HasRows()) {
+		$out = $rs->RenderInlineList();
 	    } else {
-		// 2017-01-14 What we *do* want is an edit link for the groups.
-		//$oMenu = $oPage->GetElement_HeaderMenu();	// this puts it in the title header
-		$oMenu = new fcHeaderMenu();
-		  // ($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL)
-		  $oMenu->SetNode(new fcMenuOptionLink('edit.grp',TRUE,'edit'));
-		  
-		if ($rs->HasRows()) {
-		    $out = $rs->RenderInlineList();
-		} else {
-		    $out = '<i>(none)</i>';
-		}
-		$out .= ' : ['.$oMenu->Render().']';
+		$out = '<i>(none)</i>';
 	    }
-	    return $out;
+	    $out .= ' : ['.$oMenu->Render().']';
 	}
+	return $out;
     }
 
     // -- ADMIN UI -- //

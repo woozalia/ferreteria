@@ -48,7 +48,21 @@ class fcHeaderMenuGroup extends fcMenuFolder {
     Designed for headers, but theoretically should work in vertical/hierarchical menus as well.
 */
 class fcMenuOptionLink extends fcToggleLink {
-
+/*
+    public function Render() {
+	echo 'RENDERING ['
+	  .$this->GetKeyName()
+	  .'] SHOULD DISPLAY=['
+	  .$this->GetShouldDisplay()
+	  .'] IS AUTH=['
+	  .$this->GetIsAuthorized()
+	  .'] REQUIRED PERMIT NULL=['.
+	  is_null($this->GetRequiredPrivilege())
+	  .']<br>'
+	  ;
+	return parent::Render();
+    }
+*/
     // ++ SETUP ++ //
 
     public function __construct($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL) {
@@ -58,6 +72,7 @@ class fcMenuOptionLink extends fcToggleLink {
 	$this->SetOffDisplay($sDispOff);
 	$this->SetOnDisplay($sDispOn);
 	$this->SetupDefaults();			// ALWAYS CALL THIS from constructor
+	//$this->SetIsAuthorized(TRUE);		// header menus assume access
     }
 
       //++values++//
@@ -156,6 +171,9 @@ class fcHeaderChoiceGroup extends fcHeaderMenuGroup {
 	$oPathIn = fcApp::Me()->GetKioskObject()->GetInputObject();
 	$sInValue = $oPathIn->GetString($sKeyName);
 	return $sInValue;
+    }
+    public function GetSelfArray() {
+	return array($this->GetKeyName() => $this->GetChoiceValue());
     }
 }
 /*::::
