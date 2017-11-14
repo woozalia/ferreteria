@@ -4,9 +4,10 @@
   HISTORY:
     2014-06-17 Created for WorkFerret.
     2015-07-12 resolving conflicts with other edited version
+    2017-11-05 renamed clsApp_MW -> fcApp_MW
 */
 
-class clsApp_MW extends fcAppStandard {
+class fcApp_MW extends fcAppStandard {
 
     // ++ DEPRECATED ++ //
 

@@ -10,7 +10,7 @@ $fp = dirname( __FILE__ );
 fcCodeModule::BasePath($fp.'/');
 
 $om = new fcCodeModule(__FILE__, 'app-mw.php');
-  $om->AddClass('clsApp_MW');
+  $om->AddClass('fcApp_MW');
 $om = new fcCodeModule(__FILE__, 'app-specialpage.php');
   $om->AddClass('SpecialPageApp');
   $om->AddClass('SpecialPage_DataMenu');

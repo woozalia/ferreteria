@@ -58,7 +58,9 @@ $om = new fcCodeModule(__FILE__, 'events/event-plex.php');
 
 // TABLES folder
 $om = new fcCodeModule(__FILE__, 'tables/db-table.php');
+  $om->AddClass('fcTable_wSource');
   $om->AddClass('fcTable_wRecords');
+  $om->AddClass('fcTable_wSource_wRecords');
   $om->AddClass('fcTable_wName_wSource_wRecords');
  $om = new fcCodeModule(__FILE__, 'tables/db-table-cache.php');
   $om->AddClass('ftCacheableTable');

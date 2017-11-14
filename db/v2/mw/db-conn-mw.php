@@ -6,25 +6,37 @@
     2015-03-14 forked from data-mw.php (renamed db-conn-mw.php); rewriting for Ferreteria db v2
     2016-10-24 This will probably need to be heavily updated.
       For example, FetchRecordset() needs to have a Table wrapper object for the 2nd argument.
+    2017-11-05 updating so w3tpl can live again
 */
 
-/*%%%%
+/*::::
   PURPOSE: Connection that uses MediaWiki's db
 */
-class fcDataConn_MW extends fcDataConn_MySQL {
-    private $mwDB;
+//class fcDataConn_MW extends fcDataConn_MySQL {
+class fcDataConn_MW extends fcDataConn_CliSrv {
 
     // ++ SETUP ++ //
 
-    public function __construct(DatabaseBase $oMWDB) {
-	$this->MWDB($oMWDB);
+    public function __construct(IDatabase $mwo) {
+	//$this->MWDB($oMWDB);
+	$this->NativeObject($mwo);
     }
+    private $oNative;
+    protected function NativeObject(IDatabase $mwo=NULL) {
+	if (!is_null($mwo)) {
+	    $this->oNative = $mwo;
+	}
+	return $this->oNative;
+    }
+    
+    /* 2017-11-05 let's do consistent naming here
+    private $mwDB;
     public function MWDB($oDB=NULL) {
 	if (!is_null($oDB)) {
 	    $this->mwDB = $oDB;
 	}
 	return $this->mwDB;
-    }
+    } */
 
     // -- SETUP -- //
     // ++ INHERITED ++ //
@@ -36,10 +48,11 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     public function Sanitize($sSQL) {
 	throw new exception(__CLASS__.' does not support Sanitize() without quoting.');
     }
+    /*
     // this also quotes numbers, but that *shouldn't* be a problem...
     public function Sanitize_andQuote($sSQL) {
-	return $this->MWDB()->addQuotes($sSQL);
-    }
+	return $this->NativeObject()->addQuotes($sSQL);
+    }*/
     /*----
       ACTION: Normalizes wiki page title (spaces become underscores, etc.) then
 	sanitizes and quotes for use in SQL statements.
@@ -47,10 +60,88 @@ class fcDataConn_MW extends fcDataConn_MySQL {
 	$idNSpace: ID of namespace to which title belongs
     */
     public function Sanitize_PageTitle($sName,$idNSpace) {
-	return $this->Sanitize_andQuote(static::NormalizeTitle($sName,$idNSpace));
+	return $this->SanitizeValue(static::NormalizeTitle($sName,$idNSpace));
+    }
+    
+    // -- INHERITED -- //
+    // ++ STATUS ++ //
+
+    public function IsOkay() {
+	return ($this->ErrorNumber() == 0);
+    }
+    public function ErrorNumber() {
+	return $this->NativeObject()->lastErrno();
+    }
+    public function ErrorString() {
+	return $this->NativeObject()->lastError();
     }
 
-    // -- INHERITED -- //
+    // -- STATUS -- //
+    // ++ DATA PREPROCESSING ++ //
+    
+    /*----
+      INPUT: non-NULL string value
+      OUTPUT: string value with quotes escaped, but not quoted
+    */
+    public function SanitizeString($s) {
+	throw new exception(__CLASS__.' does not support SanitizeString() (sanitize-without-quoting).');
+	// ...because the MediaWiki interface upon which this all depends does not either.
+    }
+    /*----
+      INPUT: any scalar value
+      OUTPUT: non-blank SQL-compatible string that equates to the input value
+	quoted if necessary
+    */
+    public function SanitizeValue($v) {
+	return $this->NativeObject()->addQuotes($v);	// 2017-11-05 not sure if this behaves quite as expected
+    }
+    // DEPRECATED
+    //abstract public function Sanitize_andQuote($s);
+    
+    // -- DATA PREPROCESSING -- //
+    // ++ DATA READ ++ //
+
+    public function Result_RowCount(fcDataRecord $rs) {
+	$native = $rs->GetDriverBlob();
+	if (is_null($native)) {
+	    return 0;
+	} else {
+	    return $native->num_rows;	// this may be the wrong call - try $this->NativeObject()->numRows($native)
+	}
+    }
+    public function Result_NextRow(fcDataRecord $rs) {
+	//return $this->RetrieveDriver($rs)->fetch_assoc();	// again, may be wrong call; also RetrieveDriver() may not exist
+	return $this->NativeObject()->fetchRow($rs->GetDriverBlob());
+    }
+    
+    // -- DATA READ -- //
+    // ++ DATA READ/WRITE ++ //
+
+    public function ExecuteAction($sSQL) {
+	$this->sql = $sSQL;
+	return $this->NativeObject()->query($sSQL);
+    }
+    public function CountOfAffectedRows() {
+    	return $this->NativeObject()->affectedRows();
+    }
+    public function CreatedID() {
+	return $this->NativeObject()->insertId();
+    }
+
+    // -- DATA READ/WRITE -- //
+    // ++ TRANSACTIONS ++ //
+    
+    public function TransactionOpen() {
+	return $this->NativeObject()->begin();
+    }
+    public function TransactionSave() {
+	return $this->NativeObject()->commit();
+    }
+    public function TransactionKill() {
+	return $this->NativeObject()->rollback();
+    }
+    
+    // -- TRANSACTIONS -- //
     // ++ CONVENTIONS ++ //
 
     /*----
@@ -75,26 +166,11 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     // -- CONVENTIONS -- //
     // ++ DATA RETRIEVAL ++ //
 
-    public function FetchRecordset($sql,fcDataSource $tbl) {
-
-	$mwoRe = $this->MWDB()->query($sql);	// $mwoRe is a ResultWrapper http://svn.wikimedia.org/doc/classResultWrapper.html
-	$poRes = $mwoRe->result;
-
-	/*
-	if (is_resource($mwoRes)) {
-	    $foRes = new fcDataResult_MW($this,$mwoRes);
-	    $sClass = $this->RecordsetClassName();
-	    $rs = new $sClassName();
-	    $rs->sqlMake = $sSQL;		// WORKING HERE
-	    $rs->ResultHandler($foRes);
-	    $this->PrepareItem($rs);
-	    return $rs;
-	} else {
-	    echo '<b>Note</b>: mwoRes is an object of class "'.get_class($mwoRes).'".<br>';
-	    throw new exception('MediaWiki query failed. SQL: '.$sSQL);
-	}*/
-
-	return $this->ProcessResultset($poRes,$tbl,$sql);
+    //public function FetchRecordset($sql,fcDataSource $tbl) {
+    public function FetchRecordset($sSQL,fiRecords_forTable $tbl) {
+	$mwoRe = $this->NativeObject()->query($sSQL);	// $mwoRe is a ResultWrapper http://svn.wikimedia.org/doc/classResultWrapper.html
+	$poRes = $mwoRe->result;			// $poRes is... I forget.
+	return $tbl->ProcessResultset($poRes,$sSQL);	// return provisioned recordset
     }
 
     // -- DATA RETRIEVAL -- //
@@ -112,7 +188,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     */
     public function Titles_forTopic_arr($sTopic) {
 	$res = $this->Titles_forTopic_res($sTopic);
-	$db = $this->MWDB();
+	$db = $this->NativeObject();
 
 	// process the data
 	$arTitles = array();
@@ -160,7 +236,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
 	    'p'	=> array('LEFT JOIN','cl.cl_from=p.page_id'),
 	  );
 
-	$db = $this->MWDB();
+	$db = $this->NativeObject();
 //	$db =& wfGetDB( DB_SLAVE );
 /*
 	$sql = $db->selectSQLText(
@@ -194,7 +270,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
     */
     public function Props_forPage_arr($idTitle) {
 	$res = $this->Props_forPage_res($idTitle);
-	$db = $this->MWDB();
+	$db = $this->NativeObject();
 
 	// process the data
 	$arProps = NULL;
@@ -224,7 +300,7 @@ class fcDataConn_MW extends fcDataConn_MySQL {
 	$arOptions = array();
 	$arJoins = array();
 
-	$db = $this->MWDB();
+	$db = $this->NativeObject();
 	// execute SQL and get data
 	$res = $db->select(
 	  $arTables,	// tables (string or array)

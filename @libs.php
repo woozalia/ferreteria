@@ -39,21 +39,7 @@ $om = new fcCodeModule(__FILE__, 'exception.php');
   $om->AddClass('fcSilentException');
 $om = new fcCodeModule(__FILE__, 'globals.php');
   $om->AddClass('fcGlobals');
-/* 2016-11-13 old page/skin scheme
-$om = new fcCodeModule(__FILE__, 'page.php');
-  $om->AddClass('clsPage');
-  $om->AddClass('clsPageLogin');
-  $om->AddClass('clsPageRestricted');
-$om = new fcCodeModule(__FILE__, 'page.menu.php');
-  $om->AddClass('ftPageMenu');
-*/
-/* 2016-11-15 these are also no longer applicable
-$om = new fcCodeModule(__FILE__, 'skin/skin.php');
-  $om->AddClass('fcSkin');
-  $om->AddClass('fcSkin_standard');
-$om = new fcCodeModule(__FILE__, 'skin/skin-login.php');
-  $om->AddClass('fcSkin_login');
-*/
+  $om->AddClass('ftSingleton');
 
 $om = new fcCodeModule(__FILE__,'db/sql/db-sql.php');
   $om->AddClass('clsSQL_Query');	// DEPRECATED

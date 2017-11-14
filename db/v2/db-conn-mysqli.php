@@ -9,7 +9,7 @@
 
 class fcDataConn_MySQL extends fcDataConn_CliSrv {
 
-    // ++ CONFIGURATION FIELDS ++ //
+    // ++ SETUP ++ //
 
     private $oNative;
     protected function NativeObject(mysqli $oConn=NULL) {
@@ -23,7 +23,7 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	}
     }
 
-    // -- CONFIGURATION FIELDS -- //
+    // -- SETUP -- //
     // ++ INFORMATION ++ //
 
     public function IsOkay() {
@@ -107,7 +107,8 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     public function FetchRecordset($sSQL,fcTable_wRecords $tbl) {
 	$poRes = $this->NativeObject()->query($sSQL);	// returns a mysqli_result if successful
 	$this->sql = $sSQL;
-	return $this->ProcessResultset($poRes,$tbl,$sSQL);
+	//return $this->ProcessResultset($poRes,$tbl,$sSQL);
+	return $tbl->ProcessRecordset($poRes,$sSQL);
     }
     /*----
       INPUT:
@@ -117,7 +118,7 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	* If query successful, Recordset wrapper object will be linked to a Table wrapper object, and will include the query results.
 	* If query failed, Recordset wrapper object will have 0 rows.
     */
-    protected function ProcessResultset($poRes,fcTable_wRecords $tbl,$sql) {
+    protected function ProcessResultset($poRes,fiRecords_forTable $tbl,$sql) {
 	$rcNew = $tbl->SpawnRecordset();		// spawn a blank Recordset wrapper object
 	if (is_object($poRes)) {
 	    $rcNew->SetDriverBlob($poRes);		// store mysqli_result in Recordset object

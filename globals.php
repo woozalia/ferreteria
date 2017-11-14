@@ -9,17 +9,28 @@
 */
 trait ftSingleton {
     static protected $me;
-    static public function Me() {
-	if (!isset(self::$me)) {
-	    throw new exception('Ferreteria usage error: attempting to access '.get_class($this).' object before it has been set.');
-	}
-	return self::$me;
-    }
+    // ACTION: always creates object, throws error if one already exists
     public function __construct() {
 	if (isset(self::$me)) {
 	    throw new exception('Ferreteria usage error: attempted to create duplicate instance of '.get_class($this).'.');
 	}
 	self::$me = $this;	// there can be only one
+    }
+    // ACTION: returns existing object, throws error if one does not exist
+    static public function Me() {
+	if (!isset(self::$me)) {
+	    throw new exception('Ferreteria usage error: attempting to access '.get_called_class().' object before it has been set.');
+	}
+	return self::$me;
+    }
+    // ACTION: returns existing object if there is one, otherwise creates one
+    static public function Make() {
+	if (isset(self::$me)) {
+	    return self::Me();
+	} else {
+	    $sClass = get_called_class();
+	    return new $sClass();
+	}
     }
 }
 /*::::

@@ -25,8 +25,13 @@
       * created ftStoredTable with contents of fcTable_wName_wSource_wRecords
     2017-06-06 added SourceString_forSelect()
 */
-    define('KFMT_RDATA_NATIVE',TRUE);
-    define('KFMT_RDATA_SQL',FALSE);
+define('KFMT_RDATA_NATIVE',TRUE);
+define('KFMT_RDATA_SQL',FALSE);
+
+interface fiRecords_forTable {
+    function SpawnRecordset();
+    function ProcessResultset($poRes,$sql);
+}
 /*::::
   PURPOSE: fcDataSource + this = table with db connection
   REQUIREMENT: class constructor should include same argument as TraitConstructor()
@@ -61,12 +66,38 @@ trait ftSource_forTable {
   PURPOSE: fcDataSource + this = table which can pull up recordsets
 */
 trait ftRecords_forTable {
-   // name for singular class
+    // name for singular class
     abstract protected function SingularName();
     // NOTE: 2016-11-06 Maybe this should be renamed SpawnRecordsWrapper().
     public function SpawnRecordset() {
 	$sClass = $this->SingularName();
 	return new $sClass($this);
+    }
+    /*----
+      INPUT:
+	$poRes should be either a Recordset wrapper object or boolean
+	$tbl is the Table wrapper object which should be used to instantiate the Recordset wrapper object.
+      RETURNS: Recordset wrapper
+	* If query successful, Recordset wrapper object will be linked to a Table wrapper object, and will include the query results.
+	* If query failed, Recordset wrapper object will have 0 rows.
+      HISTORY:
+	2017-11-05 moved from fcDataConn_MySQL to ftRecords_forTable
+    */
+    public function ProcessResultset($poRes,$sql) {
+	$rcNew = $this->SpawnRecordset();		// spawn a blank Recordset wrapper object
+	if (is_object($poRes)) {
+	    $rcNew->SetDriverBlob($poRes);		// store mysqli_result in Recordset object
+	} else {
+	    $db = $this->GetConnection();
+	    $sErr = $db->ErrorString();
+	    $nErr = $db->ErrorNumber();
+	    echo "<b>SQL</b>: $sql<br>";
+	    echo "<b>DB Error</b>: $sErr<br>";
+	    throw new exception("Ferreteria/mysqli error: database query failed with error $nErr.");
+	    $rcNew->SetDriverBlob(NULL);		// no result to store
+	}
+	$rcNew->sql = $sql;	// for debugging
+	return $rcNew;
     }
 }
 /*::::
@@ -257,7 +288,7 @@ class fcTable_wSource extends fcTableBase {
 /*::::
   PURPOSE: data source wrapper class
 */
-abstract class fcTable_wRecords extends fcTableBase {
+abstract class fcTable_wRecords extends fcTableBase implements fiRecords_forTable {
     use ftRecords_forTable;
 }
 /*::::

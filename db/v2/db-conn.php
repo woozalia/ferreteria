@@ -8,6 +8,8 @@
 
   HISTORY:
     2015-03-12 rewrite of data*.php started
+    2017-11-05 removed Sanitize_andQuote as a requirement in fcDataConn so MW classes wouldn't need to implement
+      TODO: replace all uses of it throughout Ferreteria and its apps with SanitizeValue()
   */
 
 
@@ -43,13 +45,15 @@ abstract class fcDataConn {
     */
     abstract public function SanitizeValue($v);
     // DEPRECATED
-    abstract public function Sanitize_andQuote($s);
+    public function Sanitize_andQuote($s) {
+	throw new exception('Call SanitizeValue() instead.');
+    }
     
     // -- DATA PREPROCESSING -- //
     // ++ DATA READ/WRITE ++ //
 
     abstract public function MakeTableWrapper($sTableClass,$id=NULL);
-    abstract public function FetchRecordset($sSQL,fcTable_wRecords $tbl);
+    abstract public function FetchRecordset($sSQL,fiRecords_forTable $tbl);
     abstract public function ExecuteAction($sSQL);
     abstract public function CountOfAffectedRows();
     abstract public function CreatedID();
@@ -65,6 +69,9 @@ abstract class fcDataConn {
     // ++ UTILITY ++ //
     
     public function Sanitize_andQuote_ValueArray(array $arVals) {
+	throw new exception('Call SanitizeValueArray() instead.');
+    }
+    public function SanitizeValueArray(array $arVals) {
 	$arOut = NULL;
 	foreach ($arVals as $key => $val) {
 	    $arOut[$key] = $this->Sanitize_andQuote($val);
