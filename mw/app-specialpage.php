@@ -4,6 +4,7 @@
   HISTORY:
     2015-05-08 split off from menu.php
     2017-01-16 partially updated for latest massive Ferreteria revisions -- just so Special:SpecialPages will load.
+    2017-11-18 clsApp_MW was renamed to fcApp_MW awhile back
 */
 
 // TODO: possibly this should be a static class property or something
@@ -46,8 +47,10 @@ class SpecialPageApp extends SpecialPage {
 	$oApp->SetPageObject($oPage);		// connects App and Page
 	*/
 	
+	/* 2017-11-18 This no longer applies.
 	$sClass = $this->AppClass();
 	$oApp = new $sClass;
+	*/
 	// The New Way: App class creates its own Page object
 
 	$vgUserName = $wgUser->getName();
@@ -67,9 +70,10 @@ class SpecialPageApp extends SpecialPage {
     protected function PageClass() {
 	return 'fcPage_MW';
     }
+    /*
     protected function AppClass() {
-	return 'clsApp_MW';
-    }
+	return 'fcApp_MW';
+    }*/
 
     // -- CLASS NAMES -- //
     // ++ APP FRAMEWORK ++ //
