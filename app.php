@@ -65,21 +65,27 @@ abstract class fcApp {
 	}
 	return $this->rcUser;
     }
-    private $oPage;
+    private $oPage=NULL;
     public function GetPageObject() {
-	if (empty($this->oPage)) {
+	if (is_null($this->oPage)) {
 	    $sClass = $this->GetPageClass();
 	    $this->oPage = new $sClass();
 	}
 	return $this->oPage;
     }
-    private $oKiosk;
+    private $oKiosk=NULL;
     public function GetKioskObject() {
-	if (empty($this->oKiosk)) {
+	if (is_null($this->oKiosk)) {
 	    $sClass = $this->GetKioskClass();
-	    $this->oKiosk = new $sClass();
+	    $this->CreateKioskObject($sClass);
 	}
 	return $this->oKiosk;
+    }
+    protected function SetKioskObject(fcMenuKiosk $o) {
+	$this->oKiosk = $o;
+    }
+    protected function CreateKioskObject($sClass) {
+	$this->SetKioskObject(new $sClass());
     }
     private $oHdrMenu;
     public function GetHeaderMenu() {

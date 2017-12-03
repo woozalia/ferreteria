@@ -5,6 +5,9 @@
     2015-05-08 split off from menu.php
     2017-01-16 partially updated for latest massive Ferreteria revisions -- just so Special:SpecialPages will load.
     2017-11-18 clsApp_MW was renamed to fcApp_MW awhile back
+    2017-12-03 did a bunch of updating, but eventually decided that this was obsolete
+      since most of the functionality had been moved elsewhere in Ferreteria.
+      Replaced with cSpecialPage (which currently does nothing).
 */
 
 // TODO: possibly this should be a static class property or something
@@ -363,6 +366,7 @@ class SpecialPageApp extends SpecialPage {
       TODO: This can probably be replaced by clsURL::ParsePath($par);
     */
     protected function GetArgs($par) {
+	throw new exception('2017-12-03 Does anything still use this?');	// shouldn't be...
 	$args_raw = preg_split('/\//',$par);
 	foreach($args_raw as $arg_raw) {
 	    if (strpos($arg_raw,KS_CHAR_URL_ASSIGN) !== FALSE) {
@@ -378,6 +382,7 @@ class SpecialPageApp extends SpecialPage {
 	or just the arguments listed in $iList
     */
     public function Args(array $iList=NULL) {
+	throw new exception('2017-12-03 Does anything still use this?');	// shouldn't be either...
 	if (is_array($iList)) {
 	    foreach ($iList as $name) {
 		$arOut[$name] = $this->Arg($name);
@@ -394,6 +399,7 @@ class SpecialPageApp extends SpecialPage {
 	  NULL is easier to test for.
     */
     public function Arg($iName) {
+	throw new exception('2017-12-03 Does anything still use this?');	// same as above
 	if (isset($this->args[$iName])) {
 	    return $this->args[$iName];
 	} else {
@@ -402,6 +408,7 @@ class SpecialPageApp extends SpecialPage {
     }
     // Alias for compatibility with other Ferreteria Page classes
     public function PathArg($sName) {
+	throw new exception('2017-12-03 Does anything still use this?');	// same as above
 	return $this->Arg($sName);
     }
     /*----
@@ -409,6 +416,7 @@ class SpecialPageApp extends SpecialPage {
 	2013-08-26 added so we could avoid adding nonexistent data to the URL
     */
     public function HasArg($iName) {
+	throw new exception('2017-12-03 Does anything still use this?');	// same as above
 	return isset($this->args[$iName]);
     }
 
@@ -420,6 +428,7 @@ class SpecialPageApp extends SpecialPage {
     */
     private $sPage, $tbl, $rec, $idRec, $doRec;
     protected function HandlePageArgs() {
+	throw new exception('2017-12-03 Does anything still use this?');	// same as above
 	if (isset($this->args['page'])) {
 	    $sPage = $this->args['page'];
 	} else {
@@ -478,12 +487,15 @@ class SpecialPageApp extends SpecialPage {
 	$this->rec = $rc;
     }
     protected function PageArg_Table() {
+	throw new exception('2017-12-03 Does anything still use this?');	// same as above
 	return $this->tbl;
     }
     protected function PageArg_Record() {
+	throw new exception('2017-12-03 Does anything still use this?');	// same as above
 	return $this->rec;
     }
     protected function PageArg_PageName() {
+	throw new exception('2017-12-03 Does anything still use this?');	// same as above
 	return $this->sPage;
     }
 

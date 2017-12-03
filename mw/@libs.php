@@ -23,6 +23,8 @@ $om = new fcCodeModule(__FILE__, 'page-section.php');
 $om = new fcCodeModule(__FILE__, 'page-section-v3.php');
   $om->AddClass('fcSectionHeader_MW');
   $om->AddClass('fcSectionMenuItem');
+$om = new fcCodeModule(__FILE__, 'specialpage.php');
+  $om->AddClass('ferreteria\mw\cSpecialPage');
 $om = new fcCodeModule(__FILE__, 'richtext.php');
   $om->AddClass('clsRT_HTML');
   $om->AddClass('clsRT_Wiki');

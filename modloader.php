@@ -228,14 +228,16 @@ class fcCodeModule {
       HISTORY:
 	2013-08-28 removed initialization of self::$arMods
     */
-    protected static function Register(fcCodeModule $iModule) {
+    static protected function Register(fcCodeModule $iModule) {
 	self::$arMods[$iModule->Key()] = $iModule;
 	self::DebugLine('Registering module "'.$iModule->Path().'"');
     }
-    public static function Load_byName($iName) {
+    static public function Load_byName($iName) {
+	throw new exception('2017-11-29 Need to document how this is different from fcCodeLibrary::Load_byName().');
 	$ok = FALSE;
 	if (self::Exists($iName)) {
 	    $objMod = self::ByName($iName);
+	    self::DebugLine("LOADING [$iName]");
 	    $ok = $objMod->Load();
 	} else {
 	    if (self::DebugMode()) {
@@ -254,6 +256,7 @@ class fcCodeModule {
     protected function Load() {
 	if ($this->isLoaded) {
 	    $ok = TRUE;
+	    // module already loaded, no action needed
 	} else {
 	    $ok = FALSE;
 	    try {
@@ -262,6 +265,7 @@ class fcCodeModule {
 		if (file_exists($fsMod)) {
 		    require_once $fsMod;
 		    $ok = TRUE;
+		    self::DebugLine("Module <b>$strName</b> loaded.");
 		} else {
 		    $fsCaller = $this->fsCaller;
 		    //$intCaller = $this->intCaller;

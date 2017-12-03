@@ -15,8 +15,8 @@ fcCodeLibrary::BasePath($fp.'/');
 $oL = new fcCodeLibrary('ferreteria.db.1','db/v1/@libs.php');
 $oL = new fcCodeLibrary('ferreteria.db.2','db/v2/@libs.php');
 $oL = new fcCodeLibrary('ferreteria.mw.core','mw/@libs.php');
-$oL = new fcCodeLibrary('ferreteria.mw.1','db/v1/mw/@libs.php');	// DEPRECATED; use ferreteria.db.mw
-$oL = new fcCodeLibrary('ferreteria.mw.2','db/v2/mw/@libs.php');	// DEPRECATED; use ferreteria.db.mw
+//$oL = new fcCodeLibrary('ferreteria.mw.1','db/v1/mw/@libs.php');	// DEPRECATED; use ferreteria.db.mw
+//$oL = new fcCodeLibrary('ferreteria.mw.2','db/v2/mw/@libs.php');	// DEPRECATED; use ferreteria.db.mw
 $oL = new fcCodeLibrary('ferreteria.forms.2','forms/@libs.php');
 $oL = new fcCodeLibrary('ferreteria.login','user-access/@libs.php');
 
