@@ -25,6 +25,7 @@
       Moved into Ferreteria folder, so it will be included in the repository
       rather than needing to be managed separately. It's unlikely to be used without Ferreteria --
       but if it is, it can always be extracted.
+    2017-12-17 support for CLI mode in debugging output
 */
 
 class fcCodeModule {
@@ -32,7 +33,6 @@ class fcCodeModule {
     private static $arCls;	// index of classes: arCls[class] => module name
     private static $arFx;	// index of functions: arFx[fx name] => module name
     private static $fpBase;	// base path for all module specs
-    private static $doDebug;
     private static $nDepth = 0;	// recursion depth for loading modules
 
     private $strName;	// name by which to refer to module
@@ -40,49 +40,6 @@ class fcCodeModule {
     private $fsCaller;	// filespec of caller
     private $isLoaded;	// TRUE = this module has already been loaded (included)
 
-    // ++ DEPRECATED ++ //
-
-      //++functions++//
-      
-      // These are deprecated because I'm trying to get rid of function registration. Use static class methods instead, and register the class.
-    
-    public function AddFunc($iName) {
-	self::_AddFunc($this, $iName);
-    }
-    /*----
-      ASSUMES: static stuff has been initialized, i.e. Register() has been called at least once
-      USED BY: clsLibMgr::Path()
-    */
-    public static function ByName($iName) {
-	if (self::Exists($iName)) {
-	    return self::$arMods[$iName];
-	} else {
-	    return NULL;
-	}
-    }
-    private static function _AddFunc(fcCodeModule $iMod, $iFunc) {
-	$sMod = $iMod->Key();
-	self::$arFx[$iFunc] = $sMod;
-    }
-    private static function HasFunc($iName) {
-	return self::ArrayHas(self::$arFx,$iName);
-    }
-    public static function LoadFunc($iName) {
-	if (self::HasFunc($iName)) {
-	    $sMod = self::$arFx[$iName];
-	    $oMod = self::$arMods[$sMod];
-	    $oMod->Load();
-	    return TRUE;
-	} else {
-	    // for debugging
-	    echo "Attempting to load unknown function <b>$iName</b>.<br>";
-	    throw new exception('Request for unknown function "'.$iName.'".');
-	}
-    }
-
-      //--functions--//
-
-    // -- DEPRECATED -- //
     // ++ SETUP ++ //
 
     /*----
@@ -159,7 +116,7 @@ class fcCodeModule {
     }
     private static function _AddClass(fcCodeModule $iMod, $iClass) {
 	$sMod = $iMod->Key();
-	if (self::DebugMode()) {
+	if (self::GetDebugMode()) {
 	    self::DebugLine('ADDING CLASS <b>'.$iClass.'</b>');
 	    if (array_key_exists($iClass,self::$arCls)) {
 		$sModFnd = self::$arCls[$iClass];
@@ -170,7 +127,7 @@ class fcCodeModule {
 	self::$arCls[$iClass] = $sMod;
     }
     public static function LoadClass($iName) {
-	$doDbg = self::DebugMode();
+	$doDbg = self::GetDebugMode();
 	self::DebugLine('LOADING CLASS: <b>'.$iName.'</b>','');
 	if (self::HasClass($iName)) {
 	    $sMod = self::$arCls[$iName];
@@ -240,7 +197,7 @@ class fcCodeModule {
 	    self::DebugLine("LOADING [$iName]");
 	    $ok = $objMod->Load();
 	} else {
-	    if (self::DebugMode()) {
+	    if (self::GetDebugMode()) {
 		self::DebugLine("Attempting to load undefined module <b>$iName</b>.");
 		throw new exception('Request for undefined module"'.$iName.'".');
 	    }
@@ -259,17 +216,29 @@ class fcCodeModule {
 	    // module already loaded, no action needed
 	} else {
 	    $ok = FALSE;
+	    if (defined('KF_CLI_MODE')) {
+		$ftHilitePfx = '[';
+		$ftHiliteSfx = ']';
+		$ftNewline = "\n";
+	    } else {
+		$ftHilitePfx = '<b>';
+		$ftHiliteSfx = '</b>';
+		$ftNewline = '<br>';
+	    }
 	    try {
 		$fsMod = $this->Path();
 		$strName = $this->Key();
 		if (file_exists($fsMod)) {
 		    require_once $fsMod;
 		    $ok = TRUE;
-		    self::DebugLine("Module <b>$strName</b> loaded.");
+		    self::DebugLine("Module $ftHilitePfx$strName$ftHiliteSfx loaded.");
 		} else {
 		    $fsCaller = $this->fsCaller;
 		    //$intCaller = $this->intCaller;
-		    echo "Module <b>$strName</b> could not be loaded because source file <b>$fsMod</b>, registered in <b>$fsCaller</b>, is not found.<br>";
+		    echo "Module $ftHilitePfx$strName$ftHiliteSfx"
+		      ." could not be loaded because source file $ftHilitePfx$fsMod$ftHiliteSfx,"
+		      ." registered in $ftHilitePfx$fsCaller$ftHiliteSfx,"
+		      ."is not found.$ftNewline";
 		}
 	    } catch(Exception $e) {
 		echo "ModLoader could not load module [$strName] from [$fsMod]; error: <b>".$e->getMessage().'</b>';
@@ -283,20 +252,64 @@ class fcCodeModule {
     // -- MODULE MANAGEMENT -- //
     // ++ DEBUGGING ++ //
 
-    public static function DebugMode($iOn=NULL) {
-	if (!is_null($iOn)) {
-	    self::$doDebug = $iOn;
-	}
-	return isset(self::$doDebug)?self::$doDebug:FALSE;
+    private static $doDebug = FALSE;
+    public static function SetDebugMode($iOn) {
+	self::$doDebug = $iOn;
+    }
+    public static function GetDebugMode() {
+	return self::$doDebug;
     }
     private static function DebugLine($iTxt,$iEnd='<br>') {
-	if (self::DebugMode()) {
+	if (self::GetDebugMode()) {
 	    $out = str_repeat(' -',self::$nDepth);
 	    echo $out.$iTxt.$iEnd;
 	}
     }
 
     // -- DEBUGGING -- //
+    // ++ DEPRECATED ++ //
+
+      //++functions++//
+      
+      // These are deprecated because I'm trying to get rid of function registration. Use static class methods instead, and register the class.
+    
+    public function AddFunc($iName) {
+	self::_AddFunc($this, $iName);
+    }
+    /*----
+      ASSUMES: static stuff has been initialized, i.e. Register() has been called at least once
+      USED BY: clsLibMgr::Path()
+    */
+    public static function ByName($iName) {
+	if (self::Exists($iName)) {
+	    return self::$arMods[$iName];
+	} else {
+	    return NULL;
+	}
+    }
+    private static function _AddFunc(fcCodeModule $iMod, $iFunc) {
+	$sMod = $iMod->Key();
+	self::$arFx[$iFunc] = $sMod;
+    }
+    private static function HasFunc($iName) {
+	return self::ArrayHas(self::$arFx,$iName);
+    }
+    public static function LoadFunc($iName) {
+	if (self::HasFunc($iName)) {
+	    $sMod = self::$arFx[$iName];
+	    $oMod = self::$arMods[$sMod];
+	    $oMod->Load();
+	    return TRUE;
+	} else {
+	    // for debugging
+	    echo "Attempting to load unknown function <b>$iName</b>.<br>";
+	    throw new exception('Request for unknown function "'.$iName.'".');
+	}
+    }
+
+      //--functions--//
+
+    // -- DEPRECATED -- //
     
 }
 
@@ -321,7 +334,11 @@ class fcCodeLibrary {
 	// make sure the resulting filespec actually exists:
 	$fs = $this->IndexSpec();
 	if (!file_exists($fs)) {
-	    echo "Trying to register <b>$fs</b> as a module index:<pre>";
+	    if (defined('KF_CLI_MODE')) {
+		echo "Trying to register [$fs] as a module index:\n";
+	    } else {
+		echo "Trying to register <b>$fs</b> as a module index:<pre>";
+	    }
 	    throw new exception('Ferreteria usage error: Specified module index file does not exist. Has it been renamed?');
 	}
 	
@@ -398,16 +415,27 @@ class fcCodeLibrary {
 	return $this->isLoaded;
     }
     public static function DumpList() {
+	if (defined('KF_CLI_MODE')) {
+	    $ftListStart = "\n";
+	    $ftLineStart = " - ";
+	    $ftLineFinish = "\n";
+	    $ftListFinish = "\n";
+	} else {
+	    $ftListStart = "\n<ul>";
+	    $ftLineStart = "<li>";
+	    $ftLineFinish = "</li>\n";
+	    $ftListFinish = "</ul>\n";
+	}
 	$out = NULL;
 	if (isset(self::$arLibs)) {
 	    if (is_array(self::$arLibs)) {
 		if (count(self::$arLibs > 0)) {
-		    $out = "Registered Libraries:\n<ul>";
+		    $out = "Registered Libraries:".$ftListStart;
 		    foreach (self::$arLibs as $sName => $oLib) {
 			$sStatus = $oLib->IsLoaded()?' LOADED':'';
-			$out .= "<li>$sName$sStatus</li>\n";
+			$out .= $ftLineStart.$sName.$sStatus.$ftLineFinish;
 		    }
-		    $out .= "</ul>\n";
+		    $out .= $ftListFinish;
 		} else {
 		    $out = '$arLibs is an empty array.';
 		}
