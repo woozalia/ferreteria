@@ -5,6 +5,7 @@
     2015-09-13 Removed the [brackets] from the output of clsArray::Render().
     2016-01-19 Fixed bug in Render() recursion.
     2017-02-22 auto-detection of CLI mode (this eventually belongs somewhere else)
+    2018-01-20 RenderKeys()
 */
 
 class fcArray {
@@ -168,6 +169,16 @@ class fcArray {
 	    }
 	    return $out;
 	}
+    }
+    static public function RenderKeys(array $ar,$sSep=' ') {
+	$out = '';
+	foreach ($ar as $key => $val) {
+	    if ($out != '') {
+		$out .= $sSep;
+	    }
+	    $out .= $key;
+	}
+	return $out;
     }
     /*----
       INPUT:
