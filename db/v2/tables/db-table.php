@@ -100,30 +100,21 @@ trait ftRecords_forTable {
 	return $rcNew;
     }
 }
-/*::::
-  PURPOSE: table functions which require the table to know its own name
+/*----
+  PURPOSE: Table-like object where we can't just give it a table-name to work on but we can still read stuff from it
+    Basically, a query.
 */
-trait ftName_forTable {
+trait ftSelectable_Table {
 
     // ++ CONFIGURATION ++ //
-    
-    // name of database table for which this class is a wrapper
-    abstract protected function TableName();
-    // PUBLIC because sometimes you have to build SQL queries from multiple tables
-    public function TableName_Cooked() {	// db table name sanitized with backticks
-	return '`'.$this->TableName().'`';
-    }
-    // PURPOSE: provides name of table for SELECT queries; can also return a JOIN
-    protected function SourceString_forSelect() {
-	return $this->TableName_Cooked();	// default; override for joins
-    }
-    // PURPOSE: provides field list for SELECT queries
+
     protected function FieldsString_forSelect() {
 	return '*';
     }
+    abstract protected function SourceString_forSelect();
 
     // -- CONFIGURATION -- //
-    // ++ CALCULATIONS ++ //
+    // ++ SQL: DATA READ ++ //
     
     protected function FigureSelectSQL($sqlWhere=NULL,$sqlSort=NULL,$sqlOther=NULL) {
 	$sqlFields = $this->FieldsString_forSelect();
@@ -140,6 +131,35 @@ trait ftName_forTable {
 	}
 	return $sql;
     }
+
+    // -- SQL: DATA READ -- //
+}
+/*::::
+  PURPOSE: table functions which require the table to know its own name
+*/
+trait ftName_forTable {
+    use ftSelectable_Table;
+
+    // ++ CONFIGURATION ++ //
+    
+    // name of database table for which this class is a wrapper
+    abstract protected function TableName();
+    // PUBLIC because sometimes you have to build SQL queries from multiple tables
+    public function TableName_Cooked() {	// db table name sanitized with backticks
+	return '`'.$this->TableName().'`';
+    }
+    // PURPOSE: provides field list for SELECT queries
+    protected function FieldsString_forSelect() {
+	return '*';
+    }
+    // PURPOSE: provides name of table for SELECT queries; can also return a JOIN
+    protected function SourceString_forSelect() {
+	return $this->TableName_Cooked();	// default; override for joins
+    }
+
+    // -- CONFIGURATION -- //
+    // ++ SQL: DATA WRITE ++ //
+    
     /*----
       RETURNS: SQL for creating a new record for the given data
       HISTORY:
@@ -203,12 +223,12 @@ trait ftName_forTable {
 	return "UPDATE $sqlName SET$sqlSet WHERE $sqlWhere";
     }
 
-    // -- CALCULATIONS -- //
+    // -- SQL: DATA WRITE -- //
 
 }
 /*----
   REQUIRES:
-    * SelectRecords() needs FigureSelectSQL() (in ftName_forTable)
+    * SelectRecords() needs FigureSelectSQL() (in ftSelectable_Table)
     * SelectRecords() needs FetchRecords() (in ftSource_forTable)
     * Insert() needs FigureSQL_forInsert() (in ftName_forTable)
     * Update() needs FigureSQL_forUpdate() (in ftName_forTable)

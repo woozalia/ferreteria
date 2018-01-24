@@ -77,6 +77,7 @@ $om = new fcCodeModule(__FILE__, 'tables/db-table-unique.php');
 $om = new fcCodeModule(__FILE__, 'records/db-records.php');
   $om->AddClass('fcSourcedDataRow');
   $om->AddClass('fcDataRecord');
+  $om->AddClass('fcDataRow');
 $om = new fcCodeModule(__FILE__, 'records/db-records-indexed.php');
   $om->AddClass('fcDataRecord_indexed');
 $om = new fcCodeModule(__FILE__, 'records/db-records-keyed.php');

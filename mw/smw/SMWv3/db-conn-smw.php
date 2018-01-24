@@ -11,9 +11,15 @@
     2012-09-17 useful pieces working
     2014-12-15 no longer invoking config-libs from library files
     2015-03-19 modified to use Ferreteria db v2
+    2018-01-23 tweaks in a probably futile attempt to make the code still run in psycrit
+    2018-01-24 renamed w3smwPage to fcPageData_SMW
+      No longer requires a w3tpl Module in order to get the database.
 */
+if (!defined('SMW_NS_PROPERTY')) {
+    define('SMW_NS_PROPERTY',102);	// just for debugging without SMW actually installed; should be commented out later
+}
 
-/*====
+/*::::
   PURPOSE: SMW-specific data functions
 */
 class fcDataConn_SMW extends fcDataConn_MW {
@@ -85,41 +91,47 @@ class fcDataConn_SMW extends fcDataConn_MW {
     }
 }
 
-class w3smwPage {
+class fcPageData_SMW extends fcPageData_MW {
     private $objPageEnv;	// wiki page environment object (from w3tpl)
-    private $mwoTitle;		// MediaWiki Title object, if set
 
-    public function __construct(w3tpl_module $iPageEnv) {
+    /*
+    public function __construct(xcModule $iPageEnv) {
 	$this->objPageEnv = $iPageEnv;
-    }
+    }*/
     /*----
       RETURNS: database engine from the wiki page environment
     */
+    /*
     protected function Engine() {
 	return $this->PageEnv()->Engine();
     }
     protected function PageEnv() {
 	return $this->objPageEnv;
     }
-
-    public function Use_TitleObject(Title $iTitle) {
-	$this->mwoTitle = $iTitle;
-    }
-    public function MW_Object() {
+    */
+    
+    // ++ FRAMEWORK ++ //
+    
+    private $mwoTitle = NULL;
+    protected function GetTitleObject() {
+	global $wgTitle;
+	
+	if (is_null($this->mwoTitle)) {
+	    $this->mwoTitle = $wgTitle;
+	}
 	return $this->mwoTitle;
     }
-    public function Use_GlobalTitle() {
-	global $wgTitle;
-	$this->Use_TitleObject($wgTitle);
+    protected function SetTitleObject(Title $mwo) {	// 2018-01-24 presume this will be needed at some point
+	$this->mwoTitle = $mwo;
     }
-    public function Use_Title_Named($iName) {
-	$mwoTitle = Title::newFromDBkey($iName);
-	$this->Use_TitleObject($mwoTitle);
+    
+    // -- FRAMEWORK -- //
+    // ++ TABLES ++ //
+    
+    protected function AttributesQuery() {
+	return $this->GetDatabase()->MakeTableWrapper('fctqSMW_Attributes');
     }
-    public function Use_Title_Keyed($iName,$iSpace=NS_MAIN) {
-	$mwoTitle = Title::newFromText($iName,$iSpace);
-	$this->Use_TitleObject($mwoTitle);
-    }
+    
     /*----
       INPUT: an array in the format returned by GetPages_forPropVal()
     */
@@ -127,20 +139,20 @@ class w3smwPage {
 	$this->Use_Title_Keyed($iar['s_title'],$iar['s_namespace']);
     }
     public function TitleKey() {
-	return $this->mwoTitle->getDBkey();
+	return $this->GetTitleObject()->getDBkey();
     }
     public function TitleShown() {
-	return $this->mwoTitle->getText();
+	return $this->GetTitleObject()->getText();
     }
     public function TitleFull() {
-	return $this->mwoTitle->getPrefixedText();
+	return $this->GetTitleObject()->getPrefixedText();
     }
     public function Nspace() {
-	return $this->mwoTitle->getNamespace();
+	return $this->GetTitleObject()->getNamespace();
     }
     /*----
       TODO:
-	* UPGRADE to schema v3
+	* UPGRADE to SMW schema v3
 	* Translate special properties such as "Date" -> "_dat".
 	  Is there a formal list somewhere?
 	Do we have to always check all three tables, or can we assume that
@@ -150,12 +162,13 @@ class w3smwPage {
 	//throw new exception('GetPropData() uses the v2 tables and needs to be either deprecated or updated to v3.');
 	$strPageKey = $this->TitleKey();
 	$strPropKey = Title::capitalize($iPropName,SMW_NS_PROPERTY);
-	$sqlPageKey = $this->Engine()->Sanitize_andQuote($strPageKey);
-	$sqlPropKey = $this->Engine()->Sanitize_andQuote($strPropKey);
+	$sqlPageKey = $this->GetDatabase()->SanitizeValue($strPageKey);
+	$sqlPropKey = $this->GetDatabase()->SanitizeValue($strPropKey);
 
 	$intNSpace = (int)$this->Nspace();
 
 	// PART ONE: smw_atts2
+	/*
 	$sql = 'SELECT value_xsd, value_num'
 	  .' FROM (smw_atts2 AS a'
 	  .' LEFT JOIN smw_ids AS s ON a.s_id=s.smw_id)'
@@ -163,8 +176,15 @@ class w3smwPage {
 	  .' WHERE'
 	  ." (p.smw_title = $sqlPropKey) AND"
 	  ." (s.smw_title = $sqlPageKey) AND"
-	  ." (s.smw_namespace = $intNSpace);";
-	$rs = $this->Engine()->Recordset($sql);
+	  ." (s.smw_namespace = $intNSpace);"; */
+	$sqlFilt = 
+	  " (p.smw_title = $sqlPropKey) AND"
+	  ." (s.smw_title = $sqlPageKey) AND"
+	  ." (s.smw_namespace = $intNSpace);"
+	  ;
+
+	$t = $this->AttributesQuery();
+	$rs = $t->SelectRecords($sqlFilt);
 	$arOut['atts'] = $rs;
 
 	// PART TWO: smw_rels2
@@ -297,21 +317,41 @@ class w3smwPage {
     }
 }
 
-class tblSMW_PageProps extends fcDataTable_indexed {
+class fctSMW_PageProps extends fcTable_keyed {
 
     // ++ SETUP ++ //
 
-    protected function DefaultTableName() {
-	throw new exception('tblSMW_PageProps::DefaultTableName() returns a v2 table name and needs to be either deprecated or updated to v3.');
+    protected function TableName() {
 	return 'smw_text2';
     }
-    protected function DefaultSingularName() {
-	return 'rcSMW_PageProp';
+    // CEMENT
+    protected function SingularName() {
+	return 'fcrSMW_PageProp';
     }
     
     // -- SETUP -- //
 }
 
+class fctqSMW_Attributes extends fcTable_wSource_wRecords {
+
+    // CEMENT
+    protected function SingularName() {
+	return 'fcrqSMW_Attribute';
+    }
+    // OVERRIDE
+    protected function FieldsString_forSelect() {
+	return 'value_xsd, value_num';
+    }
+    // OVERRIDE
+    protected function SourceString_forSelect() {
+	return '(smw_atts2 AS a'
+	  .' LEFT JOIN smw_ids AS s ON a.s_id=s.smw_id)'
+	  .' LEFT JOIN smw_ids AS p ON a.p_id=p.smw_id'
+	  ;
+    }
+}
+class fcrqSMW_Attribute extends fcDataRow {
+}
 
 /*
  2012-08-13 This function was actually written for InstaGov, but appears to represent a significant amount of time-investment in

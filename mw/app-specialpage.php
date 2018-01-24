@@ -71,7 +71,7 @@ class SpecialPageApp extends SpecialPage {
     // ++ CLASS NAMES ++ //
 
     protected function PageClass() {
-	return 'fcPage_MW';
+	return 'fcPageData_MW';
     }
     /*
     protected function AppClass() {

@@ -5,6 +5,8 @@
     2014-06-17 Created for WorkFerret.
     2015-07-12 resolving conflicts with other edited version
     2017-11-05 renamed clsApp_MW -> fcApp_MW
+    2018-01-24 ftMediaWiki_Database
+
 */
 
 class fcApp_MW extends fcAppStandard {
@@ -22,7 +24,7 @@ class fcApp_MW extends fcAppStandard {
     // ++ CLASSES ++ //
     
     protected function GetPageClass() {
-	return 'fcPage_MW';	// 2017-01-16 This may not work.
+	return 'fcPageData_MW';	// 2017-01-16 This may not work.
     }
     protected function GetKioskClass() {
 	throw new exception('Kiosk class needs to be written for MediaWiki.');
@@ -49,6 +51,7 @@ class fcApp_MW extends fcAppStandard {
     }
     */
     public function GetDatabase() {
+	throw new exception('Who calls this?');
 	return new fcDataConn_MW(wfGetDB(DB_SLAVE));
     }
 
@@ -99,5 +102,35 @@ class fcApp_MW extends fcAppStandard {
     } */
 
     // -- CEMENTING -- //
+}
+trait ftMediaWiki_Database {
+
+    // ++ CLASSES ++ //
+      
+    static protected function DatabaseClass() {
+	return '\fcDataConn_MW';
+    }
+
+    // -- CLASSES -- //
+    // ++ FRAMEWORK ++ //
+      
+    static protected function GetDatabase_MW() {
+	return wfGetDB( DB_SLAVE );
+	$db = new \fcDataConn_SMW($dbr);
+	return $db;
+    }
+    static private $fcDB = NULL;
+    static protected function GetDatabase() {
+	if (is_null(self::$fcDB)) {
+	    $sClass = static::DatabaseClass();
+	    $dbmw = self::GetDatabase_MW();
+	    $dbf = new $sClass($dbmw);
+	    self::$fcDB = $dbf;
+	}
+	return self::$fcDB;
+    }
+      
+    // -- FRAMEWORK -- //
+
 }
 

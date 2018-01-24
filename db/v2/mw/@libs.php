@@ -16,6 +16,7 @@ $om = new fcCodeModule(__FILE__, 'db-conn-mw.php');
   $om->AddClass('fcDataConn_MW');
 $om = new fcCodeModule(__FILE__, 'mw-props.php');
   $om->AddClass('fcMWSiteProperties');
+  $om->AddClass('fcMWPageProperties');
 
 if (defined('SMW_SCHEMA_VERSION')) {
     $om = new fcCodeModule(__FILE__, 'smw/SMWv'.SMW_SCHEMA_VERSION.'/db-conn-smw.php');

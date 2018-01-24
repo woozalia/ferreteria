@@ -17,7 +17,7 @@ $om = new fcCodeModule(__FILE__, 'app-specialpage.php');
 $om = new fcCodeModule(__FILE__, 'menu.php');
   $om->AddClass('clsMenu');
 $om = new fcCodeModule(__FILE__, 'mw-page.php');
-  $om->AddClass('fcPage_MW');
+  $om->AddClass('fcPageData_MW');
 $om = new fcCodeModule(__FILE__, 'page-section.php');
   $om->AddClass('clsWikiFormatter');
 $om = new fcCodeModule(__FILE__, 'page-section-v3.php');
@@ -28,3 +28,8 @@ $om = new fcCodeModule(__FILE__, 'specialpage.php');
 $om = new fcCodeModule(__FILE__, 'richtext.php');
   $om->AddClass('clsRT_HTML');
   $om->AddClass('clsRT_Wiki');
+
+// SMW
+
+$om = new fcCodeModule(__FILE__, 'smw/SMWv3/db-conn-smw.php');	// we'll use v3 by default; create override option only if needed
+  $om->AddClass('fcPageData_SMW');

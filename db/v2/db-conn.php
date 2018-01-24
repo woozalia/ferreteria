@@ -35,7 +35,10 @@ abstract class fcDataConn {
     
     /*----
       INPUT: non-NULL string value
-      OUTPUT: string value with quotes escaped, but not quoted
+      OUTPUT: string value with quotes escaped, but NOT quoted
+      TODO: this is still a bad name for the action. Should probably be:
+	(current) SanitizeString() -> SanitizeStringContent(): sanitize string data but don't quote
+	(new) SanitizeString() = sanitize and always quote, because input is a string
     */
     abstract public function SanitizeString($s);
     /*----
@@ -44,6 +47,7 @@ abstract class fcDataConn {
 	quoted if necessary
     */
     abstract public function SanitizeValue($v);
+    
     // DEPRECATED
     public function Sanitize_andQuote($s) {
 	throw new exception('Call SanitizeValue() instead.');
