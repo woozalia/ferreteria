@@ -11,7 +11,6 @@
       Prior to this, very little seemed to be using it and its functionality was pretty minimal anyway.
 */
 class fcPageData_MW {
-    use ftMediaWiki_Database;
 
     // ++ INFORMATION ++ //
 
@@ -27,11 +26,6 @@ class fcPageData_MW {
   //  }
 
     // -- INFORMATION -- //
-    // ++ FRAMEWORK ++ //
-    
-    
-    
-    // -- FRAMEWORK -- //
     // ++ TITLE ++ //
     
     public function Use_TitleObject(Title $iTitle) {

@@ -24,6 +24,7 @@
       * replaced fcDataTable with fcTable_wName_wSource_wRecords (fcTable_wSource_wRecords + ftName_forTable + ftStoredTable)
       * created ftStoredTable with contents of fcTable_wName_wSource_wRecords
     2017-06-06 added SourceString_forSelect()
+    2018-01-24 ftSelectable_Table, ftReadableTable, ftWriteableTable
 */
 define('KFMT_RDATA_NATIVE',TRUE);
 define('KFMT_RDATA_SQL',FALSE);
@@ -57,7 +58,9 @@ trait ftSource_forTable {
 
     public function FetchRecords($sql) {
 	$this->sql = $sql;	// for debugging purposes
-	return $this->GetConnection()->FetchRecordset($sql,$this);
+	$db = $this->GetConnection();
+	die('GOT TO '.__FILE__.' LINE '.__LINE__);
+	return $db->FetchRecordset($sql,$this);
     }
     
     // -- READ DATA -- //
@@ -230,11 +233,8 @@ trait ftName_forTable {
   REQUIRES:
     * SelectRecords() needs FigureSelectSQL() (in ftSelectable_Table)
     * SelectRecords() needs FetchRecords() (in ftSource_forTable)
-    * Insert() needs FigureSQL_forInsert() (in ftName_forTable)
-    * Update() needs FigureSQL_forUpdate() (in ftName_forTable)
-    * Insert() and Update() need GetConnection() (in ftSource_forTable)
 */
-trait ftStoredTable {
+trait ftReadableTable {
 
     // ++ READ DATA ++ //
 
@@ -245,6 +245,14 @@ trait ftStoredTable {
     }
     
     // -- READ DATA -- //
+}
+/*----
+  REQUIRES:
+    * Insert() needs FigureSQL_forInsert() (in ftName_forTable)
+    * Update() needs FigureSQL_forUpdate() (in ftName_forTable)
+    * Insert() and Update() need GetConnection() (in ftSource_forTable)
+*/
+trait ftWriteableTable {
     // ++ WRITE DATA ++ //
     
     /*----
@@ -286,6 +294,11 @@ trait ftStoredTable {
     }
 
     // -- WRITE DATA -- //
+}
+
+// PURPOSE: table that is readable and writable - kept for backward compatibility
+trait ftStoredTable {
+    use ftReadableTable, ftWriteableTable;
 }
 /*::::
   PURPOSE: base class to tie all the differently-derived Table classes together

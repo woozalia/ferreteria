@@ -6,6 +6,7 @@
     2015-07-12 resolving conflicts with other edited version
     2017-11-05 renamed clsApp_MW -> fcApp_MW
     2018-01-24 ftMediaWiki_Database
+    2018-01-25 moved ftMediaWiki_Database into fcApp_MW
 
 */
 
@@ -23,6 +24,9 @@ class fcApp_MW extends fcAppStandard {
     // -- DEPRECATED -- //
     // ++ CLASSES ++ //
     
+    protected function DatabaseClass() {
+	return 'fcDataConn_MW';
+    }
     protected function GetPageClass() {
 	return 'fcPageData_MW';	// 2017-01-16 This may not work.
     }
@@ -50,13 +54,22 @@ class fcApp_MW extends fcAppStandard {
 	return parent::Data($iObj);
     }
     */
-    public function GetDatabase() {
-	throw new exception('Who calls this?');
-	return new fcDataConn_MW(wfGetDB(DB_SLAVE));
+
+    // ++ FRAMEWORK ++ //
+
+    protected function GetDatabase_MW() {
+	return wfGetDB( DB_SLAVE );
     }
-
-    // ++ APP FRAMEWORK ++ //
-
+    static private $fcDB = NULL;
+    public function GetDatabase() {
+	if (is_null(self::$fcDB)) {
+	    $sClass = $this->DatabaseClass();
+	    $dbmw = $this->GetDatabase_MW();
+	    $dbf = new $sClass($dbmw);
+	    self::$fcDB = $dbf;
+	}
+	return self::$fcDB;
+    }
     // NOTE: Not sure if this is the right name for this. Is a SpecialPage a type of Page, or a Title, or Article, or what?
     private $oMW;
     public function MWPageObject(SpecialPageApp $oMW=NULL) {
@@ -70,7 +83,7 @@ class fcApp_MW extends fcAppStandard {
 	return SpecialPageApp::Me();
     }
 
-    // -- APP FRAMEWORK -- //
+    // -- FRAMEWORK -- //
     // ++ CEMENTING ++ //
 
     /* 2017-01-16 This isn't how we do Pages anymore.
@@ -102,35 +115,5 @@ class fcApp_MW extends fcAppStandard {
     } */
 
     // -- CEMENTING -- //
-}
-trait ftMediaWiki_Database {
-
-    // ++ CLASSES ++ //
-      
-    static protected function DatabaseClass() {
-	return '\fcDataConn_MW';
-    }
-
-    // -- CLASSES -- //
-    // ++ FRAMEWORK ++ //
-      
-    static protected function GetDatabase_MW() {
-	return wfGetDB( DB_SLAVE );
-	$db = new \fcDataConn_SMW($dbr);
-	return $db;
-    }
-    static private $fcDB = NULL;
-    static protected function GetDatabase() {
-	if (is_null(self::$fcDB)) {
-	    $sClass = static::DatabaseClass();
-	    $dbmw = self::GetDatabase_MW();
-	    $dbf = new $sClass($dbmw);
-	    self::$fcDB = $dbf;
-	}
-	return self::$fcDB;
-    }
-      
-    // -- FRAMEWORK -- //
-
 }
 

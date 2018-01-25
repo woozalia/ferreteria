@@ -45,7 +45,6 @@ abstract class fcTable_keyed extends fcTable_wName_wSource_wRecords {
 abstract class fcTable_keyed_single extends fcTable_keyed {
     use ftSingleKeyedTable;
     
-    
     public function Insert_andGet(array $arData) {
 	$id = $this->Insert($arData);
 	if ($id === FALSE) {

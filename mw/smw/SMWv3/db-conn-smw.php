@@ -15,9 +15,9 @@
     2018-01-24 renamed w3smwPage to fcPageData_SMW
       No longer requires a w3tpl Module in order to get the database.
 */
-if (!defined('SMW_NS_PROPERTY')) {
-    define('SMW_NS_PROPERTY',102);	// just for debugging without SMW actually installed; should be commented out later
-}
+//if (!defined('SMW_NS_PROPERTY')) {
+//    define('SMW_NS_PROPERTY',102);	// just for debugging without SMW actually installed; should be commented out later
+//}
 
 /*::::
   PURPOSE: SMW-specific data functions
@@ -159,11 +159,13 @@ class fcPageData_SMW extends fcPageData_MW {
 	  if a value is found in one table, it isn't in the others?
     */
     public function GetPropData($iPropName) {
+	$db = $this->GetDatabase();
+    
 	//throw new exception('GetPropData() uses the v2 tables and needs to be either deprecated or updated to v3.');
 	$strPageKey = $this->TitleKey();
 	$strPropKey = Title::capitalize($iPropName,SMW_NS_PROPERTY);
-	$sqlPageKey = $this->GetDatabase()->SanitizeValue($strPageKey);
-	$sqlPropKey = $this->GetDatabase()->SanitizeValue($strPropKey);
+	$sqlPageKey = $db->SanitizeValue($strPageKey);
+	$sqlPropKey = $db->SanitizeValue($strPropKey);
 
 	$intNSpace = (int)$this->Nspace();
 
@@ -333,6 +335,7 @@ class fctSMW_PageProps extends fcTable_keyed {
 }
 
 class fctqSMW_Attributes extends fcTable_wSource_wRecords {
+    use ftSelectable_Table, ftReadableTable;
 
     // CEMENT
     protected function SingularName() {

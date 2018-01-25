@@ -27,7 +27,6 @@
       but if it is, it can always be extracted.
     2017-12-17 support for CLI mode in debugging output
 */
-
 class fcCodeModule {
     private static $arMods;	// list of modules
     private static $arCls;	// index of classes: arCls[class] => module name
