@@ -28,15 +28,6 @@ class fcDataConn_MW extends fcDataConn_CliSrv {
 	}
 	return $this->oNative;
     }
-    
-    /* 2017-11-05 let's do consistent naming here
-    private $mwDB;
-    public function MWDB($oDB=NULL) {
-	if (!is_null($oDB)) {
-	    $this->mwDB = $oDB;
-	}
-	return $this->mwDB;
-    } */
 
     // -- SETUP -- //
     // ++ INHERITED ++ //
@@ -48,11 +39,6 @@ class fcDataConn_MW extends fcDataConn_CliSrv {
     public function Sanitize($sSQL) {
 	throw new exception(__CLASS__.' does not support Sanitize() without quoting.');
     }
-    /*
-    // this also quotes numbers, but that *shouldn't* be a problem...
-    public function Sanitize_andQuote($sSQL) {
-	return $this->NativeObject()->addQuotes($sSQL);
-    }*/
     /*----
       ACTION: Normalizes wiki page title (spaces become underscores, etc.) then
 	sanitizes and quotes for use in SQL statements.
@@ -95,23 +81,27 @@ class fcDataConn_MW extends fcDataConn_CliSrv {
     public function SanitizeValue($v) {
 	return $this->NativeObject()->addQuotes($v);	// 2017-11-05 not sure if this behaves quite as expected
     }
-    // DEPRECATED
-    //abstract public function Sanitize_andQuote($s);
     
     // -- DATA PREPROCESSING -- //
     // ++ DATA READ ++ //
 
+    // NOTE: $nors is a mysqli_result
     public function Result_RowCount(fcDataRecord $rs) {
-	$native = $rs->GetDriverBlob();
-	if (is_null($native)) {
+	$nors = $rs->GetDriverBlob();	// native object: recordset
+	if (is_null($nors)) {
 	    return 0;
 	} else {
-	    return $native->num_rows;	// this may be the wrong call - try $this->NativeObject()->numRows($native)
+	    return $nors->num_rows;	// this may be the wrong call - try $this->NativeObject()->numRows($native)
 	}
     }
+    // NOTE: $nors is a mysqli_result
     public function Result_NextRow(fcDataRecord $rs) {
 	//return $this->RetrieveDriver($rs)->fetch_assoc();	// again, may be wrong call; also RetrieveDriver() may not exist
-	return $this->NativeObject()->fetchRow($rs->GetDriverBlob());
+	//$nodb = $this->NativeObject();	// native object: database
+	$nors = $rs->GetDriverBlob();	// native object: recordset
+	//$arRow = $nodb->fetchRow($nors);
+	$arRow = $nors->fetch_assoc();
+	return $arRow;
     }
     
     // -- DATA READ -- //
@@ -147,6 +137,12 @@ class fcDataConn_MW extends fcDataConn_CliSrv {
     /*----
       ACTION: Convert title into normalized DB-key format
 	Surely there's some MW function which already does this...?
+      
+      NOTES:
+	Tentatively:
+	  $omw = Title::newFromText($iTitle,$iNameSpace);
+	  $snTitle = $omw->getDBkey();
+      TODO: try that ^
     */
     static public function NormalizeTitle($iTitle,$iNameSpace) {
 	$strTitle = Sanitizer::decodeCharReferencesAndNormalize($iTitle);	// convert HTML entities

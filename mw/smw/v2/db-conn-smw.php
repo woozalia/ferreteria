@@ -14,6 +14,8 @@
     2018-01-23 tweaks in a probably futile attempt to make the code still run in psycrit
     2018-01-24 renamed w3smwPage to fcPageData_SMW
       No longer requires a w3tpl Module in order to get the database.
+    2018-01-26 apparently this is still using SMW's v2 schema, but it has been modified to work with current Ferreteria,
+      so I am copying it over to the SMWv2 folder before rewriting for SMW schema v3.
 */
 //if (!defined('SMW_NS_PROPERTY')) {
 //    define('SMW_NS_PROPERTY',102);	// just for debugging without SMW actually installed; should be commented out later
@@ -27,10 +29,12 @@ class fcDataConn_SMW extends fcDataConn_MW {
     public function GetObjectID($sName) {
 	$sqlKey = $this->Sanitize_PageTitle($sName,SMW_NS_PROPERTY);
 	$sql = "SELECT smw_id FROM smw_object_ids WHERE (smw_title=$sqlKey) LIMIT 1;";
-	$rs = $this->Recordset($sql);
+	$t = $this->MakeTableWrapper('fcUsableTable');
+	//$rs = $this->Recordset($sql);
+	$rs = $t->FetchRecords($sql);
 	if ($rs->HasRows()) {
 	    $rs->NextRow();	// should be only one row -- get it.
-	    $idObj = $rs->FieldValue('smw_id');
+	    $idObj = $rs->GetFieldValue('smw_id');
 	} else {
 	    $idObj = NULL;
 	}
@@ -75,12 +79,14 @@ class fcDataConn_SMW extends fcDataConn_MW {
 		.' LEFT JOIN smw_object_ids AS s ON r.s_id=s.smw_id)'
 		.' LEFT JOIN smw_object_ids AS o ON r.o_id=o.smw_id'
 	      ." WHERE (o_id=$idVal) AND (p_id=$idProp);";
-	    $rs = $this->Recordset($sql);
+	    $t = $this->MakeTableWrapper('fcUsableTable');
+	    //$rs = $this->Recordset($sql);
+	    $rs = $t->FetchRecords($sql);
 	    if ($rs->HasRows()) {
 		$arOut = array();
 		while ($rs->NextRow()) {
-		    $idPage = $rs->FieldValue('s_id');
-		    $arOut[$idPage] = $rs->FieldValues();
+		    $idPage = $rs->GetFieldValue('s_id');
+		    $arOut[$idPage] = $rs->GetFieldValues();
 		}
 		return $arOut;
 	    } else {
@@ -92,7 +98,7 @@ class fcDataConn_SMW extends fcDataConn_MW {
 }
 
 class fcPageData_SMW extends fcPageData_MW {
-    private $objPageEnv;	// wiki page environment object (from w3tpl)
+    //private $objPageEnv;	// wiki page environment object (from w3tpl)
 
     /*
     public function __construct(xcModule $iPageEnv) {
@@ -112,6 +118,10 @@ class fcPageData_SMW extends fcPageData_MW {
     
     // ++ FRAMEWORK ++ //
     
+    protected function GetDatabase() {
+	return fcApp::Me()->GetDatabase();
+    }
+    
     private $mwoTitle = NULL;
     protected function GetTitleObject() {
 	global $wgTitle;
@@ -130,6 +140,12 @@ class fcPageData_SMW extends fcPageData_MW {
     
     protected function AttributesQuery() {
 	return $this->GetDatabase()->MakeTableWrapper('fctqSMW_Attributes');
+    }
+    protected function RelationshipsQuery() {
+	return $this->GetDatabase()->MakeTableWrapper('fctqSMW_Relationships');
+    }
+    protected function TextBlobsQuery() {
+	return $this->GetDatabase()->MakeTableWrapper('fctqSMW_TextBlobs');
     }
     
     /*----
@@ -190,6 +206,7 @@ class fcPageData_SMW extends fcPageData_MW {
 	$arOut['atts'] = $rs;
 
 	// PART TWO: smw_rels2
+	/* 2018-01-25 old
 	$sql = 'SELECT'
 	  .' r.*,'
 	  .' CAST(s.smw_title AS char) AS s_title,'
@@ -204,10 +221,20 @@ class fcPageData_SMW extends fcPageData_MW {
 	  ." (p.smw_title = $sqlPropKey) AND"
 	  ." (s.smw_title = $sqlPageKey) AND"
 	  ." (s.smw_namespace = $intNSpace);";
-	$rs = $this->Engine()->Recordset($sql);
+	$rs = $db->Recordset($sql);
+	*/
+	$sqlFilt = 
+	  " (p.smw_title = $sqlPropKey) AND"
+	  ." (s.smw_title = $sqlPageKey) AND"
+	  ." (s.smw_namespace = $intNSpace);"
+	  ;
+	$t = $this->RelationshipsQuery();
+	$rs = $t->SelectRecords($sqlFilt);
+	
 	$arOut['rels'] = $rs;
 
 	// PART THREE: smw_text2
+	/* 2018-01-26 old
 	$sql = 'SELECT'
 	  .' s_id,'
 	  .' p_id,'
@@ -221,7 +248,17 @@ class fcPageData_SMW extends fcPageData_MW {
 	  ." (p.smw_title = $sqlPropKey) AND"
 	  ." (s.smw_title = $sqlPageKey) AND"
 	  ." (s.smw_namespace = $intNSpace);";
-	$rs = $this->Engine()->Recordset($sql);
+	$rs = $db->Recordset($sql);
+	*/
+	$sqlFilt =
+	  "(p.smw_title = $sqlPropKey) AND"
+	  ." (s.smw_title = $sqlPageKey) AND"
+	  ." (s.smw_namespace = $intNSpace);"
+	  ;
+	$t = $this->TextBlobsQuery();
+	$rs = $t->SelectRecords($sqlFilt);
+	//echo "SQL=".$rs->sql.'<br>';
+	
 	$arOut['text'] = $rs;
 	return $arOut;
     }
@@ -230,8 +267,9 @@ class fcPageData_SMW extends fcPageData_MW {
       ASSUMES: smw_sortkey is the non-underscored version of smw_title
       USAGE: when multiple values are expected to happen sometimes
     */
-    public function GetPropVals($iPropName) {
-	$ar = $this->GetPropData($iPropName);
+    public function GetPropVals($sPropName) {
+	$ar = $this->GetPropData($sPropName);
+//	echo "PROP DATA FOR [$sPropName]:".fcArray::Render($ar);
 	$out = NULL;
 	$idx = 0;
 
@@ -243,6 +281,8 @@ class fcPageData_SMW extends fcPageData_MW {
 		$strVal = $rs->FieldValue('value_xsd');
 		$out[$idx] = $strVal;
 	    }
+	} else {
+	    //echo "NO ATTS FOUND<br>";
 	}
 
 	// next check RELS
@@ -253,6 +293,8 @@ class fcPageData_SMW extends fcPageData_MW {
 		$strVal = $rs->FieldValue('o_title');
 		$out[$idx] = fcDataConn_MW::VisualizeTitle($strVal);
 	    }
+	} else {
+	    //echo "NO RELS FOUND<br>";
 	}
 
 	// next check TEXT
@@ -263,6 +305,8 @@ class fcPageData_SMW extends fcPageData_MW {
 		$strVal = $rs->FieldValue('value');
 		$out[$idx] = $strVal;
 	    }
+	} else {
+	    //echo "NO TEXT FOUND<br>";
 	}
 
 	return $out;
@@ -272,8 +316,8 @@ class fcPageData_SMW extends fcPageData_MW {
       ASSUMES: smw_sortkey is the non-underscored version of smw_title
       USAGE: when there's no reason to expect multiple values
     */
-    public function GetPropVal($iPropName) {
-	$ar = $this->GetPropVals($iPropName);
+    public function GetPropVal($sPropName) {
+	$ar = $this->GetPropVals($sPropName);
 	$cnt = count($ar);
 	if ($cnt > 1) {
 	    return $ar;
@@ -282,24 +326,6 @@ class fcPageData_SMW extends fcPageData_MW {
 	} else {
 	    return NULL;	// nothing found
 	}
-/*
-	$rs = $this->GetPropData($iPropName);
-	if ($rs->HasRows()) {
-	    if ($rs->RowCount() == 1) {
-		$rs->NextRow();	// load the first row
-		$strVal = $rs->Value('value_xsd');
-		return $strVal;
-	    } else {
-		while ($rs->NextRow()) {
-		    $strVal = $rs->Value('value_xsd');
-		    $out[$id] = $strVal;
-		}
-		return $out;
-	    }
-	} else {
-	    return NULL;	// problem with the query
-	}
-*/
     }
     /*----
       RETURNS: nicely-formatted list of property values with links
@@ -353,9 +379,58 @@ class fctqSMW_Attributes extends fcTable_wSource_wRecords {
 	  ;
     }
 }
-class fcrqSMW_Attribute extends fcDataRow {
+class fcrqSMW_Attribute extends fcDataRecord {
 }
+class fctqSMW_Relationships extends fcTable_wSource_wRecords {
+    use ftSelectable_Table, ftReadableTable;
+    
+    // CEMENT
+    protected function SingularName() {
+	return 'fcrqSMW_Relationship';
+    }
+    // OVERRIDE
+    protected function FieldsString_forSelect() {
+	return 'r.*';
+    }
+    // OVERRIDE
+    protected function SourceString_forSelect() {
+	return '((smw_rels2 AS r'
+	  .' LEFT JOIN smw_ids AS s ON r.s_id=s.smw_id)'
+	  .' LEFT JOIN smw_ids AS p ON r.p_id=p.smw_id)'
+	  .' LEFT JOIN smw_ids AS o ON r.o_id=o.smw_id'
+	  ;
+    }
+    
+}
+class fcrqSMW_Relationship extends fcDataRecord {
+}
+class fctqSMW_TextBlobs extends fcTable_wSource_wRecords {
 
+    use ftSelectable_Table, ftReadableTable;
+    // CEMENT
+    protected function SingularName() {
+	return 'fcrqSMW_TextBlob';
+    }
+    // OVERRIDE
+    protected function FieldsString_forSelect() {
+	return 
+	    's_id,'
+	  .' p_id,'
+	  .' CAST(s.smw_title AS CHAR) AS s_title,'
+	  .' CAST(p.smw_title AS CHAR) AS p_title,'
+	  .' CAST(value_blob AS CHAR) AS value'
+	  ;
+    }
+    // OVERRIDE
+    protected function SourceString_forSelect() {
+	return '(smw_text2 AS t'
+	  .' LEFT JOIN smw_ids AS s ON t.s_id=s.smw_id)'
+	  .' LEFT JOIN smw_ids AS p ON t.p_id=p.smw_id'
+	  ;
+    }
+}
+class fcrqSMW_TextBlob extends fcDataRecord {
+}
 /*
  2012-08-13 This function was actually written for InstaGov, but appears to represent a significant amount of time-investment in
   figuring out how to access SMW data. I don't need it for IG anymore (for now) because I'm doing things differently there now,

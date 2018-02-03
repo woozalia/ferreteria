@@ -28,23 +28,32 @@ class fcPageData_MW {
     // -- INFORMATION -- //
     // ++ TITLE ++ //
     
-    public function Use_TitleObject(Title $iTitle) {
-	$this->mwoTitle = $iTitle;
-    }
-    public function MW_Object() {
+    private $mwoTitle = NULL;
+    // PUBLIC for use in re-casting Title object for additional functionality
+    public function GetTitleObject() {
+	global $wgTitle;
+	
+	if (is_null($this->mwoTitle)) {
+	    throw new exception('2018-02-02 This probably should not be the default. Call Use_GlobalTitle() first.');
+	    $this->mwoTitle = $wgTitle;
+	}
 	return $this->mwoTitle;
+    }
+    // PUBLIC for reasons (2018-01-27)
+    public function SetTitleObject(Title $mwo) {
+	$this->mwoTitle = $mwo;
     }
     public function Use_GlobalTitle() {
 	global $wgTitle;
-	$this->Use_TitleObject($wgTitle);
+	$this->SetTitleObject($wgTitle);
     }
     public function Use_Title_Named($iName) {
 	$mwoTitle = Title::newFromDBkey($iName);
-	$this->Use_TitleObject($mwoTitle);
+	$this->SetTitleObject($mwoTitle);
     }
     public function Use_Title_Keyed($iName,$iSpace=NS_MAIN) {
 	$mwoTitle = Title::newFromText($iName,$iSpace);
-	$this->Use_TitleObject($mwoTitle);
+	$this->SetTitleObject($mwoTitle);
     }
 
     // -- TITLE -- //

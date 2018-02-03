@@ -295,13 +295,13 @@ class fctPlex_BaseEvents extends fctPlex_EventTable {
 	$oApp = fcApp::Me();
 	$db = $oApp->GetDatabase();
 	$sqlUser = $oApp->UserIsLoggedIn() ? $oApp->GetUserID() : 'NULL' ;
-	$sqlData = is_null($arData)? 'NULL' : ($db->Sanitize_andQuote(serialize($arData)));
+	$sqlData = is_null($arData)? 'NULL' : ($db->SanitizeValue(serialize($arData)));
 	$ar = array(
 	  'WhenStart'	=> 'NOW()',
 	  'ID_Session'	=> $oApp->GetSessionRecord()->GetKeyValue(),
 	  'ID_Acct'	=> $sqlUser,
-	  'TypeCode'	=> $db->Sanitize_andQuote($sCode),
-	  'Descrip'	=> $db->Sanitize_andQuote($sText),
+	  'TypeCode'	=> $db->SanitizeValue($sCode),
+	  'Descrip'	=> $db->SanitizeValue($sText),
 	  'Stash'	=> $sqlData
 	  );
 	$id = $this->Insert($ar);
@@ -348,12 +348,12 @@ class fctSubEvents_Done extends fctSubEvents {
     
     public function CreateRecord($idEvent,$sState,$sText=NULL,array $arData=NULL) {
 	$db = $this->GetConnection();
-	$sqlData = is_null($arData)? 'NULL' : ($db->Sanitize_andQuote(serialize($arData))) ;
+	$sqlData = is_null($arData)? 'NULL' : ($db->SanitizeValue(serialize($arData))) ;
 	$ar = array(
 	  'ID_Event'	=> $idEvent,
 	  'WhenFinish'	=> 'NOW()',
-	  'StateCode'	=> $db->Sanitize_andQuote($sState),
-	  'Descrip'	=> $db->Sanitize_andQuote($sText),
+	  'StateCode'	=> $db->SanitizeValue($sState),
+	  'Descrip'	=> $db->SanitizeValue($sText),
 	  'Stash'	=> $sqlData
 	  );
 	$id = $this->Insert($ar);
@@ -391,8 +391,8 @@ class fctSubEvents_InTable extends fctSubEvents {
 	$db = $this->GetConnection();
 	$ar = array(
 	  'ID_Event'	=> $idEvent,
-	  'TableKey'	=> $db->Sanitize_andQuote($sTable),
-	  'TableRow'	=> $db->Sanitize_andQuote($idRow)
+	  'TableKey'	=> $db->SanitizeValue($sTable),
+	  'TableRow'	=> $db->SanitizeValue($idRow)
 	  );
 	$id = $this->Insert($ar);
 	return $id;
@@ -431,7 +431,7 @@ class fctSubEvents_Note extends fctSubEvents {
 	$db = $this->GetConnection();
 	$ar = array(
 	  'ID_Event'	=> $idEvent,
-	  'Notes'	=> $db->Sanitize_andQuote($sNotes),
+	  'Notes'	=> $db->SanitizeValue($sNotes),
 	  );
 	$id = $this->Insert($ar);
 	return $id;

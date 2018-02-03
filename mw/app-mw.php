@@ -24,8 +24,13 @@ class fcApp_MW extends fcAppStandard {
     // -- DEPRECATED -- //
     // ++ CLASSES ++ //
     
-    protected function DatabaseClass() {
-	return 'fcDataConn_MW';
+    private $sDatabaseClass = 'fcDataConn_MW';	// default
+    protected function GetDatabaseClass() {
+	return $this->sDatabaseClass;
+    }
+    // USAGE: call this *before* first instantiating a database object
+    public function SetDatabaseClass($sClass) {
+	$this->sDatabaseClass = $sClass;
     }
     protected function GetPageClass() {
 	return 'fcPageData_MW';	// 2017-01-16 This may not work.
@@ -57,13 +62,15 @@ class fcApp_MW extends fcAppStandard {
 
     // ++ FRAMEWORK ++ //
 
+    // NEW
     protected function GetDatabase_MW() {
 	return wfGetDB( DB_SLAVE );
     }
+    // CEMENT
     static private $fcDB = NULL;
     public function GetDatabase() {
 	if (is_null(self::$fcDB)) {
-	    $sClass = $this->DatabaseClass();
+	    $sClass = $this->GetDatabaseClass();
 	    $dbmw = $this->GetDatabase_MW();
 	    $dbf = new $sClass($dbmw);
 	    self::$fcDB = $dbf;

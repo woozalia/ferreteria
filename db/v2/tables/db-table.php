@@ -25,6 +25,7 @@
       * created ftStoredTable with contents of fcTable_wName_wSource_wRecords
     2017-06-06 added SourceString_forSelect()
     2018-01-24 ftSelectable_Table, ftReadableTable, ftWriteableTable
+    2018-01-26 fcUsableTable (should be the minimum needed to retrieve recordsets)
 */
 define('KFMT_RDATA_NATIVE',TRUE);
 define('KFMT_RDATA_SQL',FALSE);
@@ -59,7 +60,6 @@ trait ftSource_forTable {
     public function FetchRecords($sql) {
 	$this->sql = $sql;	// for debugging purposes
 	$db = $this->GetConnection();
-	die('GOT TO '.__FILE__.' LINE '.__LINE__);
 	return $db->FetchRecordset($sql,$this);
     }
     
@@ -208,7 +208,7 @@ trait ftName_forTable {
 		    $sqlSet .= ',';
 		}
 		if ($isNativeData) {
-		    $sqlVal = $db->Sanitize_andQuote($val);
+		    $sqlVal = $db->SanitizeValue($val);
 		} else {
 		    $sqlVal = $val;
 		}
@@ -280,7 +280,7 @@ trait ftWriteableTable {
     protected function InsertValues(array $arData) {
 	$db = $this->GetConnection();
 	foreach ($arData as $key => $val) {
-	    $sqlVal = $db->Sanitize_andQuote($val);
+	    $sqlVal = $db->SanitizeValue($val);
 	    $arSQL[$key] = $sqlVal;
 	}
 	return $this->Insert($arSQL);
@@ -333,6 +333,13 @@ abstract class fcTable_wRecords extends fcTableBase implements fiRecords_forTabl
 */
 abstract class fcTable_wSource_wRecords extends fcTable_wRecords {
     use ftSource_forTable;
+}
+// PURPOSE: minimum implementation necessary to retrieve records
+class fcUsableTable extends fcTable_wSource_wRecords {
+    // CEMENT
+    protected function SingularName() {
+	return 'fcUsableRecordset';
+    }
 }
 /*----
   PURPOSE: wrapper class for a database table which can generate recordsets

@@ -20,7 +20,7 @@ trait ftUniqueRowsTable {
     */
     protected function FigureSQL_toMatchValues(array $arVals) {
 	if (is_array($arVals)) {
-	    $arValsSQL = $this->GetConnection()->Sanitize_andQuote_ValueArray($arVals);
+	    $arValsSQL = $this->GetConnection()->SanitizeValueArray($arVals);
 	    $arCond = fcSQLt_Filt::ValueArray_to_ConditionArray($arValsSQL);
 	    $oFilt = new fcSQLt_Filt('AND',$arCond);
 	    return $oFilt->RenderValue();

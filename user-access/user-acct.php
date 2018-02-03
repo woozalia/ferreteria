@@ -115,10 +115,10 @@ class fctUserAccts extends fcTable_keyed_single_standard {
 	$sHashed = self::HashPass($sSalt,$iPass);
 	$db = $this->GetConnection();
 	$ar = array(
-	  'UserName'	=> $db->Sanitize_andQuote($sLogin),
-	  'PassHash'	=> $db->Sanitize_andQuote($sHashed),
-	  'PassSalt'	=> $db->Sanitize_andQuote($sSalt),
-	  'EmailAddr'	=> $db->Sanitize_andQuote($sEmail),
+	  'UserName'	=> $db->SanitizeValue($sLogin),
+	  'PassHash'	=> $db->SanitizeValue($sHashed),
+	  'PassSalt'	=> $db->SanitizeValue($sSalt),
+	  'EmailAddr'	=> $db->SanitizeValue($sEmail),
 	  'WhenCreated'	=> 'NOW()'
 	);
 	$rc = $this->Insert_andGet($ar);
@@ -129,7 +129,7 @@ class fctUserAccts extends fcTable_keyed_single_standard {
     // ++ BUSINESS LOGIC ++ //
 
     protected function SQL_forUserName_filter($iName) {
-	return 'LOWER(UserName)='.$this->GetConnection()->Sanitize_andQuote(strtolower($iName));
+	return 'LOWER(UserName)='.$this->GetConnection()->SanitizeValue(strtolower($iName));
     }
 
     public function FindUser($sName) {
@@ -220,8 +220,8 @@ class fcrUserAcct extends fcRecord_standard {
 	$sHashed = $t->HashPass($sSalt,$sPass);
 	$db = $this->GetConnection();
 	$ar = array(
-	  'PassHash'	=> $db->Sanitize_andQuote($sHashed),
-	  'PassSalt'	=> $db->Sanitize_andQuote($sSalt),
+	  'PassHash'	=> $db->SanitizeValue($sHashed),
+	  'PassSalt'	=> $db->SanitizeValue($sSalt),
 	  );
 	$ok = $this->Update($ar);
 	return $ok;

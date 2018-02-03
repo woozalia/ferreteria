@@ -44,7 +44,7 @@ extends fcForm_keyed {
       ACTION: Takes data in a format suitable for data storage and sanitizes/quotes it for use in
 	actual storage commands (typically SQL).
       HISTORY:
-	2017-05-25 Sanitize_andQuote() now handles NULL properly, so no need to do it here.
+	2017-05-25 SanitizeValue() (was Sanitize_andQuote()) now handles NULL properly, so no need to do it here.
     */
     public function CookRawValue($val) {
     /*
@@ -52,7 +52,7 @@ extends fcForm_keyed {
 	    $sql = 'NULL';
 	} else {*/
 	    $db = fcApp::Me()->GetDatabase();
-	    $sql = $db->Sanitize_andQuote($val);
+	    $sql = $db->SanitizeValue($val);
 //	}
 	return $sql;
     }

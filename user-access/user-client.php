@@ -47,15 +47,15 @@ class fctUserClients extends fcTable_keyed_single_standard {
 	    $sAddr = self::ActiveAddress();
 	    $sDom = self::ActiveDomain();
 	    
-	    $sqlAddress = $db->Sanitize_andQuote($sAddr);
+	    $sqlAddress = $db->SanitizeValue($sAddr);
 	    if ($sAddr == $sDom) {
 		$sqlDomain = 'NULL';
 	    } else {
-		$sqlDomain = $db->Sanitize_andQuote($sDom);
+		$sqlDomain = $db->SanitizeValue($sDom);
 	    }
-	    $sqlBrowser = $db->Sanitize_andQuote(self::ActiveBrowser());
+	    $sqlBrowser = $db->SanitizeValue(self::ActiveBrowser());
 	    $ar = array(
-	      'CRC'		=> $db->Sanitize_andQuote($sCRC),
+	      'CRC'		=> $db->SanitizeValue($sCRC),
 	      'Address'		=> $sqlAddress,
 	      'Domain'		=> $sqlDomain,
 	      'Browser'		=> $sqlBrowser,

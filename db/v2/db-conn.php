@@ -36,9 +36,12 @@ abstract class fcDataConn {
     /*----
       INPUT: non-NULL string value
       OUTPUT: string value with quotes escaped, but NOT quoted
-      TODO: this is still a bad name for the action. Should probably be:
-	(current) SanitizeString() -> SanitizeStringContent(): sanitize string data but don't quote
+      TODO: this is still a bad name for the action. I was originally thinking this, but now not sure:
+	(current) SanitizeString() -> NormalizeString(): sanitize string data but don't quote
 	(new) SanitizeString() = sanitize and always quote, because input is a string
+	
+	"Normalize" = make sure the value is safe to use as a value in SQL, but don't quote it
+	"Sanitize" = make sure the value can be used as-is in SQL without additional quoting
     */
     abstract public function SanitizeString($s);
     /*----
@@ -78,7 +81,7 @@ abstract class fcDataConn {
     public function SanitizeValueArray(array $arVals) {
 	$arOut = NULL;
 	foreach ($arVals as $key => $val) {
-	    $arOut[$key] = $this->Sanitize_andQuote($val);
+	    $arOut[$key] = $this->SanitizeValue($val);
 	}
 	return $arOut;
     }

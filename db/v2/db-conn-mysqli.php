@@ -38,6 +38,16 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     public function SanitizeString($sSQL) {
 	return $this->NativeObject()->escape_string($sSQL);
     }
+    /*----
+      ACTION: Sanitizes, and encloses in quotes if needed;
+	returns 'NULL' if input is NULL.
+	This is equivalent to the functionality of
+	  mysql_real_escape_string().
+      HISTORY:
+	2017-02-11 Now handles NULL properly. Also, decided there's no
+	  need to sanitize a numeric.
+      TODO: Should probably be named something that implies general SQLification.
+    */
     public function SanitizeValue($val) {
 	if (is_null($val)) {
 	    return 'NULL';
@@ -52,31 +62,9 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	    }
 	}
     }
-    /*----
-      ACTION: Sanitizes, and encloses in quotes if needed;
-	returns 'NULL' if input is NULL.
-	This is equivalent to the functionality of
-	  mysql_real_escape_string().
-      HISTORY:
-	2017-02-11 Now handles NULL properly. Also, decided there's no
-	  need to sanitize a numeric.
-      TODO: Should probably be named something that implies general SQLification.
-    */
-    public function Sanitize_andQuote($sSQL) {
-	return $this->SanitizeValue($sSQL);
-    /*
-	if (is_null($sSQL)) {
-	    return 'NULL';
-	} else {
-	    if (is_numeric($sSQL)) {
-		return $sSQL;
-	    } else {
-		$s = $this->SanitizeString($sSQL);
-		return "'$s'";
-	    }
-	}
-    */
-    }
+//    public function Sanitize_andQuote($sSQL) {
+//	return $this->SanitizeValue($sSQL);
+//    }
 
     // -- INFORMATION -- //
     // ++ ACTIONS ++ //

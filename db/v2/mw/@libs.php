@@ -18,8 +18,11 @@ $om = new fcCodeModule(__FILE__, 'mw-props.php');
   $om->AddClass('fcMWSiteProperties');
   $om->AddClass('fcMWPageProperties');
 
-if (defined('SMW_SCHEMA_VERSION')) {
-    $om = new fcCodeModule(__FILE__, 'smw/SMWv'.SMW_SCHEMA_VERSION.'/db-conn-smw.php');
-        $om->AddClass('fcDataConn_SMW');
-        $om->AddClass('w3smwPage');
+/*
+if (!defined('SMW_SCHEMA_VERSION')) {
+    define('SMW_SCHEMA_VERSION',3);
 }
+$om = new fcCodeModule(__FILE__, 'smw/SMWv'.SMW_SCHEMA_VERSION.'/db-conn-smw.php');
+    $om->AddClass('fcDataConn_SMW');
+    $om->AddClass('w3smwPage');
+*/

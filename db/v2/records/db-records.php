@@ -68,6 +68,13 @@ class fcDataRow {
     public function ClearFields() {
 	$this->arRow = NULL;
     }
+    // ACTION: returns a copy that just has the current row loaded
+    public function GetDataClone() {
+	$sClass = get_class($this);
+	$rc = new $sClass($this->GetTableWrapper());	// not sure if this will work...
+	$rc->SetFieldValues($this->GetFieldValues());
+	return $rc;
+    }
     
     // -- ENTIRE ROW -- //
     // ++ FIELDS ++ //
@@ -102,7 +109,8 @@ class fcDataRow {
 	if ($this->FieldIsSet($sKey)) {
 	    return $this->arRow[$sKey];
 	} else {
-	    echo 'FIELD VALUES:'.fcArray::Render($this->arRow);
+	    echo '<b>SQL</b>: '.$this->sql.'<br>';
+	    echo '<b>FIELD VALUES</b>:'.fcArray::Render($this->arRow);
 	    $sClass = get_class($this);
 	    throw new exception("Ferreteria usage error: Field array for class $sClass does not contain requested field '$sKey'.");
 	}
@@ -254,7 +262,12 @@ abstract class fcDataRecord extends fcSourcedDataRow {
 	    if (is_array($arVals)) {
 		$this->SetFieldValues($arVals);
 	    } else {
-		throw new exception('Anomalous result from reading a row: '.print_r($arVals,TRUE));
+		throw new exception(
+		  'Ferreteria error: Anomalous result from reading a row. Row data: [BEGIN] '
+		  .print_r($arVals,TRUE)
+		  .'[END] SQL: '
+		  .$this->sql
+		);
 	    }
 	}
 	return $arVals;
@@ -275,7 +288,7 @@ abstract class fcDataRecord extends fcSourcedDataRow {
 	    $this->RewindRows();
 	    while ($this->NextRow()) {
 		$s = $this->GetFieldValue($sField);
-		$out .= $db->Sanitize_andQuote($s).',';
+		$out .= $db->SanitizeValue($s).',';
 	    }
 	    $out = trim($out,','); // remove trailing comma
 	}
@@ -285,4 +298,6 @@ abstract class fcDataRecord extends fcSourcedDataRow {
       //--array calculations--//
     // -- STORED DATA --- //
     
+}
+class fcUsableRecordset extends fcDataRecord {
 }

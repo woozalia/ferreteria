@@ -196,7 +196,7 @@ class fcMWPageProperties extends fcMWSiteProperties {
 	    $sql = 'SELECT pp_page, pp_propname, pp_value FROM page_props'
 	      ." WHERE (pp_page=$idArticle)";
 	    if (!is_null($sKey)) {
-		$sqlKey = $this->GetConnection()->Sanitize_andQuote($sKey);
+		$sqlKey = $this->GetConnection()->SanitizeValue($sKey);
 		$sql .= " AND (pp_propname=$sqlKey)";
 	    }
 	    return $sql;
@@ -208,8 +208,8 @@ class fcMWPageProperties extends fcMWSiteProperties {
       RETURNS: SQL for writing properties
     */
 /*    protected function GetSaveSQL($idTitle,$sKey,$sVal) {
-	$sqlKey = $this->Database()->Sanitize_andQuote($sKey);
-	$sqlVal = $this->Database()->Sanitize_andQuote($sVal);
+	$sqlKey = $this->Database()->SanitizeValue($sKey);
+	$sqlVal = $this->Database()->SanitizeValue($sVal);
 	$sqlID = (int)$idTitle;
 	$sql = "REPLACE INTO page_props (pp_page,pp_propname,pp_value) VALUES ($sqlID,$sqlKey,$sqlVal)";
 	return $sql;
@@ -269,7 +269,7 @@ class fcMWProperty extends fcDataRecord /* was fcRecord_keyed */ {
     // ++ FIELD CALCULATIONS ++ //
     
     protected function GetPropertyName_Cooked() {
-	return $this->GetConnection()->Sanitize_andQuote($this->GetPropertyName());
+	return $this->GetConnection()->SanitizeValue($this->GetPropertyName());
     }
 */
     // -- FIELD CALCULATIONS -- //

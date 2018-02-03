@@ -23,7 +23,7 @@ trait ftSingleKeyedTable {
     // ++ RECORDS ++ //
     
     public function GetRecord_forKey($id) {
-	$sqlFilt = $this->GetKeyName().'='.$this->GetConnection()->Sanitize_andQuote($id);
+	$sqlFilt = $this->GetKeyName().'='.$this->GetConnection()->SanitizeValue($id);
 	$rc = $this->SelectRecords($sqlFilt);
 	if ($rc->RowCount() == 0) {
 	    $rc->ClearFields();	// so HasRow() will return FALSE

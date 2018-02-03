@@ -220,7 +220,6 @@ trait ftSaveableRecord {
 	    $sKey = $this->GetTableWrapper()->GetKeyName();
 	    foreach ($arTouch as $sField) {
 		if ($sField != $sKey) {		// don't write to the key field
-		    //$ar[$sField] = $db->Sanitize_andQuote($this->GetFieldValue($sField));
 		    $ar[$sField] = $this->GetFieldValue($sField);
 		}
 	    }
