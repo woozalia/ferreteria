@@ -32,10 +32,13 @@ class fcDropInManager extends fcDataTable_array {
     protected function SetModule(fcrDropInModule $oMod) {
 	$this->SetRow($oMod->Name(),$oMod->GetFieldValues());
     }
+    protected function HasModules() {
+	return ($this->RowCount() > 0);	// 2018-02-05 not sure why HasRows() isn't available
+    }
     // PUBLIC because outside callers sometimes need to know if a module exists or not
     public function HasModule($sName) {
-	if ($this->RowCount() == 0) {
-	    throw new exception('Ferreteria usage error: attempting to query dropin modules before scanning dropin folders.');
+	if (!$this->HasModules()) {
+	    throw new exception('Ferreteria usage error: attempting to query dropin modules when none have been found.');
 	}
 	return $this->HasRow($sName);
     }
@@ -66,11 +69,14 @@ class fcDropInManager extends fcDataTable_array {
 	    }
 	}
 	if (is_null($ar)) {
-	    throw new exception("No Dropins were found in '$fsFolder'. Something didn't install right.");
+	    throw new exception("No subfolders were found in Dropin folder '$fsFolder'.");
 	}
 	ksort($ar);
 	foreach ($ar as $fn => $fs) {
 	    $this->CheckFolder($fs,$oMenu);
+	}
+	if (!$this->HasModules()) {
+	    throw new exception("No Dropins were found in '$fsFolder'.");
 	}
     }
     protected function CheckFolder($fsFolder,fcTreeNode $oMenu) {

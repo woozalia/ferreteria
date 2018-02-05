@@ -53,7 +53,7 @@ s_id, p_id
     }
     public function SelectTitleRecords_forPropertyID_andValue($id,$sValue) {
 	//$snVal = fcDataConn_MW::NormalizeTitle($sValue,SMW_NS_PROPERTY);
-	$sqlVal = $this->GetConnection()->SanitizeValue($sVal);
+	$sqlVal = $this->GetConnection()->SanitizeValue($sValue);
 	
 	// TODO: also MW-normalize it, here and in di-wikipage
 	$sqlFilt = "p_id=$id AND o_hash=$sqlVal";	// TODO: if o_blob isn't NULL, compare with that instead
