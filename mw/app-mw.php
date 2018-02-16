@@ -12,16 +12,6 @@
 
 class fcApp_MW extends fcAppStandard {
 
-    // ++ DEPRECATED ++ //
-
-    public function Session() {
-	throw new exception('Who is calling this?');
-    }
-    public function User() {
-	throw new exception('Who is calling this?');
-    }
-    
-    // -- DEPRECATED -- //
     // ++ CLASSES ++ //
     
     private $sDatabaseClass = 'fcDataConn_MW';	// default

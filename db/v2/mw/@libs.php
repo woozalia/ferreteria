@@ -15,8 +15,8 @@ fcCodeModule::BasePath($fp.'/');
 $om = new fcCodeModule(__FILE__, 'db-conn-mw.php');
   $om->AddClass('fcDataConn_MW');
 $om = new fcCodeModule(__FILE__, 'mw-props.php');
-  $om->AddClass('fcMWSiteProperties');
-  $om->AddClass('fcMWPageProperties');
+  $om->AddClass('fcMWProperties_site');
+  $om->AddClass('fcMWProperties_page');
 
 /*
 if (!defined('SMW_SCHEMA_VERSION')) {

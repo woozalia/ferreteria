@@ -92,7 +92,7 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     public function CountOfAffectedRows() {
 	return $this->NativeObject()->affected_rows;
     }
-    public function FetchRecordset($sSQL,fiRecords_forTable $tbl) {
+    public function FetchRecordset($sSQL,fiTable_wRecords $tbl) {
 	$poRes = $this->NativeObject()->query($sSQL);	// returns a mysqli_result if successful
 	$this->sql = $sSQL;
 	return $this->ProcessResultset($poRes,$tbl,$sSQL);	// 2017-12-03 this was commented out -- why?
@@ -106,7 +106,7 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	* If query successful, Recordset wrapper object will be linked to a Table wrapper object, and will include the query results.
 	* If query failed, Recordset wrapper object will have 0 rows.
     */
-    protected function ProcessResultset($poRes,fiRecords_forTable $tbl,$sql) {
+    protected function ProcessResultset($poRes,$tbl,$sql) {
 	$rcNew = $tbl->SpawnRecordset();		// spawn a blank Recordset wrapper object
 	if (is_object($poRes)) {
 	    $rcNew->SetDriverBlob($poRes);		// store mysqli_result in Recordset object

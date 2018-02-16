@@ -18,14 +18,7 @@ define('KS_ACTION_TF_NODE_PAGE','node_'.KS_TF_NODE_TYPE_PAGE);	// '.' seems to g
 
 // CLASS NAMES
 
-define('KS_CLASS_TF_NODE_BASE',		'fctNodesBase');	// abstract
-define('KS_CLASS_TF_NODE_LOGIC',	'fctNodesLogic');	// concrete: logic
-define('KS_CLASS_TF_NODE_INDEX',	'fctNodesIndex');	// summon appropriate node-class
 define('KS_CLASS_TF_NODE_PAGE_ADMIN',	'fctNodes_SimpleWikiPage');
-define('KS_CLASS_TF_LEAF_INDEX',	'fctLeafsIndex');	// abstract ancestor for logic
-//define('KS_CLASS_TF_LEAF_LOGIC',	'fctNodeLeafsLogic');
-define('KS_CLASS_TF_LEAF_VALUE',	'fctLeafValues');
-define('KS_CLASS_TF_LEAF_VALUE_TEXT',	'fctLeafValuesText');
 
 // MENU
 
@@ -52,19 +45,18 @@ $om = $oRoot->SetNode(new fcMenuFolder('TextFerret','TextFerret content manageme
 $arDropin = array(
   'name'	=> 'ferreteria.cms',
   'descr'	=> 'content management',
-  'version'	=> '0.0.0',
-  'date'	=> '2017-10-01',
+  'version'	=> '0.0.1',
+  'date'	=> '2018-02-05',
   'URL'		=> NULL,	// nothing yet
   'classes'	=> array(	// list of files and the classes they contain
-    'node.php'			=> array(KS_CLASS_TF_NODE_BASE,'ftNodeBaseTable'),
-    'node.index.php'		=> array(KS_CLASS_TF_NODE_INDEX),
-    'node.logic.php'		=> array(KS_CLASS_TF_NODE_LOGIC,'ftrNodeLogic'),
+    //'node.php'		=> array(KS_CLASS_TF_NODE_BASE,'ftNodeBaseTable'),
+    //'node.index.php'		=> array(KS_CLASS_TF_NODE_INDEX),
+    //'node.logic.php'		=> array(KS_CLASS_TF_NODE_LOGIC,'ftrNodeLogic'),
     'node.type.php'		=> array('fctNodeTypesBase'),
     'node.type.wiki.php' 	=> array(KS_CLASS_TF_NODE_PAGE_ADMIN),
-    'leaf.index.php'		=> array(KS_CLASS_TF_LEAF_INDEX,'ftTableAccess_LeafIndex'),
-    'leaf.value.php'		=> array(KS_CLASS_TF_LEAF_VALUE),
-    'leaf.value.text.php'	=> array(KS_CLASS_TF_LEAF_VALUE_TEXT),
-    'leaf.map.php'		=> array('fcMapLeafTypes','fcMapLeafNames'),
+    //'leaf.value.php'		=> array(KS_CLASS_TF_LEAF_VALUE),
+    //'leaf.value.text.php'	=> array(KS_CLASS_TF_LEAF_VALUE_TEXT),
+    //'leaf.map.php'		=> array('fcMapLeafTypes','fcMapLeafNames'),
      ),
   'menu'	=> $om,
   'features'	=> array(

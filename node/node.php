@@ -105,7 +105,7 @@ abstract class fctNodesBase extends fcTable_keyed_single_standard /* implements 
 	if (self::TypeExists($sType)) {
 	    $idEvent = fcApp::Me()->CreateEvent($sCode,$sText,$arData);
 	    $ar = array(
-	      'Type'	=> $this->GetConnection()->Sanitize_andQuote($sType)
+	      'Type'	=> $this->GetConnection()->SanitizeValue($sType)
 	      );
 	    return $this->Insert($ar);
 	} else {

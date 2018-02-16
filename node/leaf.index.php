@@ -50,7 +50,7 @@ class fctLeafsIndex extends fcTable_keyed_single_standard {
         $sqlNode = $this->NodeIndexTable()->TableName_Cooked();
 	//$sqlLeaf = $this->TableName_Cooked();
 	$sqlLeaf = $this->FigureSourceSQL();
-	$sqlType = $this->GetConnection()->Sanitize_andQuote($sType);
+	$sqlType = $this->GetConnection()->SanitizeValue($sType);
 	
 	$sql = "SELECT * FROM $sqlLeaf AS l LEFT JOIN $sqlNode AS n ON l.ID_Node=n.ID WHERE n.Type=$sqlType";
 	
@@ -76,7 +76,7 @@ class fctLeafsIndex extends fcTable_keyed_single_standard {
     }
     // RETURNS: Leaf Index record (loaded), or NULL if none found
     protected function SelectRecord_forNode_andName($idNode,$sName) {
-	$sqlName = $this->GetConnection()->Sanitize_andQuote($sName);
+	$sqlName = $this->GetConnection()->SanitizeValue($sName);
 	$sql = "(ID_Node=$idNode) AND (Name=$sqlName)";
 	$rc = $this->SelectRecords($sql);
 	if ($rc->HasRows()) {
@@ -118,12 +118,12 @@ class fctLeafsIndex extends fcTable_keyed_single_standard {
 	
 	$tValue = $this->ValueTable_forFieldName($sName);
 	$sType = $tValue->GetTypeString();
-	$sqlType = $db->Sanitize_andQuote($sType);
+	$sqlType = $db->SanitizeValue($sType);
 	if (is_null($rcIndex)) {
 	    // Leaf record not found, so need to create it
 	
 	    $sAction = "CREATING LEAF INDEX for node [$idNode] leaf [$sName]<br>";
-	    $sqlName = $db->Sanitize_andQuote($sName);
+	    $sqlName = $db->SanitizeValue($sName);
 	    $ar = array(
 	      'ID_Node'	=> $idNode,
 	      'Name'	=> $sqlName,
@@ -202,55 +202,4 @@ class fcrLeafIndex extends fcRecord_standard {
     }
 
     // -- FIELDS -- //
-    // ++ DATA WRITE ++ //
-
-    /*
-    // ACTION: create a Leaf Value object of the appropriate class, and use that to save the value
-    public function SaveValue() {
-	$ar = array(
-	  'ID_Node'	=> $this->
-	  'Name'
-	  Type
-    } */
-
-    /*----
-      ACTION: creates a Leaf Value record for the given value, and pairs it with the current Leaf Index record
-      ASSUMES: the current field values represent an existing Leaf Index record
-      HISTORY:
-	2017-07-28 It looks like I was still debugging this.
-	2017-09-28 moved from Table to Record; replaced "$idNode,fcrLeafIndex $oLeaf" arguments with $v
-	  NOT FINISHED
-	2017-10-01 testing / finishing
-    */
-    /* 2017-10-02 apparently this won't be needed after all.
-    public function CreateValue($v) {
-	$db = $this->GetConnection();
-	
-	$sType = $this->GetTypeString();
-	$tValue = $this->ValueTable_forType($sType);
-	$idLeaf = $this->GetKeyValue();
-	$tValue->SaveValueRecord($idLeaf,$v);
-	
-	/* 2017-10-01 old code
-	$idNode = $this->GetNodeID();
-	$sType = $this->GetTypeString();
-	$sName = $this->GetNameString();
-	$ar = array(
-	  'ID_Node'	=> $idNode,
-	  'Name'	=> $sName,
-	  'Type'	=> $sType
-	  );
-	//$id = $this->Insert($ar,self::KFMT_NATIVE);	// create leaf index record
-	$oLeaf->SetLeafID($id);		// tell object the ID of the record that was just created for it
-	
-	// TODO: tell the Leaf to create itself and save the associated value as a record as well
-	$oLeaf->SaveValue();
-
-	// 2017-05-22 why isn't this setting an error condition in the engine?
-	//echo 'ENGINE OK? ['.$db->IsOkay().']<br>';
-	return $id;
-	*/
- //   }
-
-    // -- DATA WRITE -- //
 }

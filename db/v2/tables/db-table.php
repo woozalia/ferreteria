@@ -30,7 +30,7 @@
 define('KFMT_RDATA_NATIVE',TRUE);
 define('KFMT_RDATA_SQL',FALSE);
 
-interface fiRecords_forTable {
+interface fiTable_wRecords {
     function SpawnRecordset();
     function ProcessResultset($poRes,$sql);
 }
@@ -321,7 +321,7 @@ class fcTable_wSource extends fcTableBase {
 /*::::
   PURPOSE: data source wrapper class
 */
-abstract class fcTable_wRecords extends fcTableBase implements fiRecords_forTable {
+abstract class fcTable_wRecords extends fcTableBase implements fiTable_wRecords {
     use ftRecords_forTable;
 }
 /*::::

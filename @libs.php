@@ -19,6 +19,7 @@ $oL = new fcCodeLibrary('ferreteria.mw.core','mw/@libs.php');
 //$oL = new fcCodeLibrary('ferreteria.mw.2','db/v2/mw/@libs.php');	// DEPRECATED; use ferreteria.db.mw
 $oL = new fcCodeLibrary('ferreteria.forms.2','forms/@libs.php');
 $oL = new fcCodeLibrary('ferreteria.login','user-access/@libs.php');
+$oL = new fcCodeLibrary('ferreteria.node','node/@libs.php');
 
 $om = new fcCodeModule(__FILE__, 'app.php');
   $om->AddClass('fcApp');
@@ -182,6 +183,8 @@ $om = new fcCodeModule(__FILE__, 'util/time.php');
   $om->AddFunc('Date_DefaultYear');
 $om = new fcCodeModule(__FILE__, 'util/tree.php');
   $om->AddClass('fcTreeNode');
+$om = new fcCodeModule(__FILE__, 'util/tree-stats.php');
+  $om->AddClass('fcTreeStatsMgr');
 $om = new fcCodeModule(__FILE__, 'util/url.php');
   $om->AddClass('fcURL');
 

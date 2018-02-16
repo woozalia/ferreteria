@@ -1,5 +1,6 @@
 <?php
 
+// NOTE (2018-02-15): This should probably be an interface, not a trait.
 trait ftKeyedTable {
 
     // ++ RECORDS ++ //

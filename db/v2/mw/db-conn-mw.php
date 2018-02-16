@@ -162,8 +162,7 @@ class fcDataConn_MW extends fcDataConn_CliSrv {
     // -- CONVENTIONS -- //
     // ++ DATA RETRIEVAL ++ //
 
-    //public function FetchRecordset($sql,fcDataSource $tbl) {
-    public function FetchRecordset($sSQL,fiRecords_forTable $tbl) {
+    public function FetchRecordset($sSQL,fiTable_wRecords $tbl) {
 	$mwoRe = $this->NativeObject()->query($sSQL);	// $mwoRe is a ResultWrapper http://svn.wikimedia.org/doc/classResultWrapper.html
 	$poRes = $mwoRe->result;			// $poRes is... I forget.
 	return $tbl->ProcessResultset($poRes,$sSQL);	// return provisioned recordset

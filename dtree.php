@@ -67,16 +67,6 @@ document.write(d);
 __END__;
 	return $out;
     }
-/* Where would this ever be used?
-    public function RenderTree() {
-	$out = $this->RenderTreeHdr();
-// add content
-	$objRoot = $this->RootNode();
-	$out .= $objRoot->RenderTree();
-	$out .= $this->RenderTreeFtr();
-	return $out;
-    }
-*/
 }
 
 class fcDTreeNode extends fcTreeNode {
@@ -152,7 +142,7 @@ class fcDTreeNode extends fcTreeNode {
 	    }
 	}
 	if ($this->HasNodes()) {
-	    foreach ($this->Nodes() as $obj) {
+	    foreach ($this->GetNodes() as $obj) {
 		$out .= $obj->Render();
 		$out .= $obj->RenderTree();
 	    }

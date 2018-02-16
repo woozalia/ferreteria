@@ -9,6 +9,9 @@
     2017-10-30 Renaming:
       w3ctProperties -> fcMWSiteProperties
       w3ctPageProperties -> fcMWPageProperties
+    2018-02-10 Okay, this is silly; we should be caching page properties in a local array as needed
+      fcMWSiteProperties -> fcMWProperties_site
+      fcMWPageProperties -> fcMWProperties_page
 */
 
 /*::::
@@ -21,13 +24,17 @@
   HISTORY:
     2017-11-04 Much revision over the past few days; changing base table-type to fcTable_wSource.
     2017-11-05 Changing it again to fcTable_wSource_wRecords because we need the SpawnRecordset() method.
+    2018-02-10 Substantially rewriting API and how data is stored.
+      This class no longer writes data; the MW API only lets pages alter their own properties.
+	If we need to write properties on other pages, first document a case for it and then write directly
+	to the DB (if MW will allow this).
 */
-class fcMWSiteProperties extends fcTable_wSource_wRecords {
+class fcMWProperties extends fcTable_wSource_wRecords {
 
     // ++ SETUP ++ //
-
+    
     public function __construct(Parser $mwo) {
-	$this->MW_ParserObject($mwo);
+	$this->SetMWParserObject($mwo);
     }
     // CEMENT
     protected function SingularName() {
@@ -38,35 +45,105 @@ class fcMWSiteProperties extends fcTable_wSource_wRecords {
     // ++ MEDIAWIKI OBJECTS ++ //
 
     protected $mwoParser;
-    protected function MW_ParserObject(Parser $mwo=NULL) {
-	if (!is_null($mwo)) {
-	    $this->mwoParser = $mwo;
-	}
+    protected function SetMWParserObject(Parser $mwo) {
+	$this->mwoParser = $mwo;
+    }
+    protected function GetMWParserObject() {
 	return $this->mwoParser;
     }
     protected $mwoParserOutput;
-    protected function MW_ParserOutputObject() {
+    protected function GetMWParserOutputObject() {
 	if (empty($this->mwoParserOutput)) {
-	    $this->mwoParserOutput = $this->MW_ParserObject()->getOutput();
+	    $this->mwoParserOutput = $this->GetMWParserObject()->getOutput();
 	}
 	return $this->mwoParserOutput;
     }
 
     // -- MEDIAWIKI OBJECTS -- //
+    // ++ CACHE ++ //
+    
+    private $arProps_byPage, $arProps_byName;
+    protected function SetProperty(fcMWProperty $rcProp) {
+	$idPage = $rcProp->GetPageID();
+	$sName = $rcProp->GetPropertyName();
+	$this->arProps_byPage[$idPage][$sName] = $rcProp->GetFieldValues();
+	$this->arProps_byName[$sName][$idPage] = $rcProp->GetFieldValues();
+	//echo "STORED PAGE [$idPage] NAME [$sName]<br>\n";
+    }
+    protected function SetProperties(fcMWProperty $rs) {
+	while($rs->NextRow()) {
+	    $this->SetProperty($rs);
+	}
+    }
+    // TODO: should be renamed something that indicates this specifically means the property values are LOADED
+    protected function IsPropertyLoaded($sName) {
+	return fcArray::Exists($this->arProps_byName,$sName);
+    }
+    public function DumpLoadedValues() {
+	$out = "<ul>\n";
+	foreach ($this->arProps_byName as $sProp => $arPages) {
+	    $out .= "<li><b>Prop name</b>: [$sProp]\n<ul>\n";
+	    foreach ($arPages as $idPage => $val) {
+		$sVal = $this->GetPagePropertyValue($idPage,$sProp);
+		$out .= "<li><b>on Page ID</b> [$idPage] = [$sVal]";
+	    }
+	    $out .= "</ul>";
+	}
+	return $out;
+    }
+    
+    // -- CACHE -- //
+    // ++ DATA READ ++ //
+
+    /*----
+      USAGE: Always load something first; this returns NULL if property is not loaded (does not load it).
+      API
+    */
+    public function GetPagePropertyObject($idPage,$sName) {
+	if (array_key_exists($idPage,$this->arProps_byPage)) {
+	    $arProp = fcArray::Nz($this->arProps_byPage[$idPage],$sName);
+	    $rcProp = $this->SpawnRecordset();
+	    $rcProp->SetFieldValues($arProp);
+	    return $rcProp;
+	} else {
+	    return NULL;
+	}
+    }
+    // RETURNS: unserialized property value (use GetPagePropertyObject() if you want raw)
+    public function GetPagePropertyValue($idPage,$sName) {
+	$oProp = $this->GetPagePropertyObject($idPage,$sName);
+	if (is_null($oProp)) {
+	    return NULL;
+	} else {
+	    if (is_array($oProp)) {
+		echo 'okay THIS IS GETTING OLD - array is:'.fcArray::Render($oProp); die();
+	    }
+	    return unserialize($oProp->GetPropertyValue());
+	}
+    }
+
+    // -- DATA READ -- //
+}
+class fcMWProperties_site extends fcMWProperties {
     // ++ SQL ++ //
 
     /*----
       RETURNS: SQL for retrieving properties
       INPUT:
-	$sKey: if NULL, retrieve all properties; if not null, just retrieve the named property.
-      TODO: Not sure if this is useful.
+	$sName: retrieve all values (across all pages) for the named property
+      NOTES:
+	* Not sure if this is useful. (Renamed 2018-02-10; if nothing gripes about this, then it isn't.)
+	  I *think* the idea was that it was useful for finding w3tpl functions, and potentially other global values.
+      HISTORY:
+	2018-02-10 Renamed FigureSQL_forProperty() -> SQLfor_SelectProperties_byName(); $sName now cannot be NULL
+	  (NULL value formerly would retrieve all properties for entire site)
     */
-    protected function FigureSQL_forProperty($sKey=NULL) {
-	$sqlKey = $this->GetConnection()->SanitizeValue($sKey);
-	$sql = 'SELECT pp_page, pp_value FROM page_props';
-	if (!is_null($sKey)) {
-	    $sql .= " WHERE pp_propname=$sqlKey";
-	}
+//    protected function FigureSQL_forProperty($sName=NULL) {
+      protected function SQLfor_SelectProperties_byName($sName) {
+	$sqlName = $this->GetConnection()->SanitizeValue($sName);
+	$sql = 'SELECT pp_page, pp_value FROM page_props'
+	  ." WHERE pp_propname=$sqlKey"
+	  ;
 	return $sql;
     }
     
@@ -74,9 +151,34 @@ class fcMWSiteProperties extends fcTable_wSource_wRecords {
     // ++ DATA READ ++ //
 
     /*----
+      ACTION: Finds all pages having this property, and loads their values into the local cache
+      HISTORY:
+	2018-02-10 created (rewrite of LoadValue() etc.)
+    */
+    public function GetPropertyValues($sName) {
+	if (!$this->IsPropertyLoaded($sName)) {
+    
+	    $sql = $this->SQLfor_SelectProperties_byName($sName);
+	    try {
+		$rs = $this->FetchRecords($sql);
+	    } catch (Exception $e) {
+		$sErr = $db->ErrorString();
+		$txt = "db error searching for property [$sName] - <i>$sErr</i> - from this SQL:\n* ".$sql;
+		echo $txt;
+		throw new exception('Ferreteria/MW data error');
+		// TODO: display more gracefully
+	    }
+
+	    $this->SetProperties($rs);
+	}
+	return \fcArray::Nz($this->arProps_byName,$sName);
+    }
+    
+    /*----
       ACTION: Load the page property value for the given key, or all page properties
 	The set of data loaded is determined by how GetLoadSQL() is implemented.
     */
+    /* 2018-02-10 I am so just rewriting this mess
     public function LoadValue($sKey=NULL) {
 	$sql = $this->FigureSQL_forProperty($sKey);
 	
@@ -129,58 +231,45 @@ class fcMWSiteProperties extends fcTable_wSource_wRecords {
 	    }
 	    return $arThis;
 	}
-    }
+    } */
 
     // -- DATA READ -- //
-    // ++ DATA WRITE ++ //
-    
-    public function SaveValue($sKey,$sVal) {
-	$this->MW_ParserOutputObject()->setProperty($sKey,$sVal);
-    }
-    /*----
-      ACTION: Saves global properties
-    */
-    public function SaveArray(array $ar, $sBase=NULL) {
-	$keys = NULL;
-	foreach ($ar as $name => $val) {
-	    $keys .= '>'.$name;
-	    $key = $sBase.'>'.$name;
-	    if (is_array($val)) {
-		$this->SaveArray($val,$key);
-	    } else {
-		$this->SaveValue($key,$val);
-	    }
-	}
-	$this->SaveValue($sBase.'>',$keys);	// save list of all sub-keys
-    }
-
-    // -- DATA WRITE -- //
 }
 /*::::
   PURPOSE: handles properties for a given MW page/title
 */
-class fcMWPageProperties extends fcMWSiteProperties {
+class fcMWProperties_page extends fcMWProperties {
 
     // ++ SETUP ++ //
 
-    public function __construct(Parser $mwoParser, Title $mwoTitle) {
+    public function __construct(Parser $mwoParser, Title $mwoTitle=NULL) {
+	if (is_null($mwoTitle)) {
+	    global $wgTitle;
+	    $mwoTitle = $wgTitle;
+	}
 	parent::__construct($mwoParser);
-	$this->MW_TitleObject($mwoTitle);
+	$this->SetMWTitleObject($mwoTitle);
     }
 
     // -- SETUP -- //
     // ++ MEDIAWIKI ++ //
-
+/* 2018-02-10 this is now the wrong way to get a db object
     protected function MWDB() {
 	return wfGetDB( DB_MASTER );
     }
-    protected $mwoTitle;
-    protected function MW_TitleObject(Title $mwo=NULL) {
-	if (!is_null($mwo)) {
-	    $this->mwoTitle = $mwo;
-	}
+*/
+    protected $mwoTitle=NULL;
+    protected function SetMWTitleObject(Title $mwo) {
+	$this->mwoTitle = $mwo;
+	return $mwo;
+    }
+    protected function GetMWTitleObject() {
 	return $this->mwoTitle;
     }
+    protected function HasMWTitleObject() {
+	return !is_null($this->GetMWTitleObject());
+    }
+
 
     // -- MEDIAWIKI -- //
     // ++ SQL CALCULATIONS ++ //
@@ -191,8 +280,8 @@ class fcMWPageProperties extends fcMWSiteProperties {
 	$sKey: if NULL, retrieve all properties; if not null, just retrieve the named property.
     */
     protected function FigureSQL_forProperty($sKey=NULL) {
-	if (is_object($this->MW_TitleObject())) {
-	    $idArticle = $this->MW_TitleObject()->getArticleID();
+	if ($this->HasMWTitleObject()) {
+	    $idArticle = $this->GetMWTitleObject()->getArticleID();
 	    $sql = 'SELECT pp_page, pp_propname, pp_value FROM page_props'
 	      ." WHERE (pp_page=$idArticle)";
 	    if (!is_null($sKey)) {
@@ -215,63 +304,143 @@ class fcMWPageProperties extends fcMWSiteProperties {
 	return $sql;
     }
     */
+    /* 2018-02-10 is this actually in use?
     protected function FigureSQL_toSaveParams() {
 	$sql = "REPLACE INTO page_props (pp_page,pp_propname,pp_value) VALUES (@ID,@KEY,@VAL)";
 	return $sql;
-    }
+    } */
 
     // -- SQL CALCULATIONS -- //
-    // ++ ACTION: WRITE ++ //
+    // ++ DATA READ ++ //
 
     /*----
-      ACTION: Load an array of values for the given key
-	This assumes that arrays are stored in a structure something like this:
-	  "key>" => "\subkey1\subkey2"
-	  "key>subkey1" => value
-	  "key>subkey2" => value
-	  (Not sure if this is the exact structure; that should be checked.)
-      TODO: This should be renamed something like "LoadArray_forKey()".
+      ACTION: Loads all the property values for the current page. Useful if you know you'll be accessing a bunch of them.
+      USAGE: Call this before using GetPagePropertyValue() repeatedly on the same page
     */
+    public function LoadPropertyValues() {
+	$sql = $this->FigureSQL_forProperty();
+	try {
+	    $rs = $this->FetchRecords($sql);
+	    
+	    // debugging
+	    /*
+	    global $wgOut;
+	    $wgOut->addHTML(
+	      'TITLE: '.$this->GetMWTitleObject()->getFullText().'<br>'
+	      .'SQL: '.$sql.'<br>'
+	      .'# PROPERTY RECORDS FOUND: ['.$rs->RowCount().']<br>'
+	      ); */
+	    
+	    $this->SetProperties($rs);
+	} catch (Exception $e) {
+	    $idPage = $this->GetMWTitleObject()->getArticleID();
+	    $sErr = $db->ErrorString();
+	    $txt = "db error accessing properties for page ID [$idPage] - <i>$sErr</i> - from this SQL:<br> &gt; ".$sql;
+	    echo $txt;
+	    throw new exception('Ferreteria/MW data error');
+	    // TODO: display more gracefully
+	}
+    }
+    /*----
+      API
+      ACTION: retrieve value for the given property on the current page
+      NOTES: This currently uses the MW API, which only works for the current page
+	OR if Ferreteria has already loade the page's properties.
+    */
+    public function GetValue($sName) {
+	/* 2018-02-11 This does it the hard way.
+	$sVal = $this->GetPagePropertyValue($idPage,$sName);
+	*/
+	//echo "LOADING PROP [$sName]:";
+	$sRaw = $this->GetMWParserOutputObject()->getProperty($sName);
+	//echo " MW=[$sRaw]";
+	if ($sRaw===FALSE) {
+	    // the property might have been set during the current editing session but not saved yet
+	    if ($this->IsPropertyLoaded($sName)) {
+		// apparently so
+		$idPage = $this->GetMWTitleObject()->getArticleID();
+		$sVal = $this->GetPagePropertyValue($idPage,$sName);
+		//echo " LOADED=[$sVal]";
+	    } else {
+		//echo ' NOT LOADED';
+		$sVal = NULL;
+	    }
+	} else {
+	    //echo ' NOT FALSE';
+	    $sVal = unserialize($sRaw);
+	}
+	return $sVal;
+    }
+    
+    // -- DATA READ -- //
+    // ++ DATA WRITE ++ //
+    
+    // NOTE: (2018-02-10) Hopefully setProperty() actually does all the db writing in one go.
+    public function SaveValue($sName,$sVal) {
+	$this->GetMWParserOutputObject()->setProperty($sName,serialize($sVal));
+	$idPage = $this->GetMWTitleObject()->getArticleID();
+	$oProp = new fcMWProperty($this,$idPage,$sName,$sVal);
+	$this->SetProperty($oProp);
+	//echo "SAVING PROP [$sName] AS [$sVal]<br>\n";
+    }
+    /*----
+      ACTION: Saves global properties
+    */
+    public function SaveArray(array $ar, $sBase=NULL) {
+	throw new exception('2018-02-10 This should be unnecessary now, since values are serialized for storage by default.');
+	$keys = NULL;
+	foreach ($ar as $name => $val) {
+	    $keys .= '>'.$name;
+	    $key = $sBase.'>'.$name;
+	    if (is_array($val)) {
+		$this->SaveArray($val,$key);
+	    } else {
+		$this->SaveValue($key,$val);
+	    }
+	}
+	$this->SaveValue($sBase.'>',$keys);	// save list of all sub-keys
+    }
 
-    // -- ACTION: WRITE -- //
+    // -- DATA WRITE -- //
+
 }
-// 2017-11-05 tentatively, we just need this as a type for the Table types to spawn
-class fcMWProperty extends fcDataRecord /* was fcRecord_keyed */ {
+/*----
+  HISTORY:
+    2017-11-05 tentatively, we just need this as a type for the Table types to spawn
+    2018-02-12 cannot have the first argument be anything but a Table type, else Spawning gets messed up
+*/
+class fcMWProperty extends fcDataRecord {
 
-    // ++ FIELD CALCULATIONS ++ //
-/*
-    // CEMENT
-    public function GetKeyString() {
-	return $this->GetPageID().'.'.$this->GetPropertyName();
-    }
-    public function GetKeyValue() {
-	return $this->GetKeyString();
+    // ++ SETUP ++ //
+    
+    public function __construct(fcTable_wRecords $t, $idPage=NULL,$sName=NULL,$sValue=NULL) {
+	parent::__construct($t);
+	$this->SetPageID($idPage);
+	$this->SetPropertyName($sName);
+	$this->SetPropertyValue($sValue);
     }
     
-    // CEMENT
-    protected function GetSelfFilter() {
-	$idPage = $this->GetPageID();
-	$sqlProp = $this->GetPropertyName_Cooked();
-	return "(pp_page=$idPage) AND (pp_propname=$sqlProp)";
-    }
-*/
-    // -- FIELD CALCULATIONS -- //
     // ++ FIELD VALUES ++ //
-/*    
-    protected function GetPageID() {
-	$this->GetFieldName('pp_page');
-    }
-    protected function GetPropertyName() {
-	$this->GetFieldName('pp_propname');
-    }
     
+    public function GetPageID() {
+	return $this->GetFieldValue('pp_page');
+    }
+    protected function SetPageID($id) {
+	$this->SetFieldValue('pp_page',$id);
+    }
+    public function GetPropertyName() {
+	return $this->GetFieldValue('pp_propname');
+    }
+    protected function SetPropertyName($s) {
+	$this->SetFieldValue('pp_propname',$s);
+    }
+    public function GetPropertyValue() { 
+	return $this->GetFieldValue('pp_value');
+    }
+    protected function SetPropertyValue($s) {
+	$this->SetFieldValue('pp_value',$s);
+    }
+
     // -- FIELD VALUES -- //
-    // ++ FIELD CALCULATIONS ++ //
-    
-    protected function GetPropertyName_Cooked() {
-	return $this->GetConnection()->SanitizeValue($this->GetPropertyName());
-    }
-*/
-    // -- FIELD CALCULATIONS -- //
 
 }

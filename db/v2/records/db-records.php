@@ -203,8 +203,12 @@ trait ftTabledDataRow {
     protected function SetTableWrapper($t) {
 	$this->tw = $t;
     }
-    // PUBLIC so Form classes can access it
-    protected function GetTableWrapper() {
+    /*----
+      NOTE: 2018-02-12 there was a note here saying "PUBLIC so Form classes can access it"
+	but it was actually marked PROTECTED.
+	I'm temporarily making it PUBLIC for debugging purposes only, but maybe it does need to be public.
+    */
+    public function GetTableWrapper() {
 	return $this->tw;
     }
 
@@ -221,7 +225,8 @@ abstract class fcDataRecord extends fcSourcedDataRow {
 
     // PUBLIC because other objects that work with recordsets might need to interact with the same Connection object
     public function GetConnection() {
-	return $this->GetTableWrapper()->GetConnection();
+	$t = $this->GetTableWrapper();
+	return $t->GetConnection();
     }
 
     // -- OBJECT FAMILY -- //

@@ -12,37 +12,25 @@
 */
 class fcPageData_MW {
 
-    // ++ INFORMATION ++ //
-
-    public function BaseURL_rel() {
-    throw new exception('2018-01-24 Who calls this?');
-	return $this->App()->BaseURL_rel();
+    public function __construct(Title $mwo=NULL) {
+	$this->SetTitleObject($mwo);
     }
-    public function BaseURL_abs() {
-    throw new exception('Who calls this? (affirmed 2018-01-24)');
-	return $this->App()->BaseURL_abs();
-    }
-//    protected function App_BaseURL_rel() {
-  //  }
 
-    // -- INFORMATION -- //
     // ++ TITLE ++ //
     
-    private $mwoTitle = NULL;
-    // PUBLIC for use in re-casting Title object for additional functionality
+    private $mwoTitle;	// throw an error if we try to access this without setting it
+    /*----
+      PUBLIC for use in re-casting Title object for additional functionality
+      TODO: Rename this something like GetNativeTitleObject() or GetMWTitleObject()
+    */
     public function GetTitleObject() {
-	global $wgTitle;
-	
-	if (is_null($this->mwoTitle)) {
-	    throw new exception('2018-02-02 This probably should not be the default. Call Use_GlobalTitle() first.');
-	    $this->mwoTitle = $wgTitle;
-	}
 	return $this->mwoTitle;
     }
-    // PUBLIC for reasons (2018-01-27)
-    public function SetTitleObject(Title $mwo) {
+    // API
+    public function SetTitleObject(Title $mwo=NULL) {
 	$this->mwoTitle = $mwo;
     }
+    // API
     public function Use_GlobalTitle() {
 	global $wgTitle;
 	$this->SetTitleObject($wgTitle);
@@ -57,4 +45,12 @@ class fcPageData_MW {
     }
 
     // -- TITLE -- //
+    // ++ OBJECTS ++ //
+    
+    public function GetProperties() {
+	global $wgParser;	// 2018-02-10 Is there a better way to get this?
+    
+	$oProp = new fcMWProperties_page($wgParser,$this->GetTitleObject());
+	return $oProp;
+    }
 }
