@@ -109,6 +109,9 @@ class fcDataRow {
 	if ($this->FieldIsSet($sKey)) {
 	    return $this->arRow[$sKey];
 	} else {
+	    if (!isset($this->sql)) {
+		throw new exception('Ferretria internal error: $sql member not set by query');
+	    }
 	    echo '<b>SQL</b>: '.$this->sql.'<br>';
 	    echo '<b>FIELD VALUES</b>:'.fcArray::Render($this->arRow);
 	    $sClass = get_class($this);

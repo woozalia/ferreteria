@@ -28,11 +28,11 @@
     2017-12-17 support for CLI mode in debugging output
 */
 class fcCodeModule {
-    private static $arMods;	// list of modules
-    private static $arCls;	// index of classes: arCls[class] => module name
-    private static $arFx;	// index of functions: arFx[fx name] => module name
-    private static $fpBase;	// base path for all module specs
-    private static $nDepth = 0;	// recursion depth for loading modules
+    private static $arMods;		// list of modules
+    private static $arCls=array();	// index of classes: arCls[class] => module name
+    private static $arFx;		// index of functions: arFx[fx name] => module name
+    private static $fpBase;		// base path for all module specs
+    private static $nDepth = 0;		// recursion depth for loading modules
 
     private $strName;	// name by which to refer to module
     private $fsModule;	// filespec to loadable module
@@ -113,17 +113,17 @@ class fcCodeModule {
     private static function HasClass($iName) {
 	return self::ArrayHas(self::$arCls,$iName);
     }
-    private static function _AddClass(fcCodeModule $iMod, $iClass) {
-	$sMod = $iMod->Key();
+    private static function _AddClass(fcCodeModule $oMod, $sClass) {
+	$sMod = $oMod->Key();
 	if (self::GetDebugMode()) {
-	    self::DebugLine('ADDING CLASS <b>'.$iClass.'</b>');
-	    if (array_key_exists($iClass,self::$arCls)) {
-		$sModFnd = self::$arCls[$iClass];
+	    self::DebugLine('ADDING CLASS <b>'.$sClass.'</b>');
+	    if (array_key_exists($sClass,self::$arCls)) {
+		$sModFnd = self::$arCls[$sClass];
 		$oModFnd = self::ByName($sModFnd);
-		self::DebugLine("<font color=red>WARNING</font>: class <b>$iClass</b> has already been registered for module \"".$oModFnd->Path().'".');
+		self::DebugLine("<font color=red>WARNING</font>: class <b>$sClass</b> has already been registered for module \"".$oModFnd->Path().'".');
 	    }
 	}
-	self::$arCls[$iClass] = $sMod;
+	self::$arCls[$sClass] = $sMod;
     }
     public static function LoadClass($iName) {
 	$doDbg = self::GetDebugMode();
