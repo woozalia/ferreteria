@@ -55,6 +55,7 @@ $om = new fcCodeModule(__FILE__, 'events/event-plex.php');
   $om->AddClass('fctEventPlex_standard');
   $om->AddClass('fctSubEvents');
   $om->AddClass('fctSubEvents_done');
+  $om->AddClass('fctSubEvents_InTable');
 
 // TABLES folder
 $om = new fcCodeModule(__FILE__, 'tables/db-table.php');

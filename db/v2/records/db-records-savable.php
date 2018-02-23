@@ -54,45 +54,45 @@ trait ftSaveableRecord {
 	}
 	return $arOut;
     }
-    /*----
-      DEFAULT
-      INPUT: $ar (optional) = list of key-value pairs (values, not SQL-formatted) to be included
-      RETURNS array of values to insert for new records, formatted for $this->Insert().
-      PURPOSE: Mainly so it can be overridden to calculate specific fields
-	when a record is inserted, e.g. set WhenCreated.
+
+    /*====
+      FX() GROUP: GetStorableValues_to{$op}()
+      RETURNS array of values to use for db writes, formatted for $this->Insert() (i.e. SQL-format.
+      PURPOSE: originally so it can be overridden to calculate specific fields
+	when a record is updated, e.g. set WhenCreated or WhenEdited
+	but this is now probably better accomplished with Get{$op}StorageOverrides() in most cases.
       HISTORY:
 	2016-04-19 This couldn't have been working reliably until now, because the values
 	  were not being sanitize-and-quoted. (Now they are.)
-	2016-10-16 Now defaults to ChangeArray() instead of UpdateArray().
 	2017-05-25 API changes:
-	  * Renamed from InsertArray() to GetInsertNativeValues()
+	  * Renamed from {$op}Array() to Get{$op}Values() and then Get{$op}NativeValues()
 	  * Removed array parameter
 	  * Made public so Form object can access (replacing functionality of $this->Save())
-	2017-09-16 Renamed from GetInsertNativeValues to GetStorableValues_toInsert
+	2017-09-16 Renamed from Get{$op}NativeValues to GetStorableValues_to{$op}
       PUBLIC so Form object can use it when saving received values to database
     */
+      /*----
+	DEFAULT
+	VERSION: {$op} = INSERT
+	RETURNS: array of values formatted for $this->Insert()
+	HISTORY:
+	  2016-10-16 Now defaults to ChangeArray() instead of UpdateArray().
+      */
     public function GetStorableValues_toInsert() {
 	return $this->GetStorableValues_Changed();
     }
-    /*----
-      DEFAULT
-      INPUT: $ar (optional) = list of key-value pairs (values, not SQL-formatted) to be included
-      RETURNS: array of values to update, formatted for $this->Update().
-      PURPOSE: Mainly so it can be overridden to calculate specific fields
-	when a record is updated, e.g. set WhenEdited.
-      HISTORY:
-	2016-04-19 This couldn't have been working reliably until now, because the values
-	  were not being sanitize-and-quoted. (Now they are.)
-	2016-10-16 Calculations moved to ChangeArray().
-	2017-05-25 API changes:
-	  * Renamed from UpdateArray() to GetUpdateValues()
-	  * Removed array parameter
-	  * Made public so Form object can access (replacing functionality of $this->Save())
-      PUBLIC so Form object can use it when saving received values to database
-    */
+      /*----
+	DEFAULT
+	VERSION: $op = UPDATE
+	RETURNS: array of values formatted for $this->Update()
+	HISTORY:
+	  2016-10-16 Calculations moved to ChangeArray().
+      */
     public function GetStorableValues_toUpdate() {
 	return $this->GetStorableValues_Changed();
     }
+
+    //====
 
     // -- NATIVE VALUES -- //
     // ++ STORAGE VALUES ++ //
@@ -113,21 +113,20 @@ trait ftSaveableRecord {
 	  Removing Sanitize_andQuote().
 	2017-05-25 Renamed for clarity: call GetChangedStorableValues() (was GetChangedNativeValues), with no argument.
 	  * Possibly we also need to write GetChangeStorageValues()...?
-	2017-06-15 Finally sorted things out, I hope. We now have Get*NativeValues() and Get*StorageValues().
+	2017-06-15 
+	  * Finally sorted things out, I hope. We now have Get*NativeValues() and Get*StorageValues().
+	  * eliminated $ar parameter
+	  * and then (I guess?) renamed from Get*StorageValues() to Get*StorageOverrides().
     */
     
     /*----
       STUB
-      HISTORY:
-	2017-06-15 Eliminating $ar parameter; renaming from GetInsertStorageValues() to GetInsertStorageOverrides().
     */
     public function GetInsertStorageOverrides() {
 	return array();
     }
     /*----
       STUB
-      HISTORY:
-	2017-06-15 Eliminating $ar parameter; renaming from GetUpdateStorageValues() to GetUpdateStorageOverrides().
     */
     public function GetUpdateStorageOverrides() {
 	return array();
@@ -152,7 +151,7 @@ trait ftSaveableRecord {
 	  to use when external entities (usually forms) want to insert things, because
 	  sometimes we don't want to just stick the data in a record. Wiki Nodes need
 	  to be able to create a complex set of records in different tables in response
-	  to an insert request from a form.
+	  to an insert request from a form, for example.
 	  
 	  Therefore: renaming this from PublicInsert() to FormInsert(), and also
 	    creating FormUpdate().
@@ -183,34 +182,37 @@ trait ftSaveableRecord {
 	  Isn't there some other way to do this? Can't think of it.
 	2017-04-26 I'm pretty sure this was not in a trait until sometime in the last few months.
 	  Not sure exactly where it was before that, or exactly when it was moved.
+	2017-05-24 This now seems unnecessary; functionality should be in Form object. Commented out.
+	2018-02-19 ...but apparently shopping carts need it, so re-enabling.
+	2018-02-21 After much documentation, I suddenly realized this is a perfect opportunity to get rid
+	  of the $arSave input parameter.
     */
-    /* 2017-05-24 This now seems unnecessary; functionality should be in Form object.
-    public function Save($arSave=NULL) {
-	if (!is_null($arSave)) {
-	    echo 'ARSAVE:'.fcArray::Render($arSave);
-	}
+    public function Save() {
 	$out = NULL;
 	$sql = NULL;	// for debugging
 	if ($this->IsNew()) {
-	    $arIns = $this->InsertArray($arSave);
-	    if (is_array($arIns)) {
-		$this->Insert($arIns);
+	    $ar = $this->GetStorableValues_toInsert();
+	    if (is_array($ar)) {
+		$this->Insert($ar);
 	    }
 	} else {
-	    $arUpd = $this->UpdateArray();
-	    echo 'ARUPD:'.fcArray::Render($arUpd);
-	    
-	    if (is_array($arUpd)) {
-		$this->Update($arUpd);
+	    $ar = $this->GetStorableValues_toUpdate();
+	    if (is_array($ar)) {
+		$this->Update($ar);
 	    }
 	}
-	    throw new exception('Check those values...');
-    } */
+    }
+    /*
+      USAGE NOTE:
+	* GetStorableValues_to*() generates a list of values from scratch
+	* Get*StorageOverrides() is just a list of values to override the defaults
+      TODO: Add the above to the Ferreteria usage documentation.
+    */
     protected function InsertArray($ar=NULL) {
 	throw new exception('2017-05-25 Renamed for clarity: call GetStorableValues_toInsert() or GetInsertStorageOverrides(), with no argument.');
     }
     protected function UpdateArray($ar=NULL) {
-	throw new exception('2017-05-25 Renamed for clarity: call GetStorableValues_toUpdate() GetUpdateStorageOverrides(), with no argument.');
+	throw new exception('2017-05-25 Renamed for clarity: call GetStorableValues_toUpdate() or GetUpdateStorageOverrides(), with no argument.');
     }
     protected function ChangeArray($ar=NULL) {
 	throw new exception('2017-05-25 Renamed for clarity: call GetStorableValues_Changed(), with no argument, unless you need SQL.');

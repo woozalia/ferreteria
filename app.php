@@ -194,14 +194,19 @@ abstract class fcAppStandard extends fcApp {
     protected function GetUsersClass() {
 	return KS_CLASS_ADMIN_USER_ACCOUNTS;
     }
+    /* 2018-02-19 This seems like pretty much not the way to do this.
     private $sClassEvents='fctEventPlex';	// default/base
     protected function GetEventsClass() {
 	return $this->sClassEvents;
     }
     public function SetEventsClass($s) {
 	$this->sClassEvents = $s;
+    }*/
+    // DEFAULT
+    protected function GetEventsClass() {
+	return 'fctEventPlex_standard';
     }
-    protected function GetEventsDoneClass() {
+    protected function GetEventsDoneClass() {		// 2018-02-19 not sue this is used either
 	return 'fctSubEvents_done';
     }
     protected function GetDropinManagerClass() {
@@ -211,17 +216,14 @@ abstract class fcAppStandard extends fcApp {
     // -- CLASS NAMES -- //
     // ++ TABLES ++ //
 
-    // TODO 2017-06-11: rename to GetUserTable()
     public function UserTable($id=NULL) {
 	$db = $this->GetDatabase();
 	return $db->MakeTableWrapper($this->GetUsersClass(),$id);
     }
-    // TODO 2017-06-11: rename to GetEventTable()
     public function EventTable($id=NULL) {
 	$db = $this->GetDatabase();
 	return $db->MakeTableWrapper($this->GetEventsClass(),$id);
     }
-    // TODO 2017-06-11: rename to GetEventTable_Done() 
     public function EventTable_Done() {
 	$db = $this->GetDatabase();
 	return $db->MakeTableWrapper($this->GetEventsDoneClass());
@@ -384,9 +386,4 @@ trait ftFrameworkAccess {
     protected function SessionRecord() {
 	return $this->AppObject()->GetSessionRecord();
     }
-    /* 2017-05-01 conflicts with ftLoggableObject
-    protected function EventTable() {
-	return $this->AppObject()->EventTable();
-    }
-    */
 }

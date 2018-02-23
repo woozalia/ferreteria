@@ -56,7 +56,7 @@ class fctUserSessions extends fcTable_keyed_single_standard {
 	$this->isMismatch = $b;
     }
     
-    // ++ STATUS ++ //
+    // -- STATUS -- //
     // ++ COOKIE ++ //
 
       //++remote++//
@@ -197,84 +197,7 @@ class fctUserSessions extends fcTable_keyed_single_standard {
 	}
 	return $this->GetCurrentRecord();
 	    
-/* 2016-11-14 old code    
-	$okSession = FALSE;		// session not valid until we say so
-	$sSessKey = GetCookieValue();	// get the session cookie
-	$doNew = TRUE;
-	if (!is_null($sSessKey)) {
-	    // we already have a session key -- see if the session is still valid
-	    
-	    list($idRecd,$sToken) = explode('-',$sSessKey);
-	    if (empty($idRecd)) {
-		throw new fcSilentException("Ferreteria Input Error: Received session cookie has no ID. Hacking attempt? Session Key=[$sSessKey]");
-	    }
-
-	    // check to see if we've already loaded a session record
-	    if ($this->HasCurrentRecord()) {
-		$rcSess = $this->GetCurrentRecord();
-		$idThis = $rcSess->GetKeyValue();
-		if ($idThis == $idRecd) {
-		    $doNew = FALSE;
-		}
-	    }
-	    if ($doNew) {
-		$rcRecd = $this->GetRecord_forKey($idRecd);
-		$this->SetCurrentRecord($rcRecd);
-		$rcSess = $rcRecd;
-	    }
-
-	    $okSession = $rcSess->IsValidNow($sToken);	// do session's creds match browser's creds?
-	}
-
-	if (!$okSession) {
-	  // no current/valid session, so make a new one:
-	    $rcSess = $this->SpawnRecordset();
-	    $rcSess->InitNew();
-	    $rcSess->Create();
-	    
-	    if ($doNew) {
-		$this->AppObject()->AddMessage('You have to add items to your cart before you can check out.');
-	    } else {
-		$this->AppObject()->AddMessage('Your existing session was dropped because your fingerprint changed.');
-	    }
-	  // add new record for the new session:
-	    $this->SetCurrentRecord($rcSess);
-	  // generate key from the new session:
-	    $sSessKey = $rcSess->SessKey();
-	    $ok = $this->ThrowCookie($sSessKey);
-	    if (!$ok) {
-		throw new exception('Internal Error: Cookie could not be sent for session key "'.$sSessKey.'".');
-		// if this happens, then some output was already sent, preventing the cookie.
-	    }
-	} else {
-	    //echo 'SESSION IS FINE, THANKS.<br>';
-	}
-	return $this->GetCurrentRecord();
-*/
     }
-    /*----
-      ACTION: get the session record we *should* be using, based on current client specs
-      HISTORY:
-	2016-10-31 Adapted from fcApp::GetSessionRecord() -- couldn't figure out why it needed to be there,
-	  and needing to access recordset's GetTableWrapper() was a problem because that's protected now.
-    */
-    /* 2016-12-18 I'm not sure, but this has to be redundant. In any case, it's a duplicate method name.
-    public function MakeActiveRecord() {
-	if (empty($this->rcSess)) {
-	    $this->rcSess = $this->GetCurrent();
-	}
-	if (!$this->rcSess->HasRows()) {
-	    //throw new exception('Internal error: Loaded Session recordset has no rows.');
-/* 2016-03-24 I'm guessing that this happens when there is a partial match between the browser cookie
-    and a Session record -- e.g. browser has gone to a new version, so has the cookie but the fingerprint
-    doesn't match. In that case, we should just end the Session and start over.
-* /
-	    $this->ClearSession();
-	    $this->rcSess = $this->GetCurrent();
-	}
-	return $this->rcSess;
-    }
-*/
     
     // -- CURRENT RECORD -- //
 
@@ -284,7 +207,6 @@ class fctUserSessions extends fcTable_keyed_single_standard {
 */
 class fcrUserSession extends fcRecord_standard {
     use ftVerbalObject;
-    //use ftSaveableRecord;
 
     protected $rcUser;
 
@@ -422,84 +344,6 @@ class fcrUserSession extends fcRecord_standard {
     protected function ClearUserRecord() {
 	$this->rcUser = NULL;
     }
-    /* 2017-02-05 go directly to user table
-    private $rcUserFailed;
-    protected function SetFailedUserRecord(fcrUserAcct $rcUser) {
-	$this->ClearUserRecord();
-	$this->rcUserFailed = $rcUser;
-    }
-    public function GetFailedUserRecord() {
-	return $this->rcUserFailed;
-    }
-    */
-    /* 2017-01-16 old version
-    // TODO: is this ever *supposed* to be called with oUser=NULL? If so, why? Document.
-    public function SetUserRecord(fcrUserAcct $oUser=NULL) {
-	$doChg = FALSE;
-	if (is_null($oUser)) {
-	    $idNew = NULL;
-	} else {
-	    $idNew = $oUser->GetKeyValue();
-	}
-	if (is_null($this->rcUser)) {
-	    $doChg = TRUE;
-	} else {
-	    if (is_null($oUser)) {
-		throw new exception('This should not happen.');
-	    }
-	    $idOld = $this->GetUserID();
-	    if ($idOld != $idNew) {
-		$doChg = TRUE;
-	    } elseif (get_class($this->rcUser) != get_class($oUser)) {
-		$doChg = TRUE;
-	    }
-	}
-	if ($doChg) {
-	    $this->rcUser = $oUser;
-	    // UPDATE local & saved ID_User
-	    $this->SaveUserID($idNew);
-	}
-    } */
-    /*----
-      RETURNS: User record object, if the session has a user; NULL otherwise
-      ASSUMES:
-	If $this->objUser is set, it matches ID_User
-    */ /* 2016-12-18 It appears that nothing is using this anymore.
-    public function UserObj(fcrUserAcct $oUser=NULL) {
-	throw new exception('UserObj() is deprecated; call UserRecord or SetUserRecord()');
-	if (!is_null($oUser)) {
-
-	    // we are SETTING the user
-	    $doChg = FALSE;
-	    $idNew = $oUser->GetKeyValue();
-	    if (is_null($this->objUser)) {
-		$doChg = TRUE;
-	    } else {
-		$idOld = $this->Value('ID_User');
-		if ($idOld != $idNew) {
-		    $doChg = TRUE;
-		} elseif (get_class($this->objUser) != get_class($oUser)) {
-		    $doChg = TRUE;
-		}
-	    }
-	    if ($doChg) {
-		$this->objUser = $oUser;
-		// UPDTE local & saved ID_User
-		$this->SaveUserID($idNew);
-	    }
-	} else {
-	    // we are trying to RETRIEVE the user
-	    if (empty($this->objUser)) {
-		$tUser = $this->UserTable();
-		if ($this->UserIsLoggedIn()) {
-		    $this->objUser = $tUser->GetItem($this->Value('ID_User'));
-		} else {
-		    $this->objUser = NULL;
-		}
-	    }
-	}
-	return $this->objUser;
-    } */
 
     // -- RECORDS -- //
     // ++ FIELD VALUES ++ //
@@ -698,13 +542,6 @@ class fcrUserSession extends fcRecord_standard {
 	    $rcClient->Stamp();
 	}
     }
-    /*
-    public function CreateRecord_andThrowCookie() {
-	$this->CreateRecord();
-	$sSessKey = $this->SessKey();
-	$ok = $this->ThrowCookie($sSessKey);
-	return $ok;
-    }*/
     /*----
       ACTION: Attempts to log the user in with the given credentials.
       RETURNS: event record
@@ -773,7 +610,7 @@ class fcrUserSession extends fcRecord_standard {
 		  'err text'	=> $db->ErrorString(),
 		  );
 	    }
-	    $oApp->EventTable_Done()->CreateRecord($idEvent,$sState,$sText,$arData);    
+	        
 	    if (!$db->IsOkay()) {
 		echo 'SQL: '.$db->sql;
 		throw new exception('Ferreteria event-logging error recording completion of user logout: "'.$db->ErrorString());

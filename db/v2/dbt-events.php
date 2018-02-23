@@ -36,9 +36,29 @@ interface fiEventTable_forTable extends fiEventTable {
 */
 trait ftLoggableObject {
 
+    // ++ CLASS ++ //
+    
+    abstract protected function GetEventsClass();
+    
+    // -- CLASS -- //
+    // ++ TABLE ++ //
+
     protected function EventTable() {
-	return fcApp::Me()->EventTable();
+	return $this->GetConnection()->MakeTableWrapper($this->GetEventsClass());
     }
+    
+    // -- TABLE -- //
+    // ++ DB WRITE ++ //
+
+    protected function CreateEvent_Notes($idEvent,$sNotes) {
+	$tBase = $this->EventTable();
+	$tSub = $tBase->TableWrapper_forNotes();
+	$tSub->CreateRecord($idEvent,$sNotes);
+    }
+
+    // -- DB WRITE -- //
+    // ++ WEB OUTPUT ++ //
+    
     protected function EventListing_SectionHeader($sSuffix) {
 	$oHdr = new fcSectionHeader('Ferreteria Events'.$sSuffix);
 	return $oHdr;
@@ -52,11 +72,8 @@ trait ftLoggableObject {
 	//    throw new exception('Ferreteria usage error: you need to be using the admin UI (dropin) descendant of the event table class //which defines EventListing(). The event table class received from EventTable() was '.get_class($tEv).'.');
 	//}
     }
-    protected function CreateEvent_Notes($idEvent,$sNotes) {
-	$tBase = $this->EventTable();
-	$tSub = $tBase->TableWrapper_forNotes();
-	$tSub->CreateRecord($idEvent,$sNotes);
-    }
+    
+    // -- WEB OUTPUT -- //
 }
 /*::::
   REQUIRES: nothing yet
@@ -69,6 +86,13 @@ trait ftLoggableTable {
     abstract public function GetActionKey();
     
     // -- SETUP -- //
+    // ++ CLASSES ++ //
+    
+    protected function GetEventsClass() {
+	return 'fctEventPlex_standard';
+    }
+    
+    // -- CLASSES -- //
     // ++ WRITE DATA ++ //
     
     /*----
@@ -113,6 +137,8 @@ trait ftLoggableTable {
 */
 trait ftLoggableRecord {
     use ftLoggableObject;
+    
+    // ++ DB WRITE ++ //
 
     public function CreateEvent($sCode,$sText,array $arData=NULL) {
 	$tBase = $this->EventTable();
@@ -123,7 +149,8 @@ trait ftLoggableRecord {
 	return $id;
     }
     
-    // ++ READ DATA ++ //
+    // -- DB WRITE -- //
+    // ++ DB READ / WEB UI ++ //
 
     protected function EventListing() {
 	$tEv = $this->EventTable();
@@ -137,7 +164,7 @@ trait ftLoggableRecord {
 	  ;
     }
     
-    // -- READ DATA -- //
+    // -- DB READ / WEB UI -- //
 }
 /*----
   PURPOSE: Records every update and insert in the Ferreteria event log, laying in the basis for eventual "undo" capability.
@@ -364,6 +391,8 @@ class fcrEvent extends fcrEvent_base {
     const KF_PARAMS		= 'params';
     const KF_IS_ERROR		= 'error';
     const KF_IS_SEVERE	= 'severe';
+    // 2018-02-21 the above all seem like they should be DEPRECATED; new Stash fields:
+    const KF_SQL	= 'sql';
 }
 // PURPOSE: This just provides some reasonable cementing of the abstract functions.
 class fctEvents extends fctEvents_base {

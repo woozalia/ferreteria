@@ -219,6 +219,7 @@ class fcrEventPlect extends fcDataRecord {
 }
 
 class fctEventPlex_standard extends fctEventPlex {
+
     // ++ SETUP ++ //
 
     protected function InitVars() {
@@ -243,8 +244,8 @@ class fctEventPlex_standard extends fctEventPlex {
     
     // -- TABLES -- //
 }
-class fcrEventPlect_standard extends fcrEventPlect {
-  // TODO: field access methods for subevents
+// TODO: field access methods for subevents
+abstract class fcrEventPlect_standard extends fcrEventPlect {
 }
 
 // NOTE: not to be confused with fctSubEvents_InTable
@@ -315,10 +316,14 @@ class fctPlex_BaseEvents extends fctPlex_EventTable {
   HISTORY:
     2017-03-15 I had written a note that "class currently not actually used.", but actually it is.
       Adding field methods for displaying log.
+    2018-02-22 So... where are those field methods again?
 */
 class fcrPlex_BaseEvent extends fcRecord_keyed_single_integer {
 }
-// ABSTRACT: n/i = SingularName(), TableName()
+
+// === SUB EVENTS === //
+
+// ABSTRACT: n/i = { SingularName(), TableName() }
 abstract class fctSubEvents extends fctPlex_EventTable {
 }
 

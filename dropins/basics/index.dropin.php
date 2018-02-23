@@ -21,8 +21,8 @@ define('KS_CLASS_SITE_DROPIN_MODULE',	'fcrAdminDropInModule');
 define('KS_CLASS_EVENT_LOG_ADMIN',	'fctAdminEventPlex');
 
 // UTILITY CLASS UPGRADES - not sure if this is the best way to do this...
-
-fcApp::Me()->SetEventsClass(KS_CLASS_EVENT_LOG_ADMIN);
+//	2018-02-19 let's say "not"
+//fcApp::Me()->SetEventsClass(KS_CLASS_EVENT_LOG_ADMIN);
 
 // MENU
 
