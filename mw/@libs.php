@@ -10,9 +10,9 @@ fcCodeModule::BasePath($fp.'/');
 
 $om = new fcCodeModule(__FILE__, 'app-mw.php');
   $om->AddClass('fcApp_MW');
-$om = new fcCodeModule(__FILE__, 'app-specialpage.php');
-  $om->AddClass('SpecialPageApp');
-  $om->AddClass('SpecialPage_DataMenu');
+//$om = new fcCodeModule(__FILE__, 'app-specialpage.php');
+//  $om->AddClass('SpecialPageApp');
+//  $om->AddClass('SpecialPage_DataMenu');
 $om = new fcCodeModule(__FILE__, 'menu.php');
   $om->AddClass('clsMenu');
 $om = new fcCodeModule(__FILE__, 'data-page.php');
