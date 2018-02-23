@@ -79,6 +79,9 @@ class fcMWProperties extends fcTable_wSource_wRecords {
     protected function IsPropertyLoaded($sName) {
 	return fcArray::Exists($this->arProps_byName,$sName);
     }
+    protected function GetLoadedProperty($sName) {
+	return fcArray::Nz($this->arProps_byName,$sName);
+    }
     public function DumpLoadedValues() {
 	$out = "<ul>\n";
 	foreach ($this->arProps_byName as $sProp => $arPages) {
@@ -137,12 +140,13 @@ class fcMWProperties_site extends fcMWProperties {
       HISTORY:
 	2018-02-10 Renamed FigureSQL_forProperty() -> SQLfor_SelectProperties_byName(); $sName now cannot be NULL
 	  (NULL value formerly would retrieve all properties for entire site)
+	2018-02-22 Including pp_propname in results because it's needed for the cache array.
     */
 //    protected function FigureSQL_forProperty($sName=NULL) {
       protected function SQLfor_SelectProperties_byName($sName) {
 	$sqlName = $this->GetConnection()->SanitizeValue($sName);
-	$sql = 'SELECT pp_page, pp_value FROM page_props'
-	  ." WHERE pp_propname=$sqlKey"
+	$sql = 'SELECT pp_page, pp_propname, pp_value FROM page_props'
+	  ." WHERE pp_propname=$sqlName"
 	  ;
 	return $sql;
     }
@@ -152,6 +156,11 @@ class fcMWProperties_site extends fcMWProperties {
 
     /*----
       ACTION: Finds all pages having this property, and loads their values into the local cache
+      RETURNS: array of page-property-record data
+	array[page ID][field] = field value
+	  field: pp_page, pp_propname, pp_value
+      TODO: should this be renamed GetPropertyRecordsArray()?
+	Possibly it should be PROTECTED as well.
       HISTORY:
 	2018-02-10 created (rewrite of LoadValue() etc.)
     */
@@ -162,7 +171,7 @@ class fcMWProperties_site extends fcMWProperties {
 	    try {
 		$rs = $this->FetchRecords($sql);
 	    } catch (Exception $e) {
-		$sErr = $db->ErrorString();
+		$sErr = fcApp::Me()->GetDatabase()->ErrorString();
 		$txt = "db error searching for property [$sName] - <i>$sErr</i> - from this SQL:\n* ".$sql;
 		echo $txt;
 		throw new exception('Ferreteria/MW data error');
@@ -171,7 +180,51 @@ class fcMWProperties_site extends fcMWProperties {
 
 	    $this->SetProperties($rs);
 	}
-	return \fcArray::Nz($this->arProps_byName,$sName);
+	return $this->GetLoadedProperty($sName);
+    }
+    protected function GetGlobalPropertyValue($sKey) {
+	$arVals = $this->GetPropertyValues($sKey);
+	$nVals = count($arVals);
+	if ($nVals > 1) {
+	    // if we actually run into this condition, then should probably list the pages.
+	    throw new exception("Multiple pages define the array [$sKey].");	// kluge for now
+	} elseif ($nVals == 0) {
+	    return NULL;
+	}
+	$arRec = array_pop($arVals);
+	return $arRec['pp_value'];	// return first/only value
+	// NOTE: $arRec could also be turned into a Page Property object
+    }
+    /*----
+      LEGACY
+      HISTORY:
+	2018-02-22 I'm writing this *only* for dealing with old markup in Issuepedia.
+      TODO: All w3tpl functions should be re-saved with the new array format or (better) rewritten as plugins.
+    */
+    public function LoadOldFormatFunction($sName) {
+	$sKeyFx = ">fx()>$sName";
+	$arOut = $this->LoadOldFormatGlobalArray($sKeyFx);
+	return $arOut;
+    }
+    protected function LoadOldFormatGlobalArray($sName) {
+	$sKeyAr = $sName.'>';
+	$sList = $this->GetGlobalPropertyValue($sKeyAr);	// value is xplodable list
+	$arOut = NULL;
+	if (!is_null($sList)) {
+	    $arList = fcString::Xplode($sList);			// xplode the value
+	    foreach ($arList as $sSubName) {
+		$sSubKey = $sKeyAr.$sSubName;
+		$sSubVal = $this->GetGlobalPropertyValue($sSubKey);
+		if (is_null($sSubVal)) {
+		    // not found, so presumably a sub-array
+		    $arSub = $this->LoadOldFormatGlobalArray($sSubKey);
+		    $arOut[$sSubName] = $arSub;
+		} else {
+		    $arOut[$sSubName] = $sSubVal;
+		}
+	    }
+	    return $arOut;
+	}
     }
     
     /*----
