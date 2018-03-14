@@ -39,6 +39,9 @@ class fctEventPlex extends fcDataTable_array {
     protected function GetKeyName() {
 	return $this->BaseTable()->GetKeyName();
     }
+    protected function SingularName() {
+	return 'fcrEventPlect';
+    }
     
     // -- SETUP -- //
     // ++ SUB-EVENTS ++ //
@@ -123,7 +126,7 @@ class fctEventPlex extends fcDataTable_array {
 	
 	$sqlWhere = is_null($sqlFilt)?'':(' WHERE '.$sqlFilt);
 	$sql = "SELECT e.ID, $sqlFields FROM $sqlJoin$sqlWhere ORDER BY $sqlSort";
-	//die ('SQL: '.$sql);
+	//echo 'SPAWN CLASS: ['.$this->SingularName().']<br>';
 	$rs = $this->FetchRecords($sql);
 	return $rs;
     }
@@ -365,7 +368,7 @@ class fctSubEvents_Done extends fctSubEvents {
 	return $id;
     }
 
-    // ++ WRITE DATA ++ //
+    // -- WRITE DATA -- //
 }
 class fcrSubEvent_Done extends fcRecord_keyed_single_integer {
 }

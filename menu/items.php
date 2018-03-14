@@ -12,14 +12,14 @@
     2013-11-29 renamed from menu.php to navbar.php
       because proper menus look like they'll need another set of classes
     2016-11-29 Adapting for new Page system
-    2016-12-05 Adapting some things from vbz-page-shop
+    2016-12-05 Adapting some things from page/shop.php
       ftLinkableNode, fcMenuItem_link->fcNavItem_link, fcMenuItem_standard, fcMenuFolder, fcMenuFolder_standard
     2016-12-08 some renaming
     2016-12-09 merging page.navbar.php into here (menu-base.php)
       fcNavItem, fcPageBlock
     2016-12-27..28 reworking class structure
       removed ftLinkableNode
-    2017-01-10 extracted kiosk classes to kiosk.php for easier reference; renamed this from manu-base.php -> items.php
+    2017-01-10 extracted kiosk classes to kiosk.php for easier reference; renamed this from menu-base.php -> items.php
 */
 trait ftRequiresPermit {
 

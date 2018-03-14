@@ -38,7 +38,11 @@ trait ftLoggableObject {
 
     // ++ CLASS ++ //
     
-    abstract protected function GetEventsClass();
+    //abstract protected function GetEventsClass();
+    protected function GetEventsClass() {
+	return fcApp::Me()->GetEventsClass();
+    }
+    
     
     // -- CLASS -- //
     // ++ TABLE ++ //
@@ -88,9 +92,9 @@ trait ftLoggableTable {
     // -- SETUP -- //
     // ++ CLASSES ++ //
     
-    protected function GetEventsClass() {
-	return 'fctEventPlex_standard';
-    }
+//    protected function GetEventsClass() {
+//	return 'fctEventPlex_standard';
+//    }
     
     // -- CLASSES -- //
     // ++ WRITE DATA ++ //

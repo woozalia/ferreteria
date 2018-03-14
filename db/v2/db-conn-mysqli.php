@@ -92,11 +92,11 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     public function CountOfAffectedRows() {
 	return $this->NativeObject()->affected_rows;
     }
-    public function FetchRecordset($sSQL,fiTable_wRecords $tbl) {
-	$poRes = $this->NativeObject()->query($sSQL);	// returns a mysqli_result if successful
-	$this->sql = $sSQL;
-	return $this->ProcessResultset($poRes,$tbl,$sSQL);	// 2017-12-03 this was commented out -- why?
-	//return $tbl->ProcessRecordset($poRes,$sSQL);		// 2017-12-03 there is no function ProcessRecordset()
+    public function FetchRecordset($sql,fiTable_wRecords $tbl) {
+	$poRes = $this->NativeObject()->query($sql);	// returns a mysqli_result if successful
+	$this->sql = $sql;
+	return $this->ProcessResultset($poRes,$tbl,$sql);	// 2017-12-03 this was commented out -- why?
+	//return $tbl->ProcessRecordset($poRes,$sql);		// 2017-12-03 there is no function ProcessRecordset()
     }
     /*----
       INPUT:

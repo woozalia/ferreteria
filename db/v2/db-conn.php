@@ -60,7 +60,7 @@ abstract class fcDataConn {
     // ++ DATA READ/WRITE ++ //
 
     abstract public function MakeTableWrapper($sTableClass,$id=NULL);
-    abstract public function FetchRecordset($sSQL,fiTable_wRecords $tbl);
+    abstract public function FetchRecordset($sql,fiTable_wRecords $tbl);
     abstract public function ExecuteAction($sSQL);
     abstract public function CountOfAffectedRows();
     abstract public function CreatedID();

@@ -24,8 +24,7 @@ interface fiEditableRecord {
     //function Save($arSave=NULL);
 }
 
-class fcForm_DB 
-extends fcForm_keyed {
+class fcForm_DB extends fcForm_keyed {
 
     // ++ SETUP ++ //
 
@@ -105,7 +104,7 @@ extends fcForm_keyed {
       ACTION: set internal data from array of SQL-format values
     */
     protected function RecordValues_asSQL_set(array $arSQL) {
-	$arFlds = $this->FieldArray();
+	$arFlds = $this->GetFieldArray();
 	foreach ($arSQL as $key => $val) {
 	    if (array_key_exists($key,$arFlds)) {
 		// ignore data fields for which there is no Field object
@@ -115,7 +114,7 @@ extends fcForm_keyed {
 	}
     }
     protected function RecordValues_asSQL_get() {
-	$arF = $this->FieldArray();
+	$arF = $this->GetFieldArray();
 	foreach ($arF as $key => $oField) {
 	    if ($oField->ShouldWrite()) {
 		$arO[$key] = $oField->StorageObject()->GetValue();
@@ -147,8 +146,8 @@ extends fcForm_keyed {
 	  Local is native-format. Fixed.
 	2017-06-12 Moved from fcForm in form.php to fcForm_DB in form-data.php
     */
-    protected function RecordValues_asNative_set(array $arVals=NULL) {
-	$arFlds = $this->FieldArray();
+    protected function SetRecordValues_asNative(array $arVals=NULL) {
+	$arFlds = $this->GetFieldArray();
 	$rc = $this->GetRecordsObject();
 	echo 'SUPPOSEDLY NATIVE VALUES:'.fcArray::Render($arVals);
 	foreach ($arVals as $key => $val) {
@@ -176,8 +175,8 @@ extends fcForm_keyed {
       HISTORY:
 	2017-06-12 Moved from fcForm in form.php to fcForm_DB in form-data.php
     */
-    public function RecordValues_asNative_get() {
-	$arFlds = $this->FieldArray();
+    public function GetRecordValues_asNative() {
+	$arFlds = $this->GetFieldArray();
 	$arOut = NULL;
 	foreach ($arFlds as $key => $oField) {
 	    $arOut[$key] = $oField->GetValue();
@@ -205,7 +204,7 @@ extends fcForm_keyed {
     /*----
       RULE: Call this to store data after changing
       INPUT:
-	$this->RecordValues_asNative_get(): main list of values to save
+	$this->GetRecordValues_asNative(): main list of values to save
 	$arStor: array of additional values to save, in storage format
       HISTORY:
 	2016-06-12
@@ -291,7 +290,7 @@ extends fcForm_keyed {
       USAGE: descendent classes that do specialized field calculations
     */
     protected function StoreRecord() {
-	$ar = $this->RecordValues_asNative_get();
+	$ar = $this->GetRecordValues_asNative();
 	$this->GetRecordsObject()->SetFieldValues($ar);
     }
     /*----
@@ -369,7 +368,7 @@ class fcForm_blob extends fcForm {
 
     // ++ SETUP ++ //
 
-    public function __construct($sName,fcBlobField $oBlobField) {
+    public function __construct($sName, $oBlobField) {
 	parent::__construct($sName);
 	$this->BlobObject($oBlobField);
     }
@@ -386,14 +385,27 @@ class fcForm_blob extends fcForm {
     // ++ DATA I/O ++ //
 
     // ACTION: Save form fields to blob data
-    public function Save() {
-	$arBlob = $this->RecordValues_asNative_get();
+    public function SaveFields_toBlob() {
+	//$arBlob = $this->GetRecordValues_asNative();
+	$arBlob = $this->GetFieldArray_toWrite_native();
 	$this->BlobObject()->SetArray($arBlob);
     }
     // ACTION: Load form fields from blob data
-    public function Load() {
+    public function LoadFields_fromBlob() {
 	$arBlob = $this->BlobObject()->GetArray();
-	$this->RecordValues_asNative_set($arBlob);
+	//$this->SetRecordValues_asNative($arBlob);
+	$this->SetFieldArray_toWrite_native($arBlob);
+    }
+    /*----
+      NOTE that the base class defines GetFieldArray_toWrite_native().
+      HISTORY:
+	2018-02-26 written because LoadFields_fromBlob() needs it
+    */
+    protected function SetFieldArray_toWrite_native(array $ar) {
+	foreach ($ar as $key => $val) {
+	    $oField = $this->FieldObject($key);
+	    $oField->SetValue($val);
+	}
     }
 
     // -- DATA I/O -- //

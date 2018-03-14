@@ -71,6 +71,7 @@ $om = new fcCodeModule(__FILE__, 'menu/menu-action.php');
   $om->AddClass('clsAction_section'); */
 $om = new fcCodeModule(__FILE__, 'menu/kiosk.php');
   $om->AddClass('fcMenuKiosk');
+  $om->AddClass('ftMenuKiosk_admin');
   $om->AddClass('fcMenuKiosk_admin');
 $om = new fcCodeModule(__FILE__, 'menu/items.php');
   $om->AddClass('fcNavItem');

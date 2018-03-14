@@ -1,4 +1,4 @@
-<?php
+<?php namespace ferreteria\mw;
 /*
   PURPOSE: App framework descendants for MediaWiki
   HISTORY:
@@ -10,7 +10,7 @@
 
 */
 
-class fcApp_MW extends fcAppStandard {
+class fcApp_MW extends \fcAppStandard {
 
     // ++ CLASSES ++ //
     
@@ -26,7 +26,7 @@ class fcApp_MW extends fcAppStandard {
 	return 'fcPageData_MW';	// 2017-01-16 This may not work.
     }
     protected function GetKioskClass() {
-	throw new exception('Kiosk class needs to be written for MediaWiki.');
+	return '\\'.__NAMESPACE__.'\\fcMenuKiosk_MW';
     }
 
     // -- CLASSES -- //
@@ -81,36 +81,5 @@ class fcApp_MW extends fcAppStandard {
     }
 
     // -- FRAMEWORK -- //
-    // ++ CEMENTING ++ //
-
-    /* 2017-01-16 This isn't how we do Pages anymore.
-    private $oPage;
-    public function SetPageObject(clsPage $obj) {
-	
-	if (!is_object($obj)) {
-	    throw new exception('Passed a non-object to Page().');
-	}
-	$this->oPage = $obj;
-	//$obj->App($this); 2016-11-05 no longer needed
-	//$obj->Doc($oDoc);
-    }
-    public function GetPageObject() {
-	if (empty($this->oPage)) {
-	    $this->oPage = $this->MWSpecialPage();
-	}
-	return $this->oPage;
-    } */
-    /*----
-      2016-03-29 A note said:
-	"Should this even be here, or should we throw an exception and tell callers to go directly to Page()->BaseURL()?"
-	...but Page()->BaseURL_rel() calls this, so I'm not sure if that would work.
-	Either way, adding a terminating slash because otherwise the links aren't built right.
-    */
-    /* 2017-01-16 Use the Kiosk object.
-    public function BaseURL_rel() {
-	return $this->MWSpecialPage()->BaseURL_rel().'/';
-    } */
-
-    // -- CEMENTING -- //
 }
 

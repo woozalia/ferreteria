@@ -202,8 +202,13 @@ abstract class fcAppStandard extends fcApp {
     public function SetEventsClass($s) {
 	$this->sClassEvents = $s;
     }*/
-    // DEFAULT
-    protected function GetEventsClass() {
+    /*----
+      DEFAULT
+      PUBLIC because it's useful to be able to call this as a default which can then be overridden
+	by classes with specialized event loggers, rather than having to re-implement EventTable()
+	in those classes.
+    */
+    public function GetEventsClass() {
 	return 'fctEventPlex_standard';
     }
     protected function GetEventsDoneClass() {		// 2018-02-19 not sue this is used either

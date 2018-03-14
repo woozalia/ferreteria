@@ -55,24 +55,6 @@ class fcForm {
     public function GetControlObject($sName) {
 	return $this->FieldObject($sName)->ControlObject();
     }
-    /*----
-      PUBLIC so Controls can add themselves to the Form
-    */
-    public function ControlObject($sName,fcFormControl $oCtrl=NULL) {
-	// READ: Use GetControlObject() instead.
-	// WRITE: Controls should add themselves to the Field object now.
-	throw new exception('2016-04-10 ControlObject() is deprecated; see code comments for alternatives.');
-	if (!is_null($oCtrl)) {
-	    $this->arCtrls[$sName] = $oCtrl;
-	    //$this->arRec[$sName] = NULL;	// make sure data field exists
-	}
-	if (array_key_exists($sName,$this->arCtrls)) {
-	    return $this->arCtrls[$sName];
-	} else {
-	    echo 'FIELD LIST: '.fcArray::Render($this->FieldArray());
-	    throw new exception('Attempting to retrieve unknown form field "'.$sName.'".');
-	}
-    }
 
     // -- CONTROL OBJECTS -- //
     // ++ STORAGE OBJECTS ++ //
@@ -80,21 +62,13 @@ class fcForm {
     protected function GetStorageObject($sName) {
 	return $this->FieldObject($sName)->StorageObject();
     }
-    /* 2017-05-26 written yesterday, turns out to be unnecessary
-    protected function NativeArray_toStorageArray(array $arNative) {
-	foreach ($arNative as $sKey => $val) {
-	    $oStor = $this->GetStorageObject($sKey);
-	    $sqlVal = $oStor->fromNativeSane($val);
-	    $arSQL[$sKey] = $sqlVal;
-	}
-	return $arSQL;
-    } */
     
-    // -- STORAGE OBJECT S-- //
+    // -- STORAGE OBJECTS-- //
     // ++ FIELDS ++ //
 
     /*----
       ACTION: Add a Field object to the Form, or retrieve one
+      TODO: This should be split into GetFieldObject() / SetFieldObject()
     */
     public function FieldObject($sName,fcFormField $oField=NULL) {
 	//return $this->ControlObject($sName)->FieldObject();
@@ -111,12 +85,14 @@ class fcForm {
 	This is a bit of a kluge until I can work out a more general way for
 	different data sources to interconnect.
     */
-    public function FieldArray() {
+    public function GetFieldArray() {
 	return $this->arFlds;
     }
+    /* 2018-02-26 This is only used for debugging, as far as I can tell. Commenting out until needed.
+      If needed, should probably be renamed GetFieldArray_changed().
     // 2016-02-04 might be useful after all
     protected function FieldArray_changed() {
-	$ar = $this->FieldArray();
+	$ar = $this->GetFieldArray();
 	$arOut = NULL;
 	foreach ($ar as $key => $oField) {
 	    if ($oField->IsChanged()) {
@@ -124,16 +100,19 @@ class fcForm {
 	    }
 	}
 	return $arOut;
-    }
+    } */
     /*----
       PUBLIC for event logging
       TODO: Should there be a form variant which automatically logs events?
 	Then this could be protected again.
+      NOTE: 2018-02-26 There is now a SetFieldArray_toWrite_native(), but
+	it's only used in fcForm_blob at this point.
+      RETURNS: array[key] = value
       HISTORY:
 	2017-04-14 changed from protected to public
     */
-    public function FieldArray_toWrite_native() {
-	$ar = $this->FieldArray();
+    public function GetFieldArray_toWrite_native() {
+	$ar = $this->GetFieldArray();
 	$arOut = NULL;
 	foreach ($ar as $key => $oField) {
 	    if ($oField->ShouldWrite()) {
@@ -148,8 +127,8 @@ class fcForm {
 	2016-10-13 written but apparently unneeded
 	2017-09-15 Actually, we do need it.
     */
-    protected function FieldArray_toWrite_storage() {
-	$ar = $this->FieldArray();
+    protected function GetFieldArray_toWrite_storage() {
+	$ar = $this->GetFieldArray();
 	$arOut = NULL;
 	foreach ($ar as $key => $oField) {
 	    if ($oField->ShouldWrite()) {
@@ -158,11 +137,12 @@ class fcForm {
 	}
 	return $arOut;
     }
+    /* 2018-02-26 Hidden until needed, for tidying purposes
     // DEBUGGING
     public function DumpChanged($txt) {
 	$ar = $this->FieldArray_changed();
 	echo "CHANGED FIELDS ($txt):".fcArray::Render($ar);
-    }
+    } */
 
     // -- FIELDS -- //
     // ++ DATA STORAGE ++ //
@@ -172,19 +152,6 @@ class fcForm {
     */
     public function RecordValue($sField,$val=NULL) {
 	return $this->FieldObject($sField)->ValueNative($val);
-    }
-    /*----
-      PURPOSE: set or retrieve all values in record (native format)
-      DEPRECATED
-      CALLED BY RecordValues_asSQL(), which is also deprecated
-    */
-    protected function RecordValues_asNative(array $arVals=NULL) {
-	// 2017-01-17 no apparent need yet
-        throw new exception('Who calls this?');	// probably call RecordValues_asNative_get() instead
-	if (!is_null($arVals)) {
-	    $this->arRec = $arVals;
-	}
-	return $this->arRec;
     }
     /*----
       USAGE: When form data is being saved, this retrieves the SQL values to write
@@ -197,7 +164,7 @@ class fcForm {
 	2017-01-17 only return modified fields -- else unedited fields get overwritten with NULL
     */
     public function RecordValues_asStorageSane_get() {
-	$arFlds = $this->FieldArray();
+	$arFlds = $this->GetFieldArray();
 	$arOut = NULL;
 	foreach ($arFlds as $key => $oField) {
 	    if ($oField->IsChanged()) {
@@ -208,6 +175,7 @@ class fcForm {
     }
     // 2015-11-24 this will need fixing
     protected function RecordValues_asDisplay(array $arVals=NULL) {
+    throw new exception('2018-02-26 Does anything still call this?');
 	if (!is_null($arVals)) {
 	    foreach ($arVals as $key => $val) {
 		if ($this->ControlExists($key)) {
@@ -230,7 +198,7 @@ class fcForm {
 	  is different from the name for writing.
     */
     protected function DisplayToNative_array(array $arDsp) {
-	$arFlds = $this->FieldArray();
+	$arFlds = $this->GetFieldArray();
 	foreach ($arDsp as $key => $val) {
 	    $oFld = $arFlds[$key];
 	    $arOut[$key] = $oFld->ControlObject()->toNative($val);
@@ -275,7 +243,7 @@ class fcForm {
     }
 
     // -- DATA STORAGE -- //
-    // ++ RENDERING ++ //
+    // ++ WEB OUTPUT ++ //
 
     /*----
       RETURNS: array[control name] = rendering of control
@@ -291,7 +259,7 @@ class fcForm {
 	return $arOut;
     }
 
-    // -- RENDERING -- //
+    // -- WEB OUTPUT -- //
     // ++ FORM PROCESSING ++ //
 
     /*----
@@ -386,6 +354,7 @@ abstract class fcForm_keyed extends fcForm {
 	2015-11-25 Rewrote more or less from scratch. we need to ask the Controls
 	  to check whether their state has changed, because unchecked checkboxes
 	  don't send any data. The old version didn't do this.
+      TODO: This should probably be named something more specific like SaveFields_toRecord().
     */
     public function Save() {
         $sName = $this->NameString();	// get form name
@@ -403,7 +372,7 @@ abstract class fcForm_keyed extends fcForm {
 		}
 
 		// get native values from Controls
-		$arSet = $this->FieldArray_toWrite_storage();
+		$arSet = $this->GetFieldArray_toWrite_storage();
 		//die('END DEBUG READOUT');
 		// save native values to database (SaveRecord() will use Storage objects to convert)
 		$id = $this->SaveRecord($arSet);
