@@ -39,6 +39,15 @@ trait ftSingleton {
 abstract class fcGlobals {
     use ftSingleton;
     
+    // keys/names
+    
+    public function GetSessionCookieName() {
+	return 'session';
+    }
+    public function GetStashCookieName() {
+	return 'stash';
+    }
+    
     // file paths
 
     abstract protected function GetFilePath_forSiteFolders();

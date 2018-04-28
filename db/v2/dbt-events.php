@@ -38,7 +38,11 @@ trait ftLoggableObject {
 
     // ++ CLASS ++ //
     
-    //abstract protected function GetEventsClass();
+    /*----
+      TODO: (2018-04-24) Ideally, the App object would be aware of whether we were in Admin mode
+	or not, and would deliver the appropriate class name. (For now, admin classes that use
+	this trait need to override this function.
+    */
     protected function GetEventsClass() {
 	return fcApp::Me()->GetEventsClass();
     }
@@ -48,7 +52,12 @@ trait ftLoggableObject {
     // ++ TABLE ++ //
 
     protected function EventTable() {
-	return $this->GetConnection()->MakeTableWrapper($this->GetEventsClass());
+	$t = fcApp::Me()->EventTable();
+    /* 2018-04-27 the old way
+	$db = $this->GetConnection();
+	$t = $db->MakeTableWrapper($this->GetEventsClass());
+    */
+	return $t;
     }
     
     // -- TABLE -- //
@@ -158,10 +167,12 @@ trait ftLoggableRecord {
 
     protected function EventListing() {
 	$tEv = $this->EventTable();
+	
 	$sTbl = $this->GetActionKey();
 	$id = $this->GetKeyValue();
 	$sFor = " for $sTbl $id";
 	$rs = $tEv->SelectRecords_forTable($sTbl,$id);
+	
 	return $this->EventListing_SectionHeader($sFor)->Render()
 	  .$rs->AdminRows()
 	  .'<div class=content><span class=line-stats><b>Events SQL</b>: '.$tEv->sql.'</span></div>'

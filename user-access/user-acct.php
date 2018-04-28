@@ -176,6 +176,9 @@ class fcrUserAcct extends fcRecord_standard {
 
     // ++ STATUS ++ //
 
+    protected function IsRoot() {
+	return ($this->GetKeyValue() == ID_USER_ROOT);
+    }
     /*----
       RETURNS: TRUE iff the current record is the logged in user
     */
@@ -315,6 +318,10 @@ class fcrUserAcct extends fcRecord_standard {
 	    // TODO: display this message nicely
 	    echo '<b>WARNING</b>: USING ANONYMOUS ROOT! DISABLE THIS AS SOON AS POSSIBLE.';
 	    return TRUE;
+	}
+	if ($sPerm == KS_PERM_FE_ROOT) {
+	    // this permission means user must be root
+	    return $this->IsRoot();
 	}
 	$hasRoot = FALSE;
 	if (defined('ID_USER_ROOT')) {

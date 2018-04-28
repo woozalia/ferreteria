@@ -9,6 +9,7 @@
       This one should just grab data from the singleton loader-version.
       Tentatively, the recordset admin class can be descended from the recordset loading class as before.
     2017-03-28 y2017 remediation; not sure what I meant about the class reorg. Maybe the interfaces accomplished this?
+    2018-03-25 moved ClassList() and RenderClassName() here, because this is the only place they're used.
 */
 class fctDropInManager extends fcDataTable_array implements fiEventAware, fiLinkableTable {
     use ftLinkableTable;
@@ -61,6 +62,8 @@ class fctDropInManager extends fcDataTable_array implements fiEventAware, fiLink
 
 class fcrAdminDropInModule extends fcrDropInModule {
 
+    // ++ WEB OUTPUT ++ //
+
     /*----
       PUBLIC because it is called from the Table wrapper object
     */
@@ -106,5 +109,39 @@ class fcrAdminDropInModule extends fcrDropInModule {
 	$out = "\n    <td valign=top>$sName</td><td>$sFiles</td>";
 	return $out;
     }
+    
+    // -- WEB OUTPUT -- //
+    // ++ UTILITY FUNCTIONS ++ //
+
+    static protected function ClassList($vClasses,$sSep=' ') {
+	$out = NULL;
+	if (is_array($vClasses)) {
+	    // value is an array of class names for file $sFile
+	    foreach ($vClasses as $sClass) {
+		if (!is_null($out)) {
+		    $out .= $sSep;
+		}
+		$out .= static::RenderClassName($sClass);
+	    }
+	} else {
+	    // assume value is a single class name
+	    $out = static::RenderClassName($vClasses);
+	}
+	return $out;
+    }
+    static protected function RenderClassName($sClass) {
+	if (class_exists($sClass)) {
+	    $out = "<b>C:</b>$sClass";
+	} elseif (trait_exists($sClass)) {
+	    $out = "<b>T:</b>$sClass";
+	} elseif (interface_exists($sClass)) {
+	    $out = "<b>I:</b>$sClass";
+	} else {
+	    $out = "<s title='class, trait, or interface not found'>$sClass</s>";
+	}
+	return $out;
+    }
+
+    // -- UTILITY FUNCTIONS -- //
 
 }

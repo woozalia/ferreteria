@@ -13,13 +13,17 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 
     private $oNative;
     protected function NativeObject(mysqli $oConn=NULL) {
-	if (!is_null($oConn)) {
-	    $this->oNative = $oConn;
-	}
+	throw new exception('2018-04-02 Call SetNativeObject() or GetNativeObject() instead.');
+    }
+    protected function SetNativeObject(mysqli $oConn) {
+	$this->oNative = $oConn;
+    }
+    protected function GetNativeObject() {
 	if (is_object($this->oNative)) {
 	    return $this->oNative;
 	} else {
-	    throw new exception('Trying to retrieve native db object, but it is not set.');
+	    $sSchema = $this->GetSchemaString();
+	    throw new exception("Trying to retrieve native db object for schema $sSchema, but it is not set.");
 	}
     }
 
@@ -30,13 +34,13 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	return ($this->ErrorNumber() == 0);
     }
     public function ErrorNumber() {
-	return $this->NativeObject()->errno;
+	return $this->GetNativeObject()->errno;
     }
     public function ErrorString() {
-	return $this->NativeObject()->error;
+	return $this->GetNativeObject()->error;
     }
     public function SanitizeString($sSQL) {
-	return $this->NativeObject()->escape_string($sSQL);
+	return $this->GetNativeObject()->escape_string($sSQL);
     }
     /*----
       ACTION: Sanitizes, and encloses in quotes if needed;
@@ -74,12 +78,12 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 	  $this->HostString(),
 	  $this->Username(),
 	  $this->Password(),
-	  $this->SchemaString()
+	  $this->GetSchemaString()
 	  );	 // open the connection natively
-	$this->NativeObject($oNative);	// save native object
+	$this->SetNativeObject($oNative);	// save native object
     }
     public function Shut() {
-	$this->NativeObject()->close();
+	$this->GetNativeObject()->close();
     }
 
     // -- ACTIONS -- //
@@ -87,13 +91,13 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
 
     public function ExecuteAction($sSQL) {
 	$this->sql = $sSQL;
-	return $this->NativeObject()->query($sSQL);
+	return $this->GetNativeObject()->query($sSQL);
     }
     public function CountOfAffectedRows() {
-	return $this->NativeObject()->affected_rows;
+	return $this->GetNativeObject()->affected_rows;
     }
     public function FetchRecordset($sql,fiTable_wRecords $tbl) {
-	$poRes = $this->NativeObject()->query($sql);	// returns a mysqli_result if successful
+	$poRes = $this->GetNativeObject()->query($sql);	// returns a mysqli_result if successful
 	$this->sql = $sql;
 	return $this->ProcessResultset($poRes,$tbl,$sql);	// 2017-12-03 this was commented out -- why?
 	//return $tbl->ProcessRecordset($poRes,$sql);		// 2017-12-03 there is no function ProcessRecordset()
@@ -126,7 +130,7 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     // ++ RESULTS ++ //
 
     public function CreatedID() {
-	return $this->NativeObject()->insert_id;
+	return $this->GetNativeObject()->insert_id;
     }
     protected function RetrieveDriver(fcDataRecord $rs) {
 	$o = $rs->GetDriverBlob();
@@ -165,17 +169,17 @@ class fcDataConn_MySQL extends fcDataConn_CliSrv {
     */
     
     public function TransactionOpen() {
-	$o = $this->NativeObject();
+	$o = $this->GetNativeObject();
 	$o->autocommit(FALSE);	// turn off autocommit
 	$o->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
     }
     public function TransactionSave() {
-	$o = $this->NativeObject();
+	$o = $this->GetNativeObject();
 	$o->commit();		// commit the transaction
 	$o->autocommit(TRUE);	// turn autocommit back on
     }
     public function TransactionKill() {
-	$o = $this->NativeObject();
+	$o = $this->GetNativeObject();
 	$o->rollback();		// roll back the transaction
 	$o->autocommit(TRUE);	// turn autocommit back on
     }

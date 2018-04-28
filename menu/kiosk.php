@@ -15,6 +15,7 @@
 abstract class fcMenuKiosk {
   
     abstract public function GetInputString();
+    abstract public function GetPagePath();
 }
 /*::::
   PURPOSE: Kiosk that has to do its own figuring to separate out the path data from the full URL
@@ -27,6 +28,7 @@ abstract class fcMenuKiosk_autonomous extends fcMenuKiosk {
     public function SetPagePath($wp) {
 	$this->wpPage = $wp;
     }
+    // CEMENT
     public function GetPagePath() {
 	$wp = $this->wpPage;
 	return isset($wp) ? $wp : $this->GetBasePath();

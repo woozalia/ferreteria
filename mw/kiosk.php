@@ -14,4 +14,12 @@ class fcMenuKiosk_MW extends \fcMenuKiosk {
     public function GetInputString() {
 	return $this->fpInfo;
     }
+    
+    private $urlBase;
+    public function SetPagePath($url) {
+	$this->urlBase = $url;
+    }
+    public function GetPagePath() {
+	return $this->urlBase;
+    }
 }

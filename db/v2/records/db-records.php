@@ -214,6 +214,9 @@ trait ftTabledDataRow {
     public function GetTableWrapper() {
 	return $this->tw;
     }
+    protected function GetDatabase() {
+	return $this->GetTableWrapper()->GetConnection();	// 2018-04-02 to be changed back to GetDatabase() also.
+    }
 
     // -- OBJECT FAMILY -- //
 }

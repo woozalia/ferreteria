@@ -97,12 +97,17 @@ class fcUserTokens extends fcTable_keyed_single_standard {
 	    $sErrText = $this->GetErrorText();
 	    $sErrCode = $this->GetErrorCode();
 	    $tEvSub->CreateRecord($idEv,KS_EVENT_FAILED.':TOK:'.$sErrCode,'kept old password: '.$sErrText);
+	    throw new exception('Token not found.');	// 2018-04-22 debugging
 	} else {
+	    echo 'GOT TO HERE<br>';
 	    if (!$rcToken->HasExpired()) {
 		// token has not expired
 		$rcToken->Renew();	// extend the expiration
 	    }
-
+	    // TODO: should we log this?
+	}
+	if (is_null($rcToken)) {
+	    throw new exception('NULL is being returned. This should not happen.');
 	}
 	return $rcToken;
     }
@@ -159,13 +164,13 @@ class fcUserTokens extends fcTable_keyed_single_standard {
 	// save the salt and hashed token
 	$sHash = self::MakeHash($sToken,$sSalt);
 	$ar = array(
-	  'TokenHash'	=> $db->Sanitize_andQuote($sHash),
-	  'TokenSalt'	=> $db->Sanitize_andQuote($sSalt),
+	  'TokenHash'	=> $db->SanitizeValue($sHash),
+	  'TokenSalt'	=> $db->SanitizeValue($sSalt),
 	  'WhenExp'	=> 'NOW() + INTERVAL 1 HOUR'	// expires in 1 hour
 	  );
 
 	// -- check to see if there's already a hash for this entity
-	$sqlEntity = $db->Sanitize_andQuote($sEntity);
+	$sqlEntity = $db->SanitizeValue($sEntity);
 	$sqlFilt = "(Type=$nType) AND (Entity=$sqlEntity)";
 	$rc = $this->SelectRecords($sqlFilt);
 	if ($rc->HasRows()) {

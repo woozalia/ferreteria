@@ -29,6 +29,8 @@ define('KS_EVENT_FERRETERIA_DB_INTEGRITY_ERROR','ferreteria.error.db.integrity')
 
 /*::::
   PURPOSE: Handles aggregation of base events and subevent types
+  NOTE:
+    ftSource_forTable adds the *etConnection() methods
 */
 class fctEventPlex extends fcDataTable_array {
     use ftSource_forTable;
@@ -57,7 +59,8 @@ class fctEventPlex extends fcDataTable_array {
 	Can be used instead of RegisterEventTable() if caller doesn't already have the object
     */
     public function RegisterEventClass($sClass) {
-	$t = $this->GetConnection()->MakeTableWrapper($sClass);
+	$db = $this->GetConnection();
+	$t = $db->MakeTableWrapper($sClass);
 	$this->RegisterEventTable($t);
     }
     protected function GetEventTypes() {
@@ -225,8 +228,16 @@ class fctEventPlex_standard extends fctEventPlex {
 
     // ++ SETUP ++ //
 
-    protected function InitVars() {
-	parent::InitVars();
+    /*----
+      HISTORY:
+	2018-04-22 This was in InitVars(), but that caused a problem 
+	  in that RegisterEventClass() needs GetConnection(),
+	  and the connection object had not yet been set.
+    */
+//    protected function InitVars() {
+//	parent::InitVars();
+    public function SetConnection(fcDataConn $db) {
+	parent::SetConnection($db);
 	$this->RegisterEventClass('fctSubEvents_Done');
 	$this->RegisterEventClass('fctSubEvents_InTable');
 	$this->RegisterEventClass('fctSubEvents_Note');

@@ -45,15 +45,28 @@ abstract class fcRecord_keyed extends fcDataRecord {
     }
 
 }
+/*----
+  HISTORY:
+    2018-04-23 added GetKeyName() to reduce instances of confusedly hard-coding it where it doesn't belong
+      (mainly debugging, I think?)
+*/
 trait ftRecord_keyed_single {
-    public function GetKeyValue() {
+    protected function GetKeyName() {
 	$tbl = $this->GetTableWrapper();
 	if (method_exists($tbl,'GetKeyName')) {
 	    $sKey = $tbl->GetKeyName();
-	    return $this->GetFieldValueNz($sKey);
 	} else {
-	    // 2017-01-08 Not actually sure who is at fault here, the class or the caller.
-	    throw new exception('Ferreteria usage error: Class '.get_class($tbl).' does not implement GetKeyName().');
+	    $sKey = NULL;
+	}
+	return $sKey;
+    }
+    public function GetKeyValue() {
+	$sKey = $this->GetKeyName();
+	if (is_null($sKey)) {
+	    throw new exception('Ferreteria error: Could not retrieve key value because no key name is available.');
+	} else {
+	    $v = $this->GetFieldValueNz($sKey);
+	    return $v;
 	}
     }
     public function SetKeyValue($id) {

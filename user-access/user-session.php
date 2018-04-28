@@ -2,7 +2,7 @@
 /*
   PURPOSE: for managing web sessions
   CONSTANTS NEEDED:
-    KS_USER_SESSION_KEY : the name of the cookie where the session key will be stored
+    fcGlobals::GetSessionCookieName() - the name of the cookie where the session key will be stored
   INTERNAL RULES:
     * Get the session cookie. (If no cookie, we're not logged in.)
     * Load the session record indicated by the cookie.
@@ -72,16 +72,21 @@ class fctUserSessions extends fcTable_keyed_single_standard {
 	  page-load don't think it hasn't been created yet,
 	  and end up creating multiple records for each new session.
 	  (It was creating 3 new records and using the last one.)
-      TODO: Determine if there's any value in explicitly setting the cookie domain.
+      HISTORY:
+	2018-04-24 Decided there's no point in having a cookie-domain option,
+	  so removed commented-out code. Also, probably just moving cookie functionality
+	  to the App class/object.
     */
     protected function ThrowCookie($sSessKey) {
+	$ok = fcApp::ThrowCookie(fcGlobals::Me()->fcGlobals::GetSessionCookieName(),$sSessKey);
+    /* 2018-04-24 the old way
 	$sVal = $sSessKey;
-	//$ok = setcookie(KS_USER_SESSION_KEY,$sVal,0,'/',KS_COOKIE_DOMAIN);
 	$ok = setcookie(KS_USER_SESSION_KEY,$sVal,0,'/');
 	if ($ok) {
 	    // store new cookie value (see NOTES above)
 	    $this->SetCookieValue($sVal);
 	}
+    */
 	return $ok;
     }
 
@@ -101,6 +106,8 @@ class fctUserSessions extends fcTable_keyed_single_standard {
 	  which seems like a reasonable assumption. (Note: the COOKIE array is effectively read-only.)
     */
     protected function GetCookieValue() {
+	return fcApp::Me()->GetCookieValue(fcGlobals::Me()->GetSessionCookieName());
+    /* 2018-04-24 old method
 	if (!isset($this->sCookieVal)) {
 	    if (array_key_exists(KS_USER_SESSION_KEY,$_COOKIE)) {
 		$this->SetCookieValue($_COOKIE[KS_USER_SESSION_KEY]);
@@ -109,6 +116,7 @@ class fctUserSessions extends fcTable_keyed_single_standard {
 	    }
 	}
 	return $this->sCookieVal;
+    */
     }
     
       //--local--//
@@ -363,6 +371,10 @@ class fcrUserSession extends fcRecord_standard {
 
       //++stash++//
 
+    /*
+      2018-04-24 For now, I am rewriting Stash functions to use cookies instead of disk storage.
+	There were issues with disk storage (format conversion) that may take time to fix properly.
+    
     protected function FetchStash() {
 	if ($this->FieldIsSet('Stash')) {
 	    $sStash = $this->GetFieldValue('Stash');
@@ -383,7 +395,30 @@ class fcrUserSession extends fcRecord_standard {
 	} else {
 	    $this->DeleteField('Stash');
 	}
+    } */
+    protected function FetchStash() {
+	$sStash = fcApp::Me()->GetCookieValue(
+	  fcGlobals::Me()->GetStashCookieName()
+	  );
+	if (is_null($sStash)) {
+	    $arStash = array();
+	} else {
+	    $arStash = unserialize($sStash);
+	}
+	return $arStash;
     }
+    protected function StoreStash(array $ar) {
+	$sStashKey = fcGlobals::Me()->GetStashCookieName();
+	$oApp = fcApp::Me();
+      //die('STORING STASH: '.fcArray::Render($ar));
+	if (count($ar) > 0) {
+	    $sStashVal = serialize($ar);
+	    $oApp->SetCookieValue($sStashKey,$sStashVal);
+	} else {
+	    $oApp->SetCookieValue($sStashKey,NULL);
+	}
+    }
+    
     public function SetStashValue($sName,$sValue) {
 	$arStash = $this->FetchStash();
 	$sApp = fcApp::Me()->GetAppKeyString();
@@ -392,6 +427,7 @@ class fcrUserSession extends fcRecord_standard {
     }
     public function GetStashValue($sName) {
 	$arStash = $this->FetchStash();
+//    die('STASH FOUND: '.fcArray::Render($arStash));
 	$sApp = fcApp::Me()->GetAppKeyString();
 	$arAppStash = fcArray::Nz($arStash,$sApp);
 	$sValue = fcArray::Nz($arAppStash,$sName);

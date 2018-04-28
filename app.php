@@ -2,6 +2,9 @@
 /*
   FILE: app.php
   PURPOSE: generic/abstract application framework
+  NOTE: This was written with the assumption that we're writing a *web* application,
+    not desktop. If Ferreteria ever diversifies into desktop, these classes may need
+    further refinement.
   HISTORY:
     2012-05-08 split off from store.php
     2013-10-23 stripped for use with ATC app (renamed as app.php)
@@ -34,11 +37,78 @@ abstract class fcApp {
     use ftSingleton, ftVerbalObject;
 
     // ++ ACTION ++ //
-    
+  
     abstract public function Go();
     abstract public function AddContentString($s);
     
+      //++cookies++//
+/*
+  RULES:
+    * Cookie names set are prefixed with the application key (KS_APP_KEY).
+    * The local array only stores cookies to be set (modified).
+    * Only those are written (thrown) to the browser.
+    * For received cookie values, only those prefixed with KS_APP_KEY are returned.
+      (KS_APP_KEY is prepended to the keyname requested before it is looked up.)
+  HISTORY:
+    2018-04-24 written, originally to replace storage of stashed messages, but
+      on further thought I decided it's (maybe?) more efficient to keep saving them
+      on the server as I had been doing (though it's a pretty close call).
+      ...but it still provides a more generalized way of storing the session key,
+      so now I'm using it for that.
+      
+      ...and then on further further thought, I decided: well, having written this,
+      why not use it for now, rather than getting into the complexities of fixing
+      the on-disk storage method?
+*/
+
+    private $arCookies;
+    // 2018-04-25 written
+    protected function SetRawCookieValue($sKey,$sValue) {
+	$this->arCookies[$sKey] = $sValue;
+    }
+    // 2018-04-24 written
+    public function SetCookieValue($sKey,$sValue) {
+	$sKeyFull = KS_APP_KEY.'-'.$sKey;
+	$this->SetRawCookieValue($sKeyFull,$sValue);
+    }
+    // 2018-04-24 written
+    public function GetCookieValue($sKey) {
+	$sKeyFull = KS_APP_KEY.'-'.$sKey;
+	return fcArray::Nz($_COOKIE,$sKeyFull);
+    }
+    // 2018-04-24 written
+    public function ThrowCookie($sKey,$sVal) {
+	$sKeyFull = KS_APP_KEY.'-'.$sKey;
+	$ok = setcookie($sKeyFull,$sVal,0,'/');
+	if ($ok) {
+	    $this->SetRawCookieValue($sKeyFull,$sValue);
+	}
+	return $ok;
+    }
+	
+    // 2018-04-24 written; may be unnecessary
+    public function ThrowCookies() {
+	$ok = TRUE;
+	foreach($this->arCookies as $sKey => $sVal) {
+	    $sKeyFull = KS_APP_KEY.'-'.$sKey;
+	    $okThis = setcookie($sKeyFull,$sVal,0,'/');
+	    //echo "OK?[$okThis] COOKIE [$sKeyFull] BEING SET TO [$sVal]<br>";
+	    if (!$okThis) {
+		$ok = FALSE;
+	    }
+	}
+	//die();
+	return $ok;
+    }
+
+      //--cookies--//
+
     // -- ACTION -- //
+    // ++ STATUS ++ //
+    
+    abstract public function UserIsLoggedIn();
+
+    // -- STATUS -- //
     // ++ CLASSES ++ //
     
     abstract protected function GetSessionsClass();
@@ -107,11 +177,6 @@ abstract class fcApp {
     }
     
     // -- OBJECTS -- //
-    // ++ INFORMATION ++ //
-    
-    abstract public function UserIsLoggedIn();
-
-    // -- INFORMATION -- //
 }
 /*::::
   ABSTRACT: n/i - GetDatabase(), GetPageClass(), GetKioskClass()
@@ -187,29 +252,13 @@ abstract class fcAppStandard extends fcApp {
     // -- PROFILING -- //
     // ++ CLASS NAMES ++ //
 
+    abstract protected function GetEventsClass();
     protected function GetSessionsClass() {
 	//return 'fctUserSessions';
 	return KS_CLASS_ADMIN_USER_SESSIONS;
     }
     protected function GetUsersClass() {
 	return KS_CLASS_ADMIN_USER_ACCOUNTS;
-    }
-    /* 2018-02-19 This seems like pretty much not the way to do this.
-    private $sClassEvents='fctEventPlex';	// default/base
-    protected function GetEventsClass() {
-	return $this->sClassEvents;
-    }
-    public function SetEventsClass($s) {
-	$this->sClassEvents = $s;
-    }*/
-    /*----
-      DEFAULT
-      PUBLIC because it's useful to be able to call this as a default which can then be overridden
-	by classes with specialized event loggers, rather than having to re-implement EventTable()
-	in those classes.
-    */
-    public function GetEventsClass() {
-	return 'fctEventPlex_standard';
     }
     protected function GetEventsDoneClass() {		// 2018-02-19 not sue this is used either
 	return 'fctSubEvents_done';
@@ -364,6 +413,36 @@ abstract class fcAppStandard extends fcApp {
 
 }
 /*----
+  PURPOSE: standard App class with basic functionality, no admin stuff
+  HISTORY:
+    2018-04-27 created for better handling of Event classes
+*/
+abstract class fcAppStandardBasic extends fcAppStandard {
+
+    // ++ CLASSES ++ //
+
+    protected function GetEventsClass() {
+	return 'fctEventPlex_standard';
+    }
+
+    // -- CLASSES -- //
+}
+/*----
+  PURPOSE: standard App class with admin functionality
+  HISTORY:
+    2018-04-27 created for better handling of Event classes
+*/
+abstract class fcAppStandardAdmin extends fcAppStandard {
+
+    // ++ CLASSES ++ //
+
+    protected function GetEventsClass() {
+	return KS_CLASS_EVENT_LOG_ADMIN;
+    }
+
+    // -- CLASSES -- //
+}
+/*----
   PURPOSE: easy access to objects provided by fcApp descendants
   NOTES:
     * 2017-05-01 This is looking increasingly unnecessary, but for now I'm just commenting out EventTable()
@@ -372,8 +451,9 @@ abstract class fcAppStandard extends fcApp {
     * 2016-10-23 This doesn't seem very elegant. I want to make it a static class,
       but then I have to wonder why I don't just call fcApp static methods. And why does
       fcApp* ever need to be instantiated, anyway? Shouldn't it be all-static?
+	A: I think instantiating it is the only way for the descendant class to be specified in a single place.
   TODO: Assuming we keep this methodology, maybe all method names should be prefixed with "App", e.g. AppPageObject(),
-    to make it clear where they come from.
+    to make it clear where they come from (since using a trait just kind of drops them in with the class's other methods).
 */
 trait ftFrameworkAccess {
     protected function AppObject() {
