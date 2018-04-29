@@ -381,8 +381,9 @@ abstract class fcForm_keyed extends fcForm {
 		return $id;	// ...so we can redirect to the new record
 	    }
         } else {
+	    // 2018-04-29 no, I don't remember why I did it this way instead of just throwing an exception
             echo '<b>Internal error</b>: POST contains no "'.$sName.'" data.<br>';
-            echo 'POST:'.clsArray::Render($_POST);
+            echo 'POST:'.fcArray::Render($_POST);
             echo '<pre>';
             debug_print_backtrace();
             echo '</pre>';

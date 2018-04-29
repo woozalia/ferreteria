@@ -59,46 +59,37 @@ abstract class fcApp {
       ...and then on further further thought, I decided: well, having written this,
       why not use it for now, rather than getting into the complexities of fixing
       the on-disk storage method?
+    2018-04-28 removed ThrowCookie() and ThrowCookies()
+      SetRawCookieValue() now actually sets (throws) the cookie.
 */
 
-    private $arCookies;
+    private $arCookies=NULL;	// local copy of $_COOKIE[], updated with any sent-cookie values
     // 2018-04-25 written
-    protected function SetRawCookieValue($sKey,$sValue) {
-	$this->arCookies[$sKey] = $sValue;
+    protected function SetRawCookieValue($sKey,$sVal) {
+	$ok = setcookie($sKey,$sVal,0,'/');
+	if ($ok) {
+	    $this->arCookies[$sKey] = $sVal;
+	}
+	return $ok;
+    }
+    protected function GetRawCookieValue($sKey) {
+	if (is_null($this->arCookies)) {
+	    $this->arCookies = $_COOKIE;
+	}
+	return fcArray::Nz($this->arCookies,$sKey);
+    }
+    static protected function MakeRawCookieKey($sKey) {
+	return KS_APP_KEY.'-'.$sKey;
     }
     // 2018-04-24 written
     public function SetCookieValue($sKey,$sValue) {
-	$sKeyFull = KS_APP_KEY.'-'.$sKey;
+	$sKeyFull = self::MakeRawCookieKey($sKey);
 	$this->SetRawCookieValue($sKeyFull,$sValue);
     }
     // 2018-04-24 written
     public function GetCookieValue($sKey) {
-	$sKeyFull = KS_APP_KEY.'-'.$sKey;
-	return fcArray::Nz($_COOKIE,$sKeyFull);
-    }
-    // 2018-04-24 written
-    public function ThrowCookie($sKey,$sVal) {
-	$sKeyFull = KS_APP_KEY.'-'.$sKey;
-	$ok = setcookie($sKeyFull,$sVal,0,'/');
-	if ($ok) {
-	    $this->SetRawCookieValue($sKeyFull,$sValue);
-	}
-	return $ok;
-    }
-	
-    // 2018-04-24 written; may be unnecessary
-    public function ThrowCookies() {
-	$ok = TRUE;
-	foreach($this->arCookies as $sKey => $sVal) {
-	    $sKeyFull = KS_APP_KEY.'-'.$sKey;
-	    $okThis = setcookie($sKeyFull,$sVal,0,'/');
-	    //echo "OK?[$okThis] COOKIE [$sKeyFull] BEING SET TO [$sVal]<br>";
-	    if (!$okThis) {
-		$ok = FALSE;
-	    }
-	}
-	//die();
-	return $ok;
+	$sKeyFull = self::MakeRawCookieKey($sKey);
+	return $this->GetRawCookieValue($sKeyFull);
     }
 
       //--cookies--//

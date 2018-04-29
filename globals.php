@@ -115,4 +115,56 @@ abstract class fcGlobals {
     abstract public function GetWebSpec_forSuccessIcon();
     abstract public function GetWebSpec_forWarningIcon();
     abstract public function GetWebSpec_forErrorIcon();
+    
+    // -- text
+    
+    protected function GetText_SiteName() {
+	return KS_SITE_NAME;
+    }
+    
+    // WAS: constant KS_TEXT_EMAIL_SUBJ_FOR_NEW_ACCOUNT
+    public function GetText_NewAccount_EmailSubject() {
+    	return $this->GetText_SiteName().' new account request';
+    }
+    // WAS: constant KS_TPLT_EMAIL_TEXT_FOR_NEW_ACCOUNT
+    public function GetTemplate_NewAccount_EmailContent() {
+	return <<<__END__
+Someone (hopefully you) has requested authorization to create a new account on {{site}}.
+
+If you would like to do this, please go to this link:
+
+	  {{url}}
+
+You will be able to enter your account information there.
+__END__;
+    }
+    // WAS: constant KS_TEXT_EMAIL_SUBJ_FOR_PASS_CHANGE
+    public function GetText_PasswordChange_EmailSubject() {
+	return $this->GetText_SiteName().' password reset authorization';
+    }
+    // WAS: constant KS_TPLT_EMAIL_TEXT_FOR_PASS_CHANGE
+    public function GetTemplate_PasswordChange_EmailContent() {
+	return <<<__END__
+Someone (hopefully you) has made a request to change the password on {{site}} for user "{{user}}" at this email address ({{addr}}).
+
+If you would like to do this, please go to this link:
+
+	  {{url}}
+	  
+You will be able to enter your new password there.
+__END__;
+    }
+    // WAS: constant KS_TPLT_AUTH_EMAIL_TO_SHOW
+    public function GetTemplate_PasswordChange_ScreenMessage() {
+	return <<<__END__
+A password reset link has been emailed to you at <b>{{addr}}</b>.<br>
+Clicking the link will {{action}}.
+__END__;
+    }
+    public function GetTemplate_NewAccount_ScreenMessage() {
+	return <<<__END__
+A link for creating a new account has been emailed to you at <b>{{addr}}</b>.<br>
+Clicking the link will {{action}}.
+__END__;
+    }
 }

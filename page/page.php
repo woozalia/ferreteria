@@ -479,7 +479,7 @@ abstract class fcPageContent extends fcpeSimple {
 	$s = $this->GetValue();	// get content that won't be displayed because we're redirecting
 	$rcSess = $this->GetSessionRecord();
 	$rcSess->SetStashValue('page contents',$s);
-	fcApp::Me()->ThrowCookies();
+	//fcApp::Me()->ThrowCookies();
 	//$rcSess->Save();	// write to persistent storage
 
 	// now actually redirect

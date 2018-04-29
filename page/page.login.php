@@ -840,14 +840,14 @@ __END__;
 	$oTplt->SetVariableValues($ar);
 
 	// generate the email
-	$oTplt->Template(KS_TPLT_EMAIL_TEXT_FOR_NEW_ACCOUNT);
+	$oTplt->Template(fcGlobals::Me()->GetTemplate_NewAccount_EmailContent());
 	$sMsg = $oTplt->Render();
-	$sSubj = KS_TEXT_EMAIL_SUBJ_FOR_NEW_ACCOUNT;
+	$sSubj = fcGlobals::Me()->GetText_NewAccount_EmailSubject();
 	$sName = NULL;	// user's name not yet known
 	fcApp::Me()->DoEmail_fromAdmin_Auto($sAddr,$sName,$sSubj,$sMsg);
 
 	// generate status message
-	$oTplt->Template(KS_TPLT_AUTH_EMAIL_TO_SHOW);
+	$oTplt->Template(fcGlobals::Me()->GetTemplate_NewAccount_ScreenMessage());
 	$sMsg = $oTplt->Render();
 	$this->AddSuccessMessage($sMsg);
 	
@@ -885,14 +885,14 @@ __END__;
 	fcApp::Me()->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_SENDING_ADMIN_EMAIL,'lost password reset',$arEv);
 
 	// generate the email
-	$oTplt->Template(KS_TPLT_EMAIL_TEXT_FOR_PASS_CHANGE);
+	$oTplt->Template(fcGlobals::Me()->GetTemplate_PasswordChange_EmailContent());
 	$sMsg = $oTplt->Render();
-	$sSubj = KS_TEXT_EMAIL_SUBJ_FOR_PASS_CHANGE;
+	$sSubj = fcGlobals::Me()->GetText_PasswordChange_EmailSubject();
 	$sName = $rcUser->FullName();
 	fcApp::Me()->DoEmail_fromAdmin_Auto($sAddr,$sName,$sSubj,$sMsg);
 
 	// generate status message
-	$oTplt->Template(KS_TPLT_AUTH_EMAIL_TO_SHOW);
+	$oTplt->Template(fcGlobals::Me()->GetTemplate_PasswordChange_ScreenMessage());
 	$sMsg = $oTplt->Render();
 	$this->AddSuccessMessage($sMsg);
 	

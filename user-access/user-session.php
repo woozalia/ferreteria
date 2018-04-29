@@ -76,9 +76,10 @@ class fctUserSessions extends fcTable_keyed_single_standard {
 	2018-04-24 Decided there's no point in having a cookie-domain option,
 	  so removed commented-out code. Also, probably just moving cookie functionality
 	  to the App class/object.
+	2018-04-28 Using fcGlobals for naming cookies now.
     */
     protected function ThrowCookie($sSessKey) {
-	$ok = fcApp::ThrowCookie(fcGlobals::Me()->fcGlobals::GetSessionCookieName(),$sSessKey);
+	$ok = fcApp::Me()->SetCookieValue(fcGlobals::Me()->GetSessionCookieName(),$sSessKey);
     /* 2018-04-24 the old way
 	$sVal = $sSessKey;
 	$ok = setcookie(KS_USER_SESSION_KEY,$sVal,0,'/');
@@ -93,8 +94,9 @@ class fctUserSessions extends fcTable_keyed_single_standard {
       //--remote--//
       //++local++//
 
-    private $sCookieVal;
+    //private $sCookieVal;
     protected function SetCookieValue($sValue) {
+	throw new exception('2018-04-28 Does anything still call this?');
 	$this->sCookieVal = $sValue;
     }
     /*----

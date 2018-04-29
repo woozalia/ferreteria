@@ -297,7 +297,7 @@ __END__;
 	$arGrps = $oFormInput->GetArray(KS_ACTION_USER_GROUP);
 	// $arGrps is formatted like $arGrps[ID] = 'on' for each checked box
 	// we could actually use the non-admin version here, but why not reuse a class we're already using:
-	$tbl = $this->XUGroupsTable();
+	$tbl = $this->XGroupTable();
 	$out = $tbl->SetUGroups($this->GetKeyValue(),$arGrps);
 	return $out;
     }

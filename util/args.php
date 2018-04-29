@@ -71,10 +71,22 @@ abstract class fcInputData_array extends fcInputData {
 	    return $vDefault;
 	}
     }
+    /*----
+      HISTORY:
+	2018-04-29 This was just returning form data raw, which (when it comes to checkbox input)
+	  isn't what the caller is expecting -- so now we're converting it. If there's a situation
+	  where this *shouldn't* be happening, that needs to be documented.
+	  
+	  Note that we're still only returning checked boxes; unchecked boxes are ignored.
+    */
     public function GetArray($sName,$vDefault=array()) {
-	$val = $this->Value($sName);
-	if (is_array($val)) {
-	    return $val;
+	$vRaw = $this->Value($sName);
+	if (is_array($vRaw)) {
+	    $ar = array();
+	    foreach ($vRaw as $key => $val) {
+		$ar[$key] = ($val == 'on');
+	    }
+	    return $ar;
 	} else {
 	    return $vDefault;
 	}
@@ -83,22 +95,6 @@ abstract class fcInputData_array extends fcInputData {
 	$val = $this->Value($sName);
 	return new DateTime($val);
     }
-    /* 2017-02-15 Seems like the wrong approach here.
-    // NOTE: 2017-02-15 Not entirely sure these functions belong here as-is. Maybe return a date object?
-    public function GetDateTime_asUnix($sName,$ndtBase=NULL,$vDefault=NULL) {
-	$ndtBase = is_null($ndtBase)?time():$ndtBase;
-	$val = $this->Value($sName);
-	$ndtOut = strtotime($val);
-	if ($ndtOut === FALSE) {
-	    return $vDefault;
-	} else {
-	    return $ndtOut;
-	}
-    }
-    public function GetDate_asString($sName,$sFormat='Y-m-d',$vDefault=NULL) {
-	$val = $this->Value($sName);
-	return fcDate::NzDate($val,$vDefault,$sFormat);
-    } */
 }
 // PURPOSE: fcInputData_array whose data is stored internally
 class fcInputData_array_local extends fcInputData_array {

@@ -125,6 +125,25 @@ class fcrAdminUserGroup extends fcrUserGroup implements fiLinkableRecord, fiEdit
     }
 
     // -- TABLES -- //
+    // ++ RECORD CALCULATIONS ++ //
+    
+    // UNSTUB
+    public function GetInsertStorageOverrides() {
+	return array(
+	  'WhenCreated'	=> 'NOW()'
+	  );
+    }
+    /*
+      2018-04-29 Shouldn't there *be* a WhenEdited field? (Currently is not.)
+	Or is that redundant if we're logging everything?
+	ARE we logging everything?
+    // UNSTUB
+    public function GetUpdateStorageOverrides() {
+	return array(
+	  'WhenEdited'	=> 'NOW()'
+	  );
+    } */
+
     // ++ UI COMPONENTS ++ //
 
     protected function AdminRows_start(array $arOptions = NULL) {
@@ -347,10 +366,11 @@ __END__;
 	return $out;
     }
     protected function AdminPage_SavePerms() {
-	$oFormInput = fcApp::Me()->GetKioskObject()->GetInputObject()->GetArray(KS_ACTION_USER_PERMISSION);
-	// $arGrps is formatted like $arGrps[ID] = 'on' for each checked box
+	$oFormInput = fcHTTP::Request();
+	$arPrms = $oFormInput->GetArray(KS_ACTION_USER_PERMISSION);
+	$id = $this->GetKeyValue();
 	$tbl = $this->GetConnection()->MakeTableWrapper(KS_CLASS_UPERMITS_FOR_UGROUP);
-	$tbl->SetUPerms($this->GetKeyValue(),$arPrms);
+	$tbl->SetUPerms($id,$arPrms);
     }
     private $frmPage;
     protected function PageForm() {

@@ -196,7 +196,9 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
 		$ksRequiredParent = 'fcTableBase';
 		if (is_subclass_of($sTableClass,$ksRequiredParent)) {
 		    $t = new $sTableClass();
-		    $t->SetConnection($this);
+		    if (method_exists($sTableClass,'SetConnection')) {	// 2018-04-29 a bit of a kluge
+			$t->SetConnection($this);
+		    }
 		    $this->arTables[$sTableClass] = $t;
 		    $ok = TRUE;
 		} else {

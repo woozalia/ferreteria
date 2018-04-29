@@ -4,7 +4,7 @@
   HISTORY:
     2013-12-19 started
 */
-class fctUserGroups extends fcTable_keyed_single_standard {
+class fctUserGroups extends fcTable_keyed_single_standard implements fiInsertableTable {
 
     // ++ SETUP ++ //
 
