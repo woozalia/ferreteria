@@ -7,10 +7,10 @@
     2017-11-05 renamed clsApp_MW -> fcApp_MW
     2018-01-24 ftMediaWiki_Database
     2018-01-25 moved ftMediaWiki_Database into fcApp_MW
-
+    2018-05-03 changed base App class from fcAppStandard to fcAppStandardBasic
 */
 
-class fcApp_MW extends \fcAppStandard {
+class fcApp_MW extends \fcAppStandardBasic {
 
     // ++ CLASSES ++ //
     
