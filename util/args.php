@@ -47,9 +47,15 @@ abstract class fcInputData_array extends fcInputData {
     public function GetText() {
 	throw new exception('GetText() is deprecated; call GetString() instead.');
     }
+    /*----
+      HISTORY:
+	2018-05-07 Was forcing $val to (string) inside is_string(), but then it returns TRUE for blanks.
+	  Removed "(string)".
+	  Might need to just test for is_null() or !='' so integers are ok.
+    */
     public function GetString($sName,$vDefault=NULL) {
 	$val = $this->Value($sName);
-	if (is_string((string)$val)) {
+	if (is_string($val)) {
 	    return $val;
 	} else {
 	    return $vDefault;

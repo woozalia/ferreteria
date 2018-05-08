@@ -12,7 +12,11 @@
     2017-06-06 In fcForm_DB constructor, moved InitVars() to last line of constructor so it can make use of RecordsObject.
 */
 
-// 2017-05-25 Tentatively, removing Save(). It may need to be replaced with GetChangeValues() or something.
+/*iiii
+  IMPLEMENTED BY: ftSaveableRecord
+  HISTORY:
+    2017-05-25 Tentatively, removing Save(). It may need to be replaced with GetChangeValues() or something.
+*/
 interface fiEditableRecord {
     function GetActionKey();
     function IsNew();
