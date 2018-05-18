@@ -101,10 +101,15 @@ abstract class fcFormField {
 	Form->ClearValues() also only clears fields that haven't been Changed.
       HISTORY
 	2015-11-24 now uses "isSet" flag instead of assuming that NULL means no change
+	2018-05-17 If not changed locally, now checks storage object for writable values.
     */
     private $isSet;
     public function IsChanged() {
-	$is = !empty($this->isSet);
+	if (empty($this->isSet)) {
+	    $is = $this->StorageObject()->HasValueWritable();
+	} else {
+	    $is = TRUE;
+	}
 	return $is;
     }
     protected function MarkChanged() {

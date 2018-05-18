@@ -102,22 +102,39 @@ class fcForm_DB extends fcForm_keyed {
 	return $arO;
     }
     
-    // TODO: asSQL should probably be asStorage
-    
-    /*----
-      ACTION: set internal data from array of SQL-format values
-    */
-    protected function RecordValues_asSQL_set(array $arSQL) {
+    // TODO: SetRecordValues_forStorage_Received() -> SetRecordValues_Received_fromStorage()
+    protected function SetRecordValues_forStorage_Received(array $arSQL) {
 	$arFlds = $this->GetFieldArray();
 	foreach ($arSQL as $key => $val) {
 	    if (array_key_exists($key,$arFlds)) {
 		// ignore data fields for which there is no Field object
 		$oField = $arFlds[$key];
-		$oField->StorageObject()->SetValue($val);
+		$oField->StorageObject()->SetValueReceived($val);
+	    }
+	}
+    }
+    /*----
+      ACTION: set expressions to write to storage
+	e.g. strings should be quoted; may include functions
+      HISTORY:
+	2018-05-17 "ACTION" was: set internal data from array of SQL-format values
+    */
+    protected function RecordValues_asSQL_set(array $arSQL) {
+	throw new exception('2018-05-17 Call SetRecordValues_forStorage_Writable() instead.');
+    }
+    // TODO: SetRecordValues_forStorage_Writable() -> SetRecordValues_Writable_toStorage()
+    protected function SetRecordValues_forStorage_Writable(array $arSQL) {
+	$arFlds = $this->GetFieldArray();
+	foreach ($arSQL as $key => $val) {
+	    if (array_key_exists($key,$arFlds)) {
+		// ignore data fields for which there is no Field object
+		$oField = $arFlds[$key];
+		$oField->StorageObject()->SetValueWritable($val);
 	    }
 	}
     }
     protected function RecordValues_asSQL_get() {
+	throw new exception('2018-05-17 I think this should be renamed?'); 
 	$arF = $this->GetFieldArray();
 	foreach ($arF as $key => $oField) {
 	    if ($oField->ShouldWrite()) {
@@ -171,6 +188,7 @@ class fcForm_DB extends fcForm_keyed {
 		echo "WARNING: field [$key] has no field object; cannot set to [$val].<br>";
 	    }
 	}
+	throw new exception('2018-05-17 Why is there still debug code here?');
     }
     /*----
       PURPOSE: retrieve all values in record (native format)
@@ -201,7 +219,7 @@ class fcForm_DB extends fcForm_keyed {
 	if (is_null($ar)) {
 	    throw new exception('Ferreteria internal error: failed to get field values.');
 	}
-	$this->RecordValues_asSQL_set($ar);
+	$this->SetRecordValues_forStorage_Received($ar);
 	$idRec = $rc->IsNew()?KS_NEW_REC:$rc->GetKeyValue();
 	$this->Set_KeyString_loaded($idRec);
     }
@@ -209,7 +227,7 @@ class fcForm_DB extends fcForm_keyed {
       RULE: Call this to store data after changing
       INPUT:
 	$this->GetRecordValues_asNative(): main list of values to save
-	$arStor: array of additional values to save, in storage format
+	$arStor: array of additional values to save, in native format
       HISTORY:
 	2016-06-12
 	  * Changed INSERT code so it uses rc->SetValues(native) instead of tbl->Insert(native)
@@ -226,32 +244,44 @@ class fcForm_DB extends fcForm_keyed {
 	2017-09-15 Turns out we need to receive the values in storage format, not native format,
 	  because this is how the fields are formatted.
 	2017-09-17 Revising yesterday and today; apparently working now.
+	2018-05-16 "INPUT" documentation was wrong: input array is *native* format, not *storage*.
+	  Renamed $arStore to $arNative
       TODO:
 	2017-05-26 Conversion to/from storage format really ought to be a property of the recordset, but this requires
 	  some additional low-level changes probably best left for Ferreteria3.
+	2018-05-18 Changed some names and stuff yesterday. Lots of debugging, but no logic changes here (I think).
     */
-    public function SaveRecord(array $arStor) {
+    public function SaveRecord(array $arNative) {
 	$rc = $this->GetRecordsObject();
 	$idUpd = $this->Get_KeyString_toSave();
-	$rc->ChangeFieldValues($arStor);	// update the record from the form input, and flag changes
+	$rc->ChangeFieldValues($arNative);	// update the record from the form input, and flag changes
 	
 	$idUpd = $this->Get_KeyString_toSave();
+	
+	//echo 'ARNATIVE:'.fcArray::Render($arNative);
 
 	if ($idUpd == KS_NEW_REC) {
 	    // creating a new record
-	    $arStorChg = $rc->GetStorableValues_toInsert();
-	    $this->RecordValues_asSQL_set($arStorChg);	// set form fields from what needs to be inserted
-	    $arStoreFinal = $this->RecordValues_asStorageSane_get();	// get storage-format values for all form fields
+	    $arStoreChg = $rc->GetStorableValues_toInsert();
+	    //echo 'ARSTORECHG:'.fcArray::Render($arStoreChg);
+	    $this->SetRecordValues_forStorage_Writable($arStoreChg);	// set form fields from what needs to be inserted
+	    $arStoreFinal = $this->GetRecordValues_forStorage_Writable();	// get storage-format values for all form fields
+	    //echo 'ARSTOREFINAL 1:'.fcArray::Render($arStoreFinal);
 	    if (is_array($arStoreFinal)) {				// if there's anything to save...
 		$arStoreOv = $rc->GetInsertStorageOverrides();		// get any class-specific storage overrides
+		//echo 'ARSTOREOV:'.fcArray::Render($arStoreOv);
 		$arStoreFinal = array_merge($arStoreFinal,$arStoreOv);	// override standard stuff with overrides
+		//echo 'ARSTOREFINAL 2:'.fcArray::Render($arStoreFinal);
+		//die(__FILE__.' line '.__LINE__);
 		$rc->FormInsert($arStoreFinal);			// insert with the results
 	    }
 	} else {
 	    // updating an existing record
-	    $arStorChg = $rc->GetStorableValues_toUpdate();
-	    $this->RecordValues_asSQL_set($arStorChg);	// set form fields from what needs to be updated
-	    $arStoreFinal = $this->RecordValues_asStorageSane_get();	// get storage-format values for all form fields
+	    $arStoreChg = $rc->GetStorableValues_toUpdate();
+	    //echo 'ARSTORECHG:'.fcArray::Render($arStoreChg);
+	    $this->RecordValues_asSQL_set($arStoreChg);	// set form fields from what needs to be updated
+	    $arStoreFinal = $this->GetRecordValues_forStorage_Writable();	// get storage-format values for all form fields
+	    //echo 'ARSTOREFINAL:'.fcArray::Render($arStoreFinal);
 	    if (is_array($arStoreFinal)) {				// if there's anything to save...
 		$arStoreOv = $rc->GetUpdateStorageOverrides();		// get any class-specific storage overrides
 		$arStoreFinal = array_merge($arStoreFinal,$arStoreOv);		// override standard stuff with overrides
@@ -270,9 +300,9 @@ class fcForm_DB extends fcForm_keyed {
 	    //throw new exception('How do we get here?');
 	    echo "THERE WAS AN ERROR: $sErr<br><b>SQL</b>: ".$rc->sql
 	      .'<br>Storable values, from form:'
-	      .fcArray::Render($arStor)
+	      .fcArray::Render($arNative)
 	      .'Storable values to change, from record object:'
-	      .fcArray::Render($arStorChg)
+	      .fcArray::Render($arStoreChg)
 	      .'Storable values, overrides from record object:'
 	      .fcArray::Render($arStoreOv)
 	      .'Storable values - what actually gets stored:'

@@ -909,14 +909,14 @@ __END__;
 	$rcUser = fcApp::Me()->GetUserRecord();
 
 	$sUser = $rcUser->LoginName();
-	$sSiteName = KS_SITE_NAME;
+	$sSiteName = fcGlobals::Me()->GetText_SiteName();
 	$sAddrCli = $_SERVER['REMOTE_ADDR'];
 	$sBrowser = $_SERVER['HTTP_USER_AGENT'];
 	$sDomain = $_SERVER['HTTP_HOST'];
 	$uri = $_SERVER['SCRIPT_URI'];
 
 	$sMsg = <<<__END__
-Someone, presumably you, just logged in to $sSiteName on $sDomain with username "$sUser". Please make sure this was actually you.
+Someone, presumably you, just logged in to $sSiteName (at $sDomain) with username "$sUser". Please make sure this was actually you.
 * Web site address: $uri
 * Client IP address: $sAddrCli
 * Client browser ID: $sBrowser
@@ -925,7 +925,7 @@ If it wasn't you, please let us know, and change your password.
 __END__;
 	$sToAddr = $rcUser->EmailAddress();
 	$sToName = $rcUser->FullName();
-	$sSubj = 'login notification from '.KS_SITE_NAME;
+	$sSubj = 'login notification from '.$sSiteName;
 	fcApp::Me()->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_SENDING_ADMIN_EMAIL,'successful login notification');
 	$ok = fcApp::Me()->DoEmail_fromAdmin_Auto($sToAddr,$sToName,$sSubj,$sMsg);
 	return $ok;

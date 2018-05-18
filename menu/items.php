@@ -284,7 +284,8 @@ class fcLink_fromArray extends fcMenuLink {
       NEW
       PURPOSE: calculates self-identifying array
     */
-    protected function GetLinkArray_self() {
+    // PUBLIC for testing
+    public function GetLinkArray_self() {
 	$sValue = $this->GetKeyValue();
 	$sName = $this->GetKeyName();
 	return array($sName=>$sValue);

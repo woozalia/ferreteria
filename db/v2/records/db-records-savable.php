@@ -192,8 +192,8 @@ trait ftSaveableRecord {
 	  of the $arSave input parameter.
     */
     public function Save() {
-	$out = NULL;
-	$sql = NULL;	// for debugging
+	//$out = NULL;
+	//$sql = NULL;	// for debugging
 	if ($this->IsNew()) {
 	    $ar = $this->GetStorableValues_toInsert();
 	    if (is_array($ar)) {

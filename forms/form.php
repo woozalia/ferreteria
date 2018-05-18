@@ -59,7 +59,12 @@ class fcForm {
     // -- CONTROL OBJECTS -- //
     // ++ STORAGE OBJECTS ++ //
     
-    protected function GetStorageObject($sName) {
+    /*----
+      PUBLIC so callers can set write-ready storage values
+      HISTORY:
+	2018-05-18 made public
+    */
+    public function GetStorageObject($sName) {
 	return $this->FieldObject($sName)->StorageObject();
     }
     
@@ -162,8 +167,9 @@ class fcForm {
 	2016-10-17 deactivated because it seemed unnecessary
 	2016-10-18 reactivated for delivering *sanitized* SQL
 	2017-01-17 only return modified fields -- else unedited fields get overwritten with NULL
+	2018-05-17 Renamed from RecordValues_asStorageSane_get() to SetRecordValues_forStorage_Writable().
     */
-    public function RecordValues_asStorageSane_get() {
+    public function GetRecordValues_forStorage_Writable() {
 	$arFlds = $this->GetFieldArray();
 	$arOut = NULL;
 	foreach ($arFlds as $key => $oField) {
@@ -373,7 +379,6 @@ abstract class fcForm_keyed extends fcForm {
 
 		// get native values from Controls
 		$arSet = $this->GetFieldArray_toWrite_storage();
-		//die('END DEBUG READOUT');
 		// save native values to database (SaveRecord() will use Storage objects to convert)
 		$id = $this->SaveRecord($arSet);
 		// clear this record's values in case there's another record

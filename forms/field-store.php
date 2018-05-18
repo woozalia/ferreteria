@@ -50,15 +50,16 @@ abstract class fcFieldStorage {
     }
 
     // -- CONFIG -- //
-    // ++ FORMAT CONVERSION ++ //
+    // ++ FORMATS ++ //
 
     /*----
       PURPOSE: convert from received-data format to internal format
       INPUT: as received from database engine (raw)
       RETURNS: value in internal format
+      TODO 2018-05-17: maybe this should be renamed so as to clarify it's for RECEIVED values, not WRITABLE.
     */
     protected function toNative($sVal) { return $sVal; }
-    protected function fromNativeRaw($sVal) {
+    protected function fromNativeRaw($sVal) {	// TODO 2018-05-17: document purpose
 	return $sVal;	// default
     }
     /*----
@@ -68,27 +69,56 @@ abstract class fcFieldStorage {
       METHOD: DB-sanitizes the raw converted value
       PUBLIC so Form object can use it to convert arrays of native values before saving
       HISTORY:
-	2017-05-25 made publib
+	2017-05-25 made public
     */
     public function fromNativeSane($sVal) {
 	return $this->FormObject()->CookRawValue($this->fromNativeRaw($sVal));
     }
-    /*----
-      ACTION: converts the given value from storage format to native format and saves it in the native object.
-    */
     public function SetValue($vStore) {
+	throw new exception('2018-05-17 call SetValueWritable() or SetValueReceived().');
+	// This would work for SetValueReceived(), if we need it:
 	$vNative = $this->toNative($vStore);
 	$this->NativeObject()->SetValue($vNative,TRUE);
     }
+    public function SetValueReceived($vStore) {
+	$vNative = $this->toNative($vStore);
+	$this->NativeObject()->SetValue($vNative,TRUE);
+    }
+    private $vExpr;
     /*----
-      NOTE: This method may only need to exist just to keep it *mentally* clear
-	that GetValueRaw()'s output should not be sanitized; it just needs to be
-	in the right format (e.g. for dates, a date string rather than an integer).
+      ACTION: Saves the given write-ready expression locally, ready to retrieve when writing happens.
+      CALLED BY: e.g. SetRecordValues_forStorage_Writable()
+      TODO: should naming be more like ExpressionWritable instead of ValueWritable?
+      HISTORY:
+	2018-05-17 "ACTION" changed:
+	  *was*: converts the given value from storage format to native format and saves it in the native object.
+	  *now*: treats $vStore as an untranslateable write-ready expression and just saves it locally
+    */
+    public function SetValueWritable($vStore) {
+	$this->vExpr = $vStore;
+    }
+    // PUBLIC so Native object can check for changes
+    public function HasValueWritable() {
+	$is = isset($this->vExpr);
+	return $is;
+    }
+    protected function GetValueWritable() {
+	return $this->vExpr;
+    }
+    /*----
+      TODO: Probably should be renamed from GetValueSane() to GetValueWritable()
+      HISTORY:
+	2018-05-17 Now checks for a locally-stored write-ready expression, and only falls back
+	  to encoding the native value if there isn't anything stored locally.
     */
     public function GetValueSane() {
-	$vNative = $this->NativeObject()->GetValue();
-	$vStore = $this->fromNativeSane($vNative);
-	return $vStore;
+	if ($this->HasValueWritable()) {
+	    return $this->GetValueWritable();
+	} else {
+	    $vNative = $this->NativeObject()->GetValue();
+	    $vStore = $this->fromNativeSane($vNative);
+	    return $vStore;
+	}
     }
     public function GetValueRaw() {
 	$vNative = $this->NativeObject()->GetValue();

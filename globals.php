@@ -118,7 +118,13 @@ abstract class fcGlobals {
     
     // -- text
     
-    protected function GetText_SiteName() {
+    /*----
+      TODO 2018-05-13 Maybe this should be protected, and only inclusions within longer phrases should be public?
+	Examine this question later.
+      HISTORY:
+	2018-05-13 was protected, making public because I'm replacing uses of KS_SITE_NAME with calls to this.
+    */
+    public function GetText_SiteName() {
 	return KS_SITE_NAME;
     }
     

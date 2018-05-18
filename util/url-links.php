@@ -99,15 +99,6 @@ abstract class fcLinkBuilder {
 	    $oPage->AddContentString($sText);
 	}
 	$oPage->DoStashedRedirect($url);
-
-	/* 2017-02-09 old code
-	// TODO: finish adapting this
-	fcHTTP::DisplayOnReturn($sText);
-	$url = $this->LinkURL($arAdd);
-	echo 'REDIRECTING to '.$url.' and saving the following text:<br>'.$sText;	// for debugging
-	fcHTTP::Redirect($url,array(),FALSE,HTTP_REDIRECT_POST);
-	die();	// don't do any more work (including accidentally erasing the cookie)
-	*/
     }
 
     // -- API -- //

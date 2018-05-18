@@ -84,7 +84,7 @@ abstract class fcApp {
     // 2018-04-24 written
     public function SetCookieValue($sKey,$sValue) {
 	$sKeyFull = self::MakeRawCookieKey($sKey);
-	$this->SetRawCookieValue($sKeyFull,$sValue);
+	return $this->SetRawCookieValue($sKeyFull,$sValue);
     }
     // 2018-04-24 written
     public function GetCookieValue($sKey) {
