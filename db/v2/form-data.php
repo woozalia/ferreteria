@@ -279,7 +279,7 @@ class fcForm_DB extends fcForm_keyed {
 	    // updating an existing record
 	    $arStoreChg = $rc->GetStorableValues_toUpdate();
 	    //echo 'ARSTORECHG:'.fcArray::Render($arStoreChg);
-	    $this->RecordValues_asSQL_set($arStoreChg);	// set form fields from what needs to be updated
+	    $this->SetRecordValues_forStorage_Writable($arStoreChg);	// set form fields from what needs to be updated
 	    $arStoreFinal = $this->GetRecordValues_forStorage_Writable();	// get storage-format values for all form fields
 	    //echo 'ARSTOREFINAL:'.fcArray::Render($arStoreFinal);
 	    if (is_array($arStoreFinal)) {				// if there's anything to save...
