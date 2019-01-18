@@ -50,7 +50,7 @@ class fcPageData_MW {
     public function GetProperties() {
 	global $wgParser;	// 2018-02-10 Is there a better way to get this?
     
-	$oProp = new fcMWProperties_page($wgParser,$this->GetTitleObject());
+	$oProp = new \ferreteria\mw\cProperties_page($wgParser,$this->GetTitleObject());
 	return $oProp;
     }
 }

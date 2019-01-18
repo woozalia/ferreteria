@@ -5,6 +5,7 @@
   NOTES:
     Libaries and Modules don't actually know about each other. Loading a module loads the library definition file (typically @libs.php
       or config-libs.php), which may cause (additional) libraries to be registered. When a library is loaded, it adds more Modules.
+    To debug module-loading, call fcCodeModule::SetDebugMode(TRUE);
   HISTORY:
     2009-07-05 Trying to make this usable: shortened method names, added Path(), AddLog()
     2009-10-06 IsLoaded()
@@ -28,7 +29,7 @@
     2017-12-17 support for CLI mode in debugging output
 */
 class fcCodeModule {
-    private static $arMods;		// list of modules
+    private static $arMods=array();		// list of modules
     private static $arCls=array();	// index of classes: arCls[class] => module name
     private static $arFx;		// index of functions: arFx[fx name] => module name
     private static $fpBase;		// base path for all module specs
@@ -69,18 +70,22 @@ class fcCodeModule {
 	    return '';
 	}
     }
+    static private $isSetup = FALSE;
+    static protected function GetIsSetup() {
+        return self::$isSetup;
+    }
+    static protected function SetIsSetup() {
+        self::$isSetup = TRUE;
+    }
     /*----
       PURPOSE: Sometimes this needs to be called explicitly because the class has not
 	been instantiated; I'm not sure why.
     */
-    public static function Init() {
-	if (!isset(self::$arMods)) {
+    static public function Init() {
+	if (!self::GetIsSetup()) {
 	    self::DebugLine('INITIALIZING MOD LOADER');
 	    spl_autoload_register(__NAMESPACE__ .'\fcCodeModule::LoadClass');
-	    self::$arMods = NULL;
-	}
-	if (!isset(self::$arCls)) {
-	    self::$arCls = NULL;
+	    self::SetIsSetup();
 	}
     }
 
@@ -169,15 +174,8 @@ class fcCodeModule {
     public function Path() {
 	return $this->fsModule;
     }
-    /*----
-      ASSUMES: static stuff has been initialized, i.e. Register() has been called at least once
-    */
     protected static function Exists($iName) {
-	if (isset(self::$arMods)) {
-	    return array_key_exists($iName,self::$arMods);
-	} else {
-	    return FALSE;
-	}
+        return array_key_exists($iName,self::$arMods);
     }
     /*----
       USAGE: Should only be called internally to register new classes
