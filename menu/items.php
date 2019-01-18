@@ -12,14 +12,14 @@
     2013-11-29 renamed from menu.php to navbar.php
       because proper menus look like they'll need another set of classes
     2016-11-29 Adapting for new Page system
-    2016-12-05 Adapting some things from vbz-page-shop
+    2016-12-05 Adapting some things from page/shop.php
       ftLinkableNode, fcMenuItem_link->fcNavItem_link, fcMenuItem_standard, fcMenuFolder, fcMenuFolder_standard
     2016-12-08 some renaming
     2016-12-09 merging page.navbar.php into here (menu-base.php)
       fcNavItem, fcPageBlock
     2016-12-27..28 reworking class structure
       removed ftLinkableNode
-    2017-01-10 extracted kiosk classes to kiosk.php for easier reference; renamed this from manu-base.php -> items.php
+    2017-01-10 extracted kiosk classes to kiosk.php for easier reference; renamed this from menu-base.php -> items.php
 */
 trait ftRequiresPermit {
 
@@ -45,11 +45,32 @@ trait ftRequiresPermit {
 }
 
 /*::::
-  NOTE: Just an alias for now, so I don't have to do yet another search-and-replace.
-    Maybe later, this will do security checking a bit better (instead of just hiding itself
-    when there are no subnodes).
+  PURPOSE: NavFolder that may also be aware of an alternate database to use (and maybe other environment stuff later).
 */
 class fcMenuFolder extends fcNavFolder {
+
+    private $sDBSpec=NULL;
+    public function SetDatabaseSpec($s) {
+	$this->sDBSpec = $s;
+    }
+    protected function GetDatabaseSpec_isSet() {
+	return !is_null($this->sDBSpec);
+    }
+    public function GetDatabase() {
+	if ($this->GetDatabaseSpec_isSet()) {
+	    $sSpec = $this->sDBSpec;
+	    $db = fcDBOFactory::GetConn($sSpec,TRUE);	// TRUE = allow failure
+	    // open the database (creates the native object)
+	    $db->Open();
+	    if (!$db->isOkay()) {
+		$sSchema = $db->GetSchemaString();
+		throw new exception("Could not open database for schema '$sSchema'.");	// TODO: more graceful failure
+	    }
+	} else {
+	    $db = fcApp::Me()->GetDatabase();
+	}
+	return $db;
+    }
 }
 /*::::
   PURPOSE: base class for menu-links which are usage-aware
@@ -263,7 +284,8 @@ class fcLink_fromArray extends fcMenuLink {
       NEW
       PURPOSE: calculates self-identifying array
     */
-    protected function GetLinkArray_self() {
+    // PUBLIC for testing
+    public function GetLinkArray_self() {
 	$sValue = $this->GetKeyValue();
 	$sName = $this->GetKeyName();
 	return array($sName=>$sValue);
@@ -290,10 +312,10 @@ class fcUtilityLink extends fcLink_fromArray {
 	parent::__construct($sKeyValue,$sText,$sPopup);
 	$this->SetKeyName($sKeyName);
     }
-    // OVERRIDE - we don't want any list-formatting
+    // OVERRIDE - we don't want any list-formatting (also, don't prefix with newline)
     protected function RenderSelf() {
 	$sClass = $this->GetKeyName().'-'.$this->GetKeyValue();
-	return "\n<span class='$sClass'>".$this->RenderContent()."</span>";
+	return "<span class='$sClass'>".$this->RenderContent()."</span>";
     }
     /*
     public function Render() {

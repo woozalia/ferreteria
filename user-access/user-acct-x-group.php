@@ -6,7 +6,16 @@
     2017-01-27 rewriting to work with Ferreteria changes
 */
 class fctUGroups_for_UAcct extends fcTable_wSource {
+    use ftName_forTable;
+    use ftWriteableTable;	// Insert()
 
+    // ++ SETUP ++ //
+    
+    protected function TableName() {
+	return KS_TABLE_UACCT_X_UGROUP;
+    }
+
+    // -- SETUP -- //
     // ++ CLASSES ++ //
     
     protected function GroupsClass() {
@@ -52,14 +61,16 @@ class fctUGroups_for_UAcct extends fcTable_wSource {
       INPUT:
 	$idAcct : user to which we are assigning groups
 	arGrps[id] = (arbitrary value) : user should be assigned to group 'id'
+      HISTORY:
+	2018-04-28 updating for current Ferreteria API (has needed it since at least 2017-01-28)
     */
     public function SetUGroups($idAcct, array $arGrps=NULL) {
-	throw new exception('2017-01-28 This will need updating.');
-	$this->Engine()->TransactionOpen();
+	$db = $this->GetConnection();
+	$db->TransactionOpen();
 	// first, delete any existing assignments:
-	$sql = 'DELETE FROM '.$this->NameSQL().' WHERE ID_Acct='.$idAcct;
+	$sql = 'DELETE FROM '.$this->TableName_Cooked().' WHERE ID_Acct='.$idAcct;
 	$this->sql = $sql;
-	$ok = $this->Engine()->Exec($sql);
+	$ok = $db->ExecuteAction($sql);
 
 	// next, add any specified by the form:
 	if (is_null($arGrps)) {
@@ -74,11 +85,11 @@ class fctUGroups_for_UAcct extends fcTable_wSource {
 		  )
 		);
 	    }
-	    $out = "User $idAcct has been assigned to ".Pluralize(count($arGrps),'group'.$htG,'these groups:'.$htG);
+	    $out = "User $idAcct has been assigned to ".fcString::Pluralize(count($arGrps),'group'.$htG,'these groups:'.$htG);
 	    //die ($out);
 	}
 
-	$this->Engine()->TransactionSave();
+	$db->TransactionSave();
 	return $out;
     }
 

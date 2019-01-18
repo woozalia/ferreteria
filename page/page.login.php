@@ -93,6 +93,17 @@ abstract class fcpeLoginWidget extends fcpeSimple {
     }
     
     // -- FRAMEWORK -- //
+    // ++ OPTIONS ++ //
+   
+    private $isVisible = TRUE;
+    public function SetVisible($b) {
+	$this->isVisible = $b;
+    }
+    protected function GetVisible() {
+	return $this->isVisible;
+    }
+    
+    // -- OPTIONS -- //
     // ++ INPUT ++ //
 
 	//++internal states++// -- can be set internally or by external caller
@@ -123,15 +134,6 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	return fcApp::Me()->GetKioskObject()->GetInputObject()->GetString(KS_PATH_ACTION_KEY);
     }
 
-    // vv 2017-02-04 these may all be obsolete now
-    
-    // INPUT: URL path includes "do:login"
-    
-    /* 2017-02-12 Apparently this is no longer used.
-    protected function GetInput_IsLoginFormRequest() {
-	$sDo = fcApp::Me()->GetKioskObject()->GetInputObject()->GetString(KS_PATH_ACTION_KEY);
-	return $sDo == KS_USER_PATH_REQ_LOGIN_FORM;
-    } */
     // INPUT: existing username, existing password
     protected function GetInput_IsLoginAttempt() {
 	return !empty($_POST[KSF_USER_BTN_LOGIN]);
@@ -140,13 +142,6 @@ abstract class fcpeLoginWidget extends fcpeSimple {
     protected function GetInput_IsPasswordResetForm() {
 	return !empty($_POST[KSF_USER_BTN_SET_PASS]);
     }
-    /* 2017-02-05 no longer needed
-    // INPUT: URL path includes "do:newacct"
-    protected function GetInput_IsNewAccountRequest() {
-	$sDo = fcApp::Me()->GetKioskObject()->GetInputObject()->GetString(KS_PATH_ACTION_KEY);
-	return $sDo == KS_USER_PATH_REQ_NEW_ACCT;
-    }
-    */
     // DETECTS: button for new account auth email address form
     protected function GetInput_IsNewAccountEmailForm() {
 	return !empty($_POST[KSF_USER_BTN_NEW_ACCT_EMAIL]);
@@ -223,7 +218,8 @@ abstract class fcpeLoginWidget extends fcpeSimple {
     const KS_STEP_NA2_ACCT_ENTRY_FORM	= 'NA2';	// show new account request form (asks for username and password (x2))
     
     protected function ProcessInput() {
-
+//$oTrace = new fcStackTrace();
+//echo 'LOGIN INPUT BEING PROCESSED HERE<br>'.$oTrace->RenderAllRows();
       // STAGE 0: check DETA - set flags - these may affect other states - but don't do anything yet (need to check DETF)
 
 	if ($this->GetInput_AuthCodeFound()) {
@@ -433,6 +429,9 @@ abstract class fcpeLoginWidget extends fcpeSimple {
     protected function SetFromInput_AuthCodeStatus() {
 	$tToken = $this->TokenTable();
 	$rcToken = $tToken->GetRecord_fromTokenString($this->GetInput_AuthCodeValue());
+	if (is_null($rcToken)) {
+	    throw new exception('Token record came back NULL.');	// 2018-04-22 how is this even happening?
+	}
 	$this->Set_AuthTokenRecord($rcToken);
 	
 	if (is_null($rcToken)) {
@@ -578,123 +577,47 @@ abstract class fcpeLoginWidget extends fcpeSimple {
       ACTION: Displays forms as needed according to internal states
     */
     public function Render() {
-
-	switch ($this->GetStatus_DoNext()) {
-	  case self::KS_STEP_NA0_EMAIL_ADDR_FORM:	// NA0
-	    return $this->RenderForm_GetEmailAddressForNewAcct();
-	  case self::KS_STEP_NA2_ACCT_ENTRY_FORM:	// NA2
-	    return $this->RenderForm_GetNewAccountSpecs();
-	  case self::KS_STEP_PR0_USERNAME_FORM:		// PR0
-	    return $this->RenderForm_GetUserForPasswordReset();
-	  case self::KS_STEP_PR2_PASSWORD_FORM:		// PR2
-	    return $this->RenderForm_ResetLostPassword();
-	  case self::KS_STEP_SHOW_LOGIN:		// LGN0
-	    return $this->RenderForm_Login();
-	  default:
-	    return NULL;
-	}
-
-    /* 2017-02-05 Replacing this.
-	switch ($this->GetStatus_DoNext()) {
-	  case self::KS_STEP_SHOW_LOGIN:		// show the existing-user login form
-	    return $this->RenderForm_Login();
-	  case self::KS_STEP_SHOW_PASSRESET_USER:	// show the password-reset initiation form (asks for username)
-	    return $this->RenderForm_GetUserForPasswordReset();
-	  case self::KS_STEP_SHOW_PASSRESET_PASS:	// show the password-reset request form (asks for new password)
-	    return $this->RenderForm_GetNewPasswordsForUser();
-	  case self::KS_STEP_SHOW_EMAIL_ADDR:		// show the account-creation initiation form (asks for email address)
-	    return $this->RenderForm_GetEmailAddressForNewAcct();
-	  case self::KS_STEP_SHOW_NEW_ACCT_REQ:
-	    return $this->RenderForm_GetNewAccountSpecs();
-	  default:
-	    return NULL;	// nothing happening with the login widget
-	}
-    */
-
-/* 2016-12-18 This is probably all completely redundant now...
-
-	// 2016-11-18 TO BE REWRITTEN - must only do output, based on internal states
-    
-	$this->SetMode_ShowLogin(TRUE);	// By default, we'll still show the login form if not logged in
-	$isEmailAuth = FALSE;	// Assume this page is not an email authorization link until proven guilty.
-	
-	$ht = NULL;
-	$ok = FALSE;	// set false initially so we do one iteration
-	while (!$ok) {
-	    $ok = TRUE; 	// assume success
-
-	    // check auth link and display form if it checks out
-	    if ($this->GetMode_IsAuthLink()) {
-		// this is an AUTH link, so ignore any other stuff
-
-		// parse the authcode
-		$arAuth = $this->ParseAuthCode($this->GetInput_AuthCodeValue());
-		$arStatus = $this->CheckData_AuthCodePasses($arAuth);
-		
-		$ar = $this->CheckAuth();	// check token
-		$ht = $this->UserAccess_ProcessAuth($ar);
-
-		if ($this->IsCreateRequest()) {
-		    $ht .= $this->UserAccess_CreateRequest($ar);
-		} elseif ($this->IsResetRequest()) {	// password change request submitted
-		    $ht .= $this->UserAccess_ResetRequest();
-		}
-
-	    } elseif($this->doEmail) {
-
-		// REQUEST AUTH LINK form has been submitted
-
-		$ht .= $this->SendPassReset_forAddr(
-		  $this->EmailAddress(),
-		  $this->LoginName()
-		  );
-	    // END do email
-	    } elseif($this->isLogin) {
-		if ($this->IsLoggedIn()) {
-		    $sUser = $this->LoginName();
-		    $sSite = KS_SITE_SHORT;
-		    $htMsg = $oSkin->SuccessMessage("Welcome to $sSite, $sUser.");
-		    $this->RedirectHome($htMsg);
-		}
-
-		// LOGIN FAILED: login was tried, but we're still here (not logged in), so it must have failed:
-
-		$ht .= $oSkin->ErrorMessage('Sorry, the given username/password combination was not valid.');
-		$ht .= $oSkin->HLine();
-	    // END is login
-	    } else {
-		// TODO : log as possible illicit hacking attempt
+	if ($this->GetVisible()) {
+	    switch ($this->GetStatus_DoNext()) {
+	      case self::KS_STEP_NA0_EMAIL_ADDR_FORM:	// NA0
+		$out = $this->RenderForm_GetEmailAddressForNewAcct();	break;
+	      case self::KS_STEP_NA2_ACCT_ENTRY_FORM:	// NA2
+		$out = $this->RenderForm_GetNewAccountSpecs();		break;
+	      case self::KS_STEP_PR0_USERNAME_FORM:		// PR0
+		$out = $this->RenderForm_GetUserForPasswordReset();		break;
+	      case self::KS_STEP_PR2_PASSWORD_FORM:		// PR2
+		$out = $this->RenderForm_ResetLostPassword();		break;
+	      case self::KS_STEP_SHOW_LOGIN:		// LGN0
+		$out = $this->RenderForm_Login();				break;
+	      default:
+		$out = NULL;
 	    }
-
-	    if ($this->doShowLogin) {
-		$ht .= "\n<b>If you already have a user account on this site</b>, you can log in now:<br>"
-		  .$this->RenderLogin($this->LoginName())
-		  .$oSkin->HLine();
-	    }
-	    if ($this->IsAuthLink()) {
-		$htMsgPre = 'You can request another authorization email here';
-		$htMsgPost = NULL;
-	    } else {
-		$htMsgPre = '<b>If you have forgotten your password or have not set up an account</b>';
-		$htMsgPost = '<br>This will email you a link to set or reset your password.';
-	    }
-
-	    $ht .= "\n$htMsgPre:<br>"
-		  .$oSkin->RenderForm_Email_RequestReset($this->EmailAddress())
-		  ."\n$htMsgPost";
+	} else {
+	    $out = NULL;
 	}
-	return $ht;
-*/
+	return $out;
+
     }
+    /*----
+      HISTORY:
+	2018-03-22 Previously, if there was no explicit redirect, this would still generate
+	  a hidden redirect field with value ''. At some point it stopped doing this, which
+	  meant that if you went straight to the login page without a redirect query in the URL,
+	  the login form would continue to display even after logging in.
+	  
+	  So now I'm always rendering the hidden field even if the value is blank.
+	  I hope that doesn't cause problems elsewhere.
+    */
     protected function Render_RedirectField() {
 	$oFormIn = fcHTTP::Request();
 	
-	if ($oFormIn->KeyExists(self::ksFIELD_RETURN_URI)) {
-	    $uriReturn = $oFormIn->GetString(self::ksFIELD_RETURN_URI);
-	    $ctReturn = "<input type=hidden name='".self::ksFIELD_RETURN_URI."' value='$uriReturn'>";
-	} else {
-	    $ctReturn = '';
-	}
+//	if ($oFormIn->KeyExists(self::ksFIELD_RETURN_URI)) {
+	    $sName = self::ksFIELD_RETURN_URI;
+	    $uriReturn = $oFormIn->GetString($sName);
+	    $ctReturn = "<input type=hidden name='$sName' value='$uriReturn'>";
+//	} else {
+//	    $ctReturn = '';
+//	}
 	return $ctReturn;
     }
     /*----
@@ -729,6 +652,7 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	$oKiosk = fcApp::Me()->GetKioskObject();
 	$urlBase = $oKiosk->GetBasePath();
 	$urlThis = $oKiosk->GetInputString();
+	$urlQuery = fcString::IsBlank($urlThis)?'':('?return='.$urlThis);
 	return '<a href="'
 	  .$urlBase
 	  //.KS_CHAR_PATH_SEP		// /
@@ -736,25 +660,10 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	  .KS_CHAR_URL_ASSIGN		// :
 	  .KS_USER_PATH_REQ_LOGIN_FORM	// login
 	  .KS_CHAR_PATH_SEP		// /
-	  .'?return='
-	  .$urlThis
+	  .$urlQuery
 	  .'" title="display the login form">log in</a>'	// TODO: make these strings config options too
 	  ;
     }
-    /* 2017-06-29 This seems to be redundant.
-    // ACTION: renders the control for requesting the page for editing current user's profile
-    protected function Render_ProfileRequestControl() {
-	$urlBase = fcApp::Me()->GetKioskObject()->GetBasePath();
-	return '<a href="'
-	  .$urlBase
-	  //.KS_CHAR_PATH_SEP			// /
-	  .KS_PATH_ACTION_KEY			// do
-	  .KS_CHAR_URL_ASSIGN			// :
-	  .KS_USER_PATH_REQ_PROFILE_PAGE	// profile
-	  .KS_CHAR_PATH_SEP			// /
-	  .'" title="display the login form">log in</a>'	// TODO: make these strings config options too
-	  ;
-    } */
     // ACTION: renders the control (usually a link) for starting the new account process
     protected function Render_NewAccountRequestControl() {
 	$oeLink = new fcUtilityLink(
@@ -764,17 +673,6 @@ abstract class fcpeLoginWidget extends fcpeSimple {
 	  'request a new account'
 	  );
 	return $oeLink->Render();
-    /*
-	$urlBase = fcApp::Me()->GetKioskObject()->GetBasePath();
-	return '<a href="'
-	  .$urlBase
-	  .KS_CHAR_PATH_SEP		// /
-	  .KS_PATH_ACTION_KEY		// do
-	  .KS_CHAR_URL_ASSIGN		// :
-	  .KS_USER_PATH_REQ_NEW_ACCT	// newacct
-	  .KS_CHAR_PATH_SEP		// /
-	  .'" title="request a new account">new</a>'	// TODO: make these strings config options too
-	  ; */
     }
     protected function Render_ResetPasswordRequestControl() {
 	$oeLink = new fcUtilityLink(
@@ -942,14 +840,14 @@ __END__;
 	$oTplt->SetVariableValues($ar);
 
 	// generate the email
-	$oTplt->Template(KS_TPLT_EMAIL_TEXT_FOR_NEW_ACCOUNT);
+	$oTplt->Template(fcGlobals::Me()->GetTemplate_NewAccount_EmailContent());
 	$sMsg = $oTplt->Render();
-	$sSubj = KS_TEXT_EMAIL_SUBJ_FOR_NEW_ACCOUNT;
+	$sSubj = fcGlobals::Me()->GetText_NewAccount_EmailSubject();
 	$sName = NULL;	// user's name not yet known
 	fcApp::Me()->DoEmail_fromAdmin_Auto($sAddr,$sName,$sSubj,$sMsg);
 
 	// generate status message
-	$oTplt->Template(KS_TPLT_AUTH_EMAIL_TO_SHOW);
+	$oTplt->Template(fcGlobals::Me()->GetTemplate_NewAccount_ScreenMessage());
 	$sMsg = $oTplt->Render();
 	$this->AddSuccessMessage($sMsg);
 	
@@ -977,24 +875,24 @@ __END__;
 	  'action'	=> 'allow you to change your password',
 	  'url'		=> $url
 	  );
-	$oTplt->VariableValues($ar);
+	$oTplt->SetVariableValues($ar);
 	
 	// log the email about to be sent
 	$arEv = array(
 	  'user'	=> $rcUser->LoginName(),
 	  'addr'	=> $sAddr,
 	  );
-	fcApp::Me()->EventPlex()->CreateBaseEvent(KS_EVENT_FERRETERIA_SENDING_ADMIN_EMAIL,'lost password reset',$arEv);
+	fcApp::Me()->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_SENDING_ADMIN_EMAIL,'lost password reset',$arEv);
 
 	// generate the email
-	$oTplt->Template(KS_TPLT_EMAIL_TEXT_FOR_PASS_CHANGE);
+	$oTplt->Template(fcGlobals::Me()->GetTemplate_PasswordChange_EmailContent());
 	$sMsg = $oTplt->Render();
-	$sSubj = KS_TEXT_EMAIL_SUBJ_FOR_PASS_CHANGE;
+	$sSubj = fcGlobals::Me()->GetText_PasswordChange_EmailSubject();
 	$sName = $rcUser->FullName();
 	fcApp::Me()->DoEmail_fromAdmin_Auto($sAddr,$sName,$sSubj,$sMsg);
 
 	// generate status message
-	$oTplt->Template(KS_TPLT_AUTH_EMAIL_TO_SHOW);
+	$oTplt->Template(fcGlobals::Me()->GetTemplate_PasswordChange_ScreenMessage());
 	$sMsg = $oTplt->Render();
 	$this->AddSuccessMessage($sMsg);
 	
@@ -1011,20 +909,23 @@ __END__;
 	$rcUser = fcApp::Me()->GetUserRecord();
 
 	$sUser = $rcUser->LoginName();
-	$sSiteName = KS_SITE_NAME;
-	$sAddress = $_SERVER['REMOTE_ADDR'];
+	$sSiteName = fcGlobals::Me()->GetText_SiteName();
+	$sAddrCli = $_SERVER['REMOTE_ADDR'];
 	$sBrowser = $_SERVER['HTTP_USER_AGENT'];
+	$sDomain = $_SERVER['HTTP_HOST'];
+	$uri = $_SERVER['SCRIPT_URI'];
 
 	$sMsg = <<<__END__
-Someone, presumably you, just logged in to $sSiteName with username "$sUser". Please make sure this was actually you.
-* IP address: $sAddress
-* Browser: $sBrowser
+Someone, presumably you, just logged in to $sSiteName (at $sDomain) with username "$sUser". Please make sure this was actually you.
+* Web site address: $uri
+* Client IP address: $sAddrCli
+* Client browser ID: $sBrowser
 
 If it wasn't you, please let us know, and change your password.
 __END__;
 	$sToAddr = $rcUser->EmailAddress();
 	$sToName = $rcUser->FullName();
-	$sSubj = 'login notification from '.KS_SITE_NAME;
+	$sSubj = 'login notification from '.$sSiteName;
 	fcApp::Me()->EventTable()->CreateBaseEvent(KS_EVENT_FERRETERIA_SENDING_ADMIN_EMAIL,'successful login notification');
 	$ok = fcApp::Me()->DoEmail_fromAdmin_Auto($sToAddr,$sToName,$sSubj,$sMsg);
 	return $ok;
@@ -1126,29 +1027,42 @@ __END__;
       Render_LoginWidget() is an exception, because it probably needs to display
       within a different element than the one where the login widget proper lives.
 */
+/*----
+  PURPOSE: can easily generate login widget, but doesn't do so automatically.
+    This is to give the page-class more flexibility over how to handle it.
+*/
+trait ftLoginGenerator {
+
+    // ++ CLASSES ++ //
+
+    abstract protected function Class_forLoginWidget();
+
+    // -- CLASSES -- //
+    // ++ ELEMENTS ++ //
+
+    // NEW ELEMENT
+    protected function MakeElement_LoginWidget() {
+	return $this->MakeNode('login',$this->Class_forLoginWidget());
+    }
+
+    // -- ELEMENTS -- //
+}
 trait ftLoginContainer {
+    use ftLoginGenerator;
 
     // ++ ABSTRACT ++ //
     
-    abstract protected function Class_forLoginWidget();
     abstract protected function GetElement_LoginWidget();	// get the login widget, wherever it is hiding
     
 
     // -- ABSTRACT -- //
     // ++ OVERRIDES ++ //
-
+/* 2018-03-16 this looks completely unnecessary...?
     protected function InitNodes() {
 	parent::InitNodes();
-    }
+    } */
 
     // -- OVERRIDES -- //
-    // ++ NEW ELEMENTS ++ //
-    
-    protected function MakeElement_LoginWidget() {
-	return $this->MakeNode('login',$this->Class_forLoginWidget());
-    }
-
-    // -- NEW ELEMENTS -- //
 
 }
 trait ftLoginContainer_standard {

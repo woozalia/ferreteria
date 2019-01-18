@@ -14,6 +14,8 @@
 	  and adding a corresponding recordset type.
 */
 class fctUPermits_for_UGroup extends fcTable_wSource {
+    use ftName_forTable;
+    use ftWriteableTable;	// Insert()
 
     // ++ SETUP ++ //
 /*
@@ -23,10 +25,9 @@ class fctUPermits_for_UGroup extends fcTable_wSource {
 	  $this->ClassName_Perms(KS_CLASS_USER_PERMISSIONS);
 	  $this->ClassName_Perms(KS_CLASS_USER_PERMISSION);
     }*/
-    /*
-    protected function SingularName() {
-	return KS_CLASS_USER_PERMISSION;
-    }*/
+    protected function TableName() {
+	return 'ugroup_x_uperm';
+    }
 
     // -- SETUP -- //
     // ++ CLASSES ++ //
@@ -90,10 +91,11 @@ class fctUPermits_for_UGroup extends fcTable_wSource {
 	arPerms[id] = (any value) : user should be assigned to group 'id'
     */
     public function SetUPerms($idGroup, array $arPerms) {
-	$this->Engine()->TransactionOpen();
+	$db = $this->GetConnection();
+	$db->TransactionOpen();
 	// first, delete any existing assignments:
-	$sql = 'DELETE FROM '.$this->NameSQL().' WHERE ID_UGrp='.$idGroup;
-	$ok = $this->Engine()->Exec($sql);
+	$sql = 'DELETE FROM '.$this->TableName_Cooked().' WHERE ID_UGrp='.$idGroup;
+	$ok = $db->ExecuteAction($sql);
 
 	// next, add any specified by the form:
 	foreach ($arPerms as $idPerm => $on) {
@@ -102,11 +104,10 @@ class fctUPermits_for_UGroup extends fcTable_wSource {
 	      'ID_Permit'=>$idPerm
 	      )
 	    );
-//	    $sql = $this->sqlExec;
-//	    echo "SQL: $sql<br>";
+	    //$sql = $this->sql;
+	    //echo "SQL: $sql<br>";
 	}
-
-	$this->Engine()->TransactionSave();
+	$db->TransactionSave();
     }
 
     // -- ACTIONS -- //

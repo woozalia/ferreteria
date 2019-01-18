@@ -438,20 +438,6 @@ class fcTreeNode {
 
     // ...until their use can be documented, at least.
 
-    /*----
-      FUTURE: For consistency, should probably be renamed NodeValue()
-    */
-/* 2011-12-25 who uses this?
-    public function SubValue($iName,$iVal=NULL) {
-	if (!is_null($iVal)) {
-	    $obj = $this->Spawn();
-	    $obj->Value($iVal);
-	} else {
-	    $obj = NULL;
-	}
-	return $this->Node($iName,$obj)->Value();
-    }
-*/
     public function AccessCount() {
 	throw new exception('2016-11-11 What is this even for?');
 	return $this->intRefs;

@@ -2,6 +2,7 @@
 /*
   HISTORY:
     2016-10-31 Adapting from db.v1 to db.v2.
+    2018-02-24 GetStorableValues_Changed() wasn't sanitizing values. Fixed.
 */
 
 trait ftSaveableRecord {
@@ -44,11 +45,14 @@ trait ftSaveableRecord {
     public function GetStorableValues_Changed() {
 	$arTouch = $this->TouchedArray();	// just a list; no values
 	$arOut = NULL;
+	$db = $this->GetConnection();
 	if (is_array($arTouch)) {
 	    $sKey = $this->GetTableWrapper()->GetKeyName();
 	    foreach ($arTouch as $sField) {
 		if ($sField != $sKey) {		// don't write to the key field
-		    $arOut[$sField] = $this->GetFieldValue($sField);
+		    $v = $this->GetFieldValue($sField);
+		    $sqlVal = $db->SanitizeValue($v);
+		    $arOut[$sField] = $sqlVal;
 		}
 	    }
 	}
@@ -188,16 +192,18 @@ trait ftSaveableRecord {
 	  of the $arSave input parameter.
     */
     public function Save() {
-	$out = NULL;
-	$sql = NULL;	// for debugging
+	//$out = NULL;
+	//$sql = NULL;	// for debugging
 	if ($this->IsNew()) {
 	    $ar = $this->GetStorableValues_toInsert();
 	    if (is_array($ar)) {
+		$ar = array_merge($ar,$this->GetInsertStorageOverrides());
 		$this->Insert($ar);
 	    }
 	} else {
 	    $ar = $this->GetStorableValues_toUpdate();
 	    if (is_array($ar)) {
+		$ar = array_merge($ar,$this->GetUpdateStorageOverrides());
 		$this->Update($ar);
 	    }
 	}

@@ -97,12 +97,19 @@ class fcUserTokens extends fcTable_keyed_single_standard {
 	    $sErrText = $this->GetErrorText();
 	    $sErrCode = $this->GetErrorCode();
 	    $tEvSub->CreateRecord($idEv,KS_EVENT_FAILED.':TOK:'.$sErrCode,'kept old password: '.$sErrText);
+	    
+	    // DEBUGGING - can comment out otherwise:
+	    echo '<b>SQL</b>: '.$this->sql;
+	    throw new exception('Token not found.');	// 2018-04-22 debugging
 	} else {
 	    if (!$rcToken->HasExpired()) {
 		// token has not expired
 		$rcToken->Renew();	// extend the expiration
 	    }
-
+	    // TODO: should we log this?
+	}
+	if (is_null($rcToken)) {
+	    throw new exception('NULL is being returned. This should not happen.');
 	}
 	return $rcToken;
     }
@@ -122,18 +129,18 @@ class fcUserTokens extends fcTable_keyed_single_standard {
 	    }
 	    if ($rc->HashMatches($sToken)) {
 		if ($rc->HasExpired()) {
-		    $this->SetError_TokenExpired($rc->GetExpirationString());
-		} else {
-		    return $rc;
+		    $this->SetError_TokenExpired($rc->GetWhenExpires_text());
 		}
 	    } else {
 		$this->SetError_TokenMismatch();
+		$rc = NULL;
 	    }
 	} else {
 	    $this->SetError_TokenNotFound();
+	    $rc = NULL;
 	}
 	// no valid matching token found
-	return NULL;
+	return $rc;
     }
     
     // -- READ DB -- //
@@ -159,13 +166,13 @@ class fcUserTokens extends fcTable_keyed_single_standard {
 	// save the salt and hashed token
 	$sHash = self::MakeHash($sToken,$sSalt);
 	$ar = array(
-	  'TokenHash'	=> $db->Sanitize_andQuote($sHash),
-	  'TokenSalt'	=> $db->Sanitize_andQuote($sSalt),
+	  'TokenHash'	=> $db->SanitizeValue($sHash),
+	  'TokenSalt'	=> $db->SanitizeValue($sSalt),
 	  'WhenExp'	=> 'NOW() + INTERVAL 1 HOUR'	// expires in 1 hour
 	  );
 
 	// -- check to see if there's already a hash for this entity
-	$sqlEntity = $db->Sanitize_andQuote($sEntity);
+	$sqlEntity = $db->SanitizeValue($sEntity);
 	$sqlFilt = "(Type=$nType) AND (Entity=$sqlEntity)";
 	$rc = $this->SelectRecords($sqlFilt);
 	if ($rc->HasRows()) {
@@ -237,20 +244,28 @@ class fcUserToken extends fcRecord_standard {
     // -- FIELD VALUES -- //
     // ++ FIELD CALCULATIONS ++ //
     
+    // PUBLIC so it can be used to inform user when the token expired
+    public function GetWhenExpires_text() {
+	return $this->GetFieldValue('WhenExp');
+    }
+    protected function GetWhenExpires_int() {
+	$sExp = $this->GetWhenExpires_text();
+	if (is_null($sExp)) {
+	    return NULL;
+	} else {
+	    return strtotime($sExp);	// there's got to be a better function for this
+	}
+    }
     /*----
       RETURNS: TRUE iff expiration date has passed
     */
     public function HasExpired() {
-	$sExp = $this->GetFieldValue('WhenExp');
-	if (is_null($sExp)) {
-	    return TRUE;	// for now, tokens MUST have an expiry
+	$nExp = $this->GetWhenExpires_int();
+	if (is_null($nExp)) {
+	    return TRUE;		// for now, tokens MUST have an expiry
 	} else {
-	    $dtExp = strtotime($sExp);	// there's got to be a better function for this
-	    return ($dtExp < time());	// expiry has passed?
+	    return ($nExp < time());	// expiry has passed?
 	}
-    }
-    public function GetExpirationString() {
-	return $this->WhenExpires();	// TODO: make it more friendly
     }
     public function HashMatches($sToken) {
 	$sSalt = $this->GetTokenSalt();

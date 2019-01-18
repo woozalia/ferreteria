@@ -84,10 +84,12 @@ class fcDropinLink extends fcDynamicLink {
     // ++ OBJECTS ++ //
 
     /*----
-      NOTE: (2017-03-27) Having this returned in two stages is a kluge for requiring both fiLinkable and fiEventAware.
-	There's got to be a better way to do this, short of creating an fiLinkableEventConsumer interface and maintaining
-	it manually. Maybe the two interfaces don't actually need to be separate? (04-13) Or maybe the _raw one can
-	be more general, somehow.
+      NOTES:
+	* 2017-03-27 Having this returned in two stages is a kluge for requiring both fiLinkable and fiEventAware.
+	  There's got to be a better way to do this, short of creating an fiLinkableEventConsumer interface and maintaining
+	  it manually. Maybe the two interfaces don't actually need to be separate? (04-13) Or maybe the _raw one can
+	  be more general, somehow.
+	* 2018-04-02 return value ($o) could be a table or a recordset; other types may be supported in future
       HISTORY:
 	2017-04-13 Added caching, because otherwise we end up doing rendering on a different object than
 	  the one we passed the build and figure events. Aside from being inefficient, this means that
@@ -108,7 +110,8 @@ class fcDropinLink extends fcDynamicLink {
 	if (array_key_exists($sCache,$this->arObj)) {
 	    $o = $this->arObj[$sCache];
 	} else {
-	    $o = fcApp::Me()->GetDatabase()->MakeTableWrapper($sClass,$id);
+	    $db = $this->GetParent()->GetDatabase();	// this dropin's db might not be the site-wide default
+	    $o = $db->MakeTableWrapper($sClass,$id);
 	    $this->arObj[$sCache] = $o;
 	}
 	return $o;

@@ -14,7 +14,7 @@ class fcDropInManager extends fcDataTable_array {
 
     // ++ STATIC ++ //
     
-    // METHOD: Goes through App object-factory so we don't get more than one, even when created by the Engine.
+    // METHOD: Goes through App object-factory so we don't get more than one regardless of how it's requested.
     static public function Me() {
 	return fcApp::Me()->GetDropinManager();
     }
@@ -106,27 +106,6 @@ class fcDropInManager extends fcDataTable_array {
 	
 	return $od;
     }
-    static public function IsReady($sName) {
-	throw new exception('2017-01-01 static::IsReady() is deprecated; call object->HasModule() instead.');
-    }
-    /* 2017-01-01 This is kind of useless.
-    static public function AreModulesLoaded() {
-	return count(self::$arMods) > 0;
-    }*/
-    /*----
-      RETURNS: TRUE iff the named drop-in module is available for use
-    */
-    static public function IsModuleLoaded($sName) {
-	throw new exception('2017-01-01 static::IsModuleLoaded() is deprecated; call object->HasModule() instead.');
-	
-	$isOk = FALSE;
-	if (array_key_exists($sName,self::$arMods)) {
-	    if (is_object(self::$arMods[$sName])) {
-		$isOk = TRUE;
-	    }
-	}
-	return $isOk;
-    }
 
     // -- BASIC OPERATIONS -- //
 }
@@ -141,21 +120,12 @@ class fcDropInManager extends fcDataTable_array {
 */
 class fcrDropInModule extends fcDataRow_array {
 
-    // ++ FIELD ARRAY ++ //
+    // ++ SETUP ++ //
     
-    // NOTE: Load specs array and do any additional per-module processing.
+    // ACTION: Load specs array and do any additional per-module processing.
     public function SetSpecs(array $arSpecs) {
 	$this->SetFieldValues($arSpecs);
 	$this->RegisterClasses();
-    }
-
-    // ++ FIELD VALUES ++ //
-
-    public function Name() {
-	return $this->GetFieldValue('name');
-    }
-    protected function ClassArray() {
-	return $this->GetFieldValue('classes');
     }
     /*----
       ACTION: register any classes defined within the dropin.
@@ -176,37 +146,15 @@ class fcrDropInModule extends fcDataRow_array {
 	}
     }
 
+    // -- SETUP -- //
+    // ++ FIELD VALUES ++ //
+
+    public function Name() {
+	return $this->GetFieldValue('name');
+    }
+    protected function ClassArray() {
+	return $this->GetFieldValue('classes');
+    }
+
     // -- FIELD VALUES -- //
-    // ++ UTILITY FUNCTIONS ++ //
-
-    static protected function ClassList($vClasses,$sSep=' ') {
-	$out = NULL;
-	if (is_array($vClasses)) {
-	    // value is an array of class names for file $sFile
-	    foreach ($vClasses as $sClass) {
-		if (!is_null($out)) {
-		    $out .= $sSep;
-		}
-		$out .= static::RenderClassName($sClass);
-	    }
-	} else {
-	    // assume value is a single class name
-	    $out = static::RenderClassName($vClasses);
-	}
-	return $out;
-    }
-    static protected function RenderClassName($sClass) {
-	if (class_exists($sClass)) {
-	    $out = "<b>C:</b>$sClass";
-	} elseif (trait_exists($sClass)) {
-	    $out = "<b>T:</b>$sClass";
-	} elseif (interface_exists($sClass)) {
-	    $out = "<b>I:</b>$sClass";
-	} else {
-	    $out = "<s title='class, trait, or interface not found'>$sClass</s>";
-	}
-	return $out;
-    }
-
-    // -- UTILITY FUNCTIONS -- //
 }

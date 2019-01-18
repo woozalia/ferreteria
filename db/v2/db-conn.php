@@ -60,7 +60,7 @@ abstract class fcDataConn {
     // ++ DATA READ/WRITE ++ //
 
     abstract public function MakeTableWrapper($sTableClass,$id=NULL);
-    abstract public function FetchRecordset($sSQL,fiTable_wRecords $tbl);
+    abstract public function FetchRecordset($sql,fiTable_wRecords $tbl);
     abstract public function ExecuteAction($sSQL);
     abstract public function CountOfAffectedRows();
     abstract public function CreatedID();
@@ -94,7 +94,7 @@ abstract class fcDataConn {
     This type will always need host and schema names, username, and password.
 */
 abstract class fcDataConn_CliSrv extends fcDataConn {
-    private $sHost,$sUser,$sPass,$sSchema;
+    private $sHost,$sUser,$sPass;
 
     // ++ SETUP ++ //
     static private $nInst=0;
@@ -127,11 +127,11 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
 	$this->HostString($sHost);
 	$this->Username($sUser);
 	$this->Password($sPass);
-	$this->SchemaString($sSchema);
+	$this->SetSchemaString($sSchema);
     }
 
     // -- SETUP -- //
-    // ++ CONFIGURATION FIELDS ++ //
+    // ++ SETUP FIELDS ++ //
 
     protected function HostString($sVal=NULL) {
 	if (!is_null($sVal)) {
@@ -151,14 +151,17 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
 	}
 	return $this->sPass;
     }
-    protected function SchemaString($sVal=NULL) {
-	if (!is_null($sVal)) {
-	    $this->sSchema = $sVal;
-	}
+    
+    private $sSchema;
+    protected function SetSchemaString($sVal) {
+	$this->sSchema = $sVal;
+    }
+    // PUBLIC for debugging
+    public function GetSchemaString() {
 	return $this->sSchema;
     }
 
-    // -- CONFIGURATION FIELDS -- //
+    // -- SETUP FIELDS -- //
     // ++ DATA OPERATIONS ++ //
 
     abstract public function Result_RowCount(fcDataRecord $rs);
@@ -177,6 +180,7 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
 	  ...unless $id is KS_NEW_REC, in which case we will return a blank recordset.
       HISTORY:
 	2017-08-28 Added KS_NEW_REC functionality -- but surely this must exist somewhere already.
+	2018-04-01 added $t->SetConnection($this)
     */
     private $arTables = array();
     public function MakeTableWrapper($sTableClass,$id=NULL) {
@@ -191,7 +195,10 @@ abstract class fcDataConn_CliSrv extends fcDataConn {
 		$ok = FALSE;
 		$ksRequiredParent = 'fcTableBase';
 		if (is_subclass_of($sTableClass,$ksRequiredParent)) {
-		    $t = new $sTableClass($this);
+		    $t = new $sTableClass();
+		    if (method_exists($sTableClass,'SetConnection')) {	// 2018-04-29 a bit of a kluge
+			$t->SetConnection($this);
+		    }
 		    $this->arTables[$sTableClass] = $t;
 		    $ok = TRUE;
 		} else {

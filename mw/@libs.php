@@ -4,26 +4,30 @@
   HISTORY:
     2015-05-08 created to remove duplication in config-libs-v1 and config-libs-v2
     2015-09-24 renamed config-libs-both.php -> config-libs.php after moving db-dependent mw libs into separate folders
+    2018-03-12 obsoleted menu.php, page-section.php, page-section-v3.php
 */
 $fp = dirname( __FILE__ );
 fcCodeModule::BasePath($fp.'/');
 
 $om = new fcCodeModule(__FILE__, 'app-mw.php');
-  $om->AddClass('fcApp_MW');
-$om = new fcCodeModule(__FILE__, 'app-specialpage.php');
-  $om->AddClass('SpecialPageApp');
-  $om->AddClass('SpecialPage_DataMenu');
+  $om->AddClass('ferreteria\mw\fcApp_MW');
+/*
 $om = new fcCodeModule(__FILE__, 'menu.php');
   $om->AddClass('clsMenu');
+*/
 $om = new fcCodeModule(__FILE__, 'data-page.php');
   $om->AddClass('fcPageData_MW');
+$om = new fcCodeModule(__FILE__, 'kiosk.php');
+  $om->AddClass('ferreteria\mw\fcMenuKiosk_MW');
+/*
 $om = new fcCodeModule(__FILE__, 'page-section.php');
   $om->AddClass('clsWikiFormatter');
 $om = new fcCodeModule(__FILE__, 'page-section-v3.php');
   $om->AddClass('fcSectionHeader_MW');
   $om->AddClass('fcSectionMenuItem');
+  */
 $om = new fcCodeModule(__FILE__, 'specialpage.php');
-  $om->AddClass('ferreteria\mw\cSpecialPage');
+  $om->AddClass('ferreteria\mw\tSpecialPage');
 $om = new fcCodeModule(__FILE__, 'richtext.php');
   $om->AddClass('clsRT_HTML');
   $om->AddClass('clsRT_Wiki');

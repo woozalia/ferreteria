@@ -47,11 +47,24 @@ trait ftSource_forTable {
 
     /*----
       PUBLIC so Recordset wrapper object can access it
-      NOTE: To access a table in some other database, create a descendant type
-	which gets its connection differently.
+      TODO: Change name back to GetDatabase()
+      HISTORY:
+	2018-04-01 A note said: "To access a table in some other database, create a descendant type
+	which gets its connection differently." This is a problem, because we need to be able to set
+	the database object explicitly on an object-by-object basis (mainly because this is what makes
+	sense intuitively)... so I am changing this class to require explicit setting of the db object,
+	which will be done by the db->MakeTableWrapper() function.
     */
+    private $db;
+    public function SetConnection(fcDataConn $db) {
+	$this->db = $db;
+    }
     public function GetConnection() {
-	return fcApp::Me()->GetDatabase();
+	if (is_null($this->db)) {
+	    $sClass = get_class($this);
+	    throw new exception("Tried to retrieve db object before it has been set in class '$sClass'.");
+	}
+	return $this->db;
     }
 
     // -- CONFIGURATION -- //
@@ -147,6 +160,8 @@ trait ftName_forTable {
     
     // name of database table for which this class is a wrapper
     abstract protected function TableName();
+    // This exists only for debugging:
+    public function DebugTableName() { return $this->TableName(); }
     // PUBLIC because sometimes you have to build SQL queries from multiple tables
     public function TableName_Cooked() {	// db table name sanitized with backticks
 	return '`'.$this->TableName().'`';

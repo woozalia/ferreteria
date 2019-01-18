@@ -35,6 +35,7 @@ class fctNodes_SimpleWikiPage extends fctNodeTypesBase {
 	return KS_TF_NODE_TYPE_PAGE;
     }
     protected function FieldArray() {	// 2017-09-02 is this used?
+	throw new exception('2018-02-26 This appears to be unused.');
 	return array('title','content');
     }
     

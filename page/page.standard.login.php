@@ -65,26 +65,10 @@ abstract class fcTag_body_login extends fcTag_body_standard {
 	return $this->MakeElement_LoginWidget();	// in ftLoginContainer_standard
     }
 }
-// ABSTRACT: n/i = GetElement_PageHeader, GetElement_HeaderMenu, + 2 more
-abstract class fcPage_login extends fcPage_standard {
+trait ftPageMessages {
 
-    // ++ OBJECTS ++ //
+    // ++ UI OUTPUT ++ //
 
-    /*----
-      PUBLIC because page header needs to access login widget's status thingy
-      NEW
-    */
-    public function GetElement_LoginWidget() {
-	return $this->GetTagNode_body()->GetElement_LoginWidget();
-    }
-    
-    // -- OBJECTS -- //
-    // ++ SCREEN ++ //
-
-    /*----
-      NOTE: These messages *conceivably* could be of use in a non-login app,
-	but that seems like a thing to do when the need actually arises.
-    */
     public function AddErrorMessage($s) {
 	$this->GetElement_PageContent()->AddErrorMessage($s);
     }
@@ -95,5 +79,22 @@ abstract class fcPage_login extends fcPage_standard {
 	$this->GetElement_PageContent()->AddSuccessMessage($s);
     }
     
-    // -- SCREEN -- //
+    // -- UI OUTPUT -- //
+    
+}
+// ABSTRACT: n/i = GetElement_PageHeader, GetElement_HeaderMenu, + 2 more
+abstract class fcPage_login extends fcPage_standard {
+    use ftPageMessages;
+
+    // ++ ELEMENTS ++ //
+
+    /*----
+      PUBLIC because page header needs to access login widget's status thingy
+      NEW
+    */
+    public function GetElement_LoginWidget() {
+	return $this->GetTagNode_body()->GetElement_LoginWidget();
+    }
+    
+    // -- ELEMENTS -- //
 }

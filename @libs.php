@@ -22,10 +22,9 @@ $oL = new fcCodeLibrary('ferreteria.node','node/@libs.php');
 $om = new fcCodeModule(__FILE__, 'app.php');
   $om->AddClass('fcApp');
   $om->AddClass('fcAppStandard');
-/* 2017-01-16 appears to be unnecessary
-$om = new fcCodeModule(__FILE__, 'app-user.php');
-  $om->AddClass('fcDBOF_UserAuth');
-*/
+  $om->AddClass('fcAppStandardBasic');
+  $om->AddClass('fcAppStandardAdmin');
+
 $om = new fcCodeModule(__FILE__, 'crypt.php');
   $om->AddClass('Cipher');
   $om->AddClass('Cipher_pubkey');
@@ -69,6 +68,8 @@ $om = new fcCodeModule(__FILE__, 'menu/menu-action.php');
   $om->AddClass('clsAction_section'); */
 $om = new fcCodeModule(__FILE__, 'menu/kiosk.php');
   $om->AddClass('fcMenuKiosk');
+  $om->AddClass('fcMenuKiosk_autonomous');
+  $om->AddClass('ftMenuKiosk_admin');
   $om->AddClass('fcMenuKiosk_admin');
 $om = new fcCodeModule(__FILE__, 'menu/items.php');
   $om->AddClass('fcNavItem');
@@ -185,15 +186,17 @@ $om = new fcCodeModule(__FILE__, 'util/tree-stats.php');
   $om->AddClass('fcTreeStatsMgr');
 $om = new fcCodeModule(__FILE__, 'util/url.php');
   $om->AddClass('fcURL');
+$om = new fcCodeModule(__FILE__, 'util/url-links.php');
+  $om->AddClass('fiLinkable');
+  $om->AddClass('ftLinkableObject');
+  $om->AddClass('fcLinkBuilder');
 
 // WIDGETS
 $om = new fcCodeModule(__FILE__, 'widgets/js.php');
   $om->AddClass('fcJavaScript');
 $om = new fcCodeModule(__FILE__, 'widgets/object-msgs.php');
   $om->AddClass('ftVerbalObject');
-/* 2016-12-01 replacing all these with page/page.navbar.php
 $om = new fcCodeModule(__FILE__, 'widgets/navbar.php');
   $om->AddClass('fcNavbar_flat');
   $om->AddClass('fcNavbar_tree');
-  $om->AddClass('fcNav_LabeledLink');
-*/
+  //$om->AddClass('fcNav_LabeledLink');
