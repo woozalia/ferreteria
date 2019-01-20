@@ -48,21 +48,7 @@ class fcHeaderMenuGroup extends fcMenuFolder {
     Designed for headers, but theoretically should work in vertical/hierarchical menus as well.
 */
 class fcMenuOptionLink extends fcToggleLink {
-/*
-    public function Render() {
-	echo 'RENDERING ['
-	  .$this->GetKeyName()
-	  .'] SHOULD DISPLAY=['
-	  .$this->GetShouldDisplay()
-	  .'] IS AUTH=['
-	  .$this->GetIsAuthorized()
-	  .'] REQUIRED PERMIT NULL=['.
-	  is_null($this->GetRequiredPrivilege())
-	  .']<br>'
-	  ;
-	return parent::Render();
-    }
-*/
+
     // ++ SETUP ++ //
 
     public function __construct($sGroupKey,$sKeyValue=TRUE,$sDispOff=NULL,$sDispOn=NULL,$sPopup=NULL) {
@@ -74,6 +60,32 @@ class fcMenuOptionLink extends fcToggleLink {
 	$this->SetupDefaults();			// ALWAYS CALL THIS from constructor
 	//$this->SetIsAuthorized(TRUE);		// header menus assume access
     }
+
+/* uncomment to see debugging information
+    public function Render() {
+        $sKeyName = $this->GetKeyName();
+        $sKeyValue = $this->GetKeyValue();
+        $oPathIn = $this->GetKioskObject()->GetInputObject();
+
+	echo 'RENDERING ['
+	  .$sKeyName
+	  .']=['
+	  .$sKeyValue
+	  .'] IS SELECTED=['
+	  .$this->GetIsSelected()
+	  .'] PATH VALUE=['
+	  .$oPathIn->GetBool($sKeyName)
+	  .'] SHOULD DISPLAY=['
+	  .$this->GetShouldDisplay()
+	  //.'] IS AUTH=['
+	  //.$this->GetIsAuthorized()
+	  .'] REQUIRED PERMIT NULL=['.
+	  is_null($this->GetRequiredPrivilege())
+	  .']<br>'
+	  ;
+	return parent::Render();
+    }
+/**/
 
       //++values++//
 

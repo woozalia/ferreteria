@@ -26,7 +26,7 @@ class fctUPermits_for_UGroup extends fcTable_wSource {
 	  $this->ClassName_Perms(KS_CLASS_USER_PERMISSION);
     }*/
     protected function TableName() {
-	return 'ugroup_x_uperm';
+	return 'ugroup_x_upermit';
     }
 
     // -- SETUP -- //

@@ -148,7 +148,7 @@ class fcReportFile extends fcReportStandard {
 	}
 	return $out;
     }
-    private $arCmds;
+    private $arCmds = array();
     protected function AddCommandResult(array $arCmds) {
 	$nRows = count($this->arCmds);
 	foreach ($arCmds as $sCmd => $sRes) {

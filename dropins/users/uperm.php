@@ -297,7 +297,6 @@ __END__;
 	}
 
 	$doEdit = $this->GetDoEdit();
-	echo "DO EDIT=[$doEdit]";
 	
 	// prepare the form
 

@@ -415,7 +415,6 @@ __END__;
 	if ($this->IsNew()) {
 	    return NULL;	// new record - no permissions yet
 	}
-	//$oPage = $this->Engine()->App()->Page();
 
 	// set up header action-links
 	$sName = $this->NameString();
@@ -435,18 +434,6 @@ __END__;
 	// set up section and menu
 	$oHdr = new fcSectionHeader('Group Permissions',$oMenu);
 	$out = $oHdr->Render();
-	    
-	/* 2017-01-27 old
-	// set up header action-links
-	$arPath = $oPage->PathArgs();
-	$arActs = array(
-	  // (array $iarData,$iLinkKey,$iGroupKey=NULL,$iDispOff=NULL,$iDispOn=NULL,$iDescr=NULL)
-	  new clsActionLink_option($arPath,'edit.prm',NULL,'edit')
-	  );
-	$out = $oPage->ActionHeader('Permissions',$arActs);
-
-	$doEdit = $oPage->PathArg('edit.prm');
-	*/
 
 	$rs = $this->UPermRecords();
 	if ($doEdit) {

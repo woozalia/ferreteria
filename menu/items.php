@@ -336,12 +336,12 @@ abstract class fcDynamicLink extends fcLink_fromArray {
     // PUBLIC so other objects can see whether menu options are activated
     public function GetIsSelected() {
 	if (empty($this->isSel)) {
-	    $sKeyValue = $this->GetKeyValue();
+	    $sKeyValue = $this->GetKeyValue(); // value to activate (TRUE = just needs to be present)
 	    $sKeyName = $this->GetKeyName();
 	    $oPathIn = $this->GetKioskObject()->GetInputObject();
-	    if ($sKeyName === TRUE || is_null($sKeyName)) {
+	    if ($sKeyValue === TRUE || is_null($sKeyValue)) {
 		// if key name is TRUE or NULL, we use the presence of the value as a flag
-		$this->isSel = $oPathIn->GetBool($sKeyValue);
+		$this->isSel = $oPathIn->GetBool($sKeyName);
 	    } else {
 		$sInValue = $oPathIn->GetString($sKeyName);
 		$this->isSel = ($sInValue == $sKeyValue);

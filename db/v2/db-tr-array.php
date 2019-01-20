@@ -49,7 +49,8 @@ class fcDataTable_array extends fcTable_wRecords {
 class fcDataRow_array extends fcSourcedDataRow implements fiLinkableRecord {
     use ftLinkableRecord;
 
-    private $arRows, $nRow;
+    private $arRows=array();
+    private $nRow=0;
 
     // ++ CEMENT ++ //
     
@@ -64,14 +65,18 @@ class fcDataRow_array extends fcSourcedDataRow implements fiLinkableRecord {
     /*----
       HISTORY:
 	2017-02-23 Fixed counting logic so this finally renders all rows
+	2019-01-18 revised to work with PHP 7.2.10-0ubuntu0.18.04.1
     */
     public function NextRow() {
 	$nRow = $this->nRow;
-	$this->nRow++;
+        $this->nRow++;
+	echo 'ROWS:'.fcArray::Render($this->arRows);
 	if ($nRow < $this->RowCount()) {
-	    $arElem = each($this->arRows);
-	    //this->ClearFields();
-	    //$this->SetFieldValues($arElem['value']);
+            $arKeys = array_keys($this->arRows);
+            $sKey = $arKeys[$nRow];
+	    $arElem = $this->arRows[$sKey];
+	    echo 'ELEMENT:'.fcArray::Render($arElem);
+	    throw new exception('How do we get here?');
 	    $this->SetRow($arElem['value']);
 	    return TRUE;
 	} else {

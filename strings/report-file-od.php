@@ -75,8 +75,6 @@ class fcReport_OpenDoc extends fcReportFile {
       OVERRIDE
     */
     public function RenderToFile($fs) {	
-	
-	// XML DEBUGGING
 	$sRaw = $this->Render();
 	$this->FormatContent($sRaw);
 	$sOut = $this->GetOutput_XML();
@@ -213,7 +211,25 @@ class fcReport_OpenDoc extends fcReportFile {
 	    throw new exception("Ferreteria configuration error: Could not chdir to folder [$fpUnzip].");
 	}
 	$sCmd = 'unzip "'.$fs.'"';
-	exec($sCmd,$arCmdOut);
+	exec($sCmd,$arCmdOut,$nStatus);
+	switch($nStatus) {
+          case 0: $sStatus = NULL; break;
+          // messages adapted from 'man unzip'
+          case 1: $sStatus = 'completed with warnings'; break;
+          case 2: $sStatus = 'error or warning in zipfile data'; break;
+          case 3: $sStatus = 'severe error in zipfile format'; break;
+          case 4: $sStatus = 'could not allocate enough memory during initialization'; break;
+          case 5: $sStatus = 'could not read decryption password, possibly insufficient memory'; break;
+          case 6: $sStatus = 'could not allocate enough memory during decompression to disk'; break;
+          case 7: $sStatus = 'could not allocate enough memory during in-memory decompression'; break;
+          //case 8: $sStatus = currently not used
+          case 9: $sStatus = "the specified source zipfile [$fs] was not found"; break;
+          default: $sStatus = 'unknown unzip error';
+        }
+        if (!is_null($sStatus)) {
+            // TODO: gracefully pass this back so it can be displayed nicely to the user
+            throw new exception('The unzip command gave an error or warning: '.$sStatus);
+        }
 	$this->AddCommandResult(array('source file'=>$fs));
 	$this->AddCommandResult(array('target folder'=>$fpUnzip));
 	$this->AddCommandResult(array('unzip'=>$arCmdOut));
